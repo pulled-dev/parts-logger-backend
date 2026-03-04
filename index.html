@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pulled Apart — Parts Logger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #141414;
+      --surface2: #1e1e1e;
+      --border: #2a2a2a;
+      --accent: #ef4444;
+      --accent-dim: rgba(239,68,68,0.12);
+      --text: #f0f0f0;
+      --muted: #888;
+      --dim: #444;
+      --green: #22c55e;
+      --blue: #3b82f6;
+      --purple: #a855f7;
+      --yellow: #eab308;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Inter', sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      min-height: 100vh;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Header ────────────────────────────────────────────────────── */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      gap: 12px;
+    }
+
+    .brand { display: flex; flex-direction: column; gap: 1px; }
+
+    .brand-name {
+      font-family: var(--mono);
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .brand-sub {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .header-right { display: flex; align-items: center; gap: 8px; }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      user-select: none;
+      transition: all 0.2s;
+    }
+    .status-badge.live   { border-color: var(--green);  color: var(--green);  background: rgba(34,197,94,0.08); }
+    .status-badge.demo   { border-color: var(--yellow); color: var(--yellow); background: rgba(234,179,8,0.08); }
+    .status-badge.error  { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+    .status-badge.live .status-dot { animation: pulse-dot 2s infinite; }
+    @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+    .icon-btn {
+      width: 32px; height: 32px;
+      border-radius: 7px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .icon-btn:hover, .icon-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+    /* ── Main ──────────────────────────────────────────────────────── */
+    .main {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 20px 16px 90px;
+    }
+
+    /* ── Add Form ──────────────────────────────────────────────────── */
+    .add-form {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 22px;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field.f-part { flex: 1.6; min-width: 140px; }
+    .field.f-ref  { flex: 1;   min-width: 100px; }
+
+    .field label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: var(--muted);
+    }
+
+    input[type="text"] {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      padding: 8px 11px;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input[type="text"]:focus { border-color: var(--accent); }
+    input[type="text"]::placeholder { color: var(--dim); }
+
+    .field.f-part input { font-family: var(--mono); font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+    .add-btn {
+      padding: 0 18px;
+      height: 37px;
+      background: var(--accent);
+      border: none;
+      border-radius: 6px;
+      color: #fff;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .add-btn:hover:not(:disabled) { background: #dc2626; }
+    .add-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .spinner {
+      width: 13px; height: 13px;
+      border: 2px solid rgba(255,255,255,0.25);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.55s linear infinite;
+      display: none;
+    }
+    .add-btn.loading .spinner { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Section header ───────────────────────────────────────────── */
+    .sec-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .sec-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--dim);
+    }
+
+    /* ── Empty state ──────────────────────────────────────────────── */
+    .empty {
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      padding: 52px 24px;
+      text-align: center;
+      color: var(--dim);
+    }
+    .empty-icon { font-size: 30px; margin-bottom: 12px; }
+    .empty p { font-size: 13px; line-height: 1.7; }
+
+    /* ── Parts list ───────────────────────────────────────────────── */
+    .parts-list { display: flex; flex-direction: column; gap: 8px; }
+
+    /* ── Part card ────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 13px 14px;
+      position: relative;
+      animation: pop-in 0.18s ease both;
+    }
+    @keyframes pop-in { from { opacity:0; transform:translateY(-5px); } }
+    .card:hover { border-color: #333; }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+      padding-right: 22px;
+    }
+
+    .card-id { flex: 1; min-width: 0; }
+
+    .card-pn {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.06em;
+    }
+    .card-ref {
+      font-size: 11px;
+      color: var(--dim);
+      margin-top: 1px;
+    }
+    .card-desc {
+      font-size: 13px;
+      color: var(--text);
+      margin-top: 4px;
+    }
+
+    .card-tags { display: flex; gap: 4px; flex-wrap: wrap; flex-shrink: 0; margin-top: 1px; }
+
+    .tag {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      padding: 2px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .tag-ebay   { background: rgba(59,130,246,0.12);  color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); }
+    .tag-claude { background: rgba(168,85,247,0.12);  color: #c084fc; border: 1px solid rgba(168,85,247,0.25); }
+    .tag-paint  { background: rgba(234,179,8,0.12);   color: #fbbf24; border: 1px solid rgba(234,179,8,0.25); }
+    .tag-mock   { background: rgba(156,163,175,0.1);  color: #9ca3af; border: 1px solid rgba(156,163,175,0.2); }
+
+    .card-pricing {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .price-grid { display: flex; gap: 14px; }
+
+    .price-cell { display: flex; flex-direction: column; gap: 2px; }
+    .price-lbl {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--dim);
+    }
+    .price-val {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--text);
+    }
+    .price-val.avg { color: var(--green); }
+
+    .listing-ct {
+      font-size: 10px;
+      color: var(--dim);
+      white-space: nowrap;
+      padding-top: 12px;
+    }
+
+    .no-price {
+      font-size: 12px;
+      color: var(--dim);
+      font-style: italic;
+    }
+
+    .your-price-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+    .yp-label { font-size: 11px; color: var(--muted); white-space: nowrap; }
+    .yp-input {
+      width: 110px !important;
+      font-family: var(--mono) !important;
+      font-size: 13px !important;
+      padding: 5px 9px !important;
+    }
+    .yp-hint { font-size: 11px; color: var(--dim); }
+
+    .remove-btn {
+      position: absolute;
+      top: 10px; right: 10px;
+      width: 20px; height: 20px;
+      background: none;
+      border: none;
+      color: var(--dim);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 4px;
+      font-size: 13px;
+      line-height: 1;
+      transition: all 0.12s;
+    }
+    .remove-btn:hover { background: var(--accent-dim); color: var(--accent); }
+
+    /* ── Stats bar ────────────────────────────────────────────────── */
+    .stats-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      z-index: 90;
+      flex-wrap: wrap;
+    }
+
+    .stats { display: flex; gap: 22px; flex: 1; flex-wrap: wrap; }
+
+    .stat { display: flex; flex-direction: column; gap: 1px; }
+    .stat-lbl { font-size: 9px; text-transform: uppercase; letter-spacing: 0.09em; color: var(--dim); }
+    .stat-val { font-family: var(--mono); font-size: 16px; font-weight: 600; }
+    .stat-val.hi { color: var(--green); }
+
+    .export-btn {
+      padding: 6px 13px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--muted);
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .export-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Settings panel ───────────────────────────────────────────── */
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 200;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .overlay.open { opacity: 1; pointer-events: all; }
+
+    .panel {
+      position: fixed;
+      top: 0; right: 0; bottom: 0;
+      width: min(320px, 100vw);
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      z-index: 201;
+      transform: translateX(100%);
+      transition: transform 0.22s ease;
+      display: flex; flex-direction: column;
+    }
+    .panel.open { transform: translateX(0); }
+
+    .panel-head {
+      padding: 15px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .panel-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+
+    .panel-body { padding: 20px 18px; display: flex; flex-direction: column; gap: 22px; flex: 1; overflow-y: auto; }
+
+    .setting { display: flex; flex-direction: column; gap: 7px; }
+    .setting > label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+    .setting .hint { font-size: 11px; color: var(--dim); margin-top: -2px; }
+
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; }
+    .toggle-row .tl { font-size: 13px; }
+
+    .toggle { position: relative; width: 38px; height: 21px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .track {
+      position: absolute; inset: 0;
+      border-radius: 21px;
+      background: var(--border);
+      cursor: pointer;
+      transition: background 0.18s;
+    }
+    .toggle input:checked + .track { background: var(--accent); }
+    .thumb {
+      position: absolute;
+      top: 2px; left: 2px;
+      width: 17px; height: 17px;
+      border-radius: 50%;
+      background: #fff;
+      transition: left 0.18s;
+      pointer-events: none;
+    }
+    .toggle input:checked ~ .thumb { left: 19px; }
+
+    .save-btn {
+      padding: 10px 16px;
+      background: var(--accent);
+      border: none;
+      border-radius: 7px;
+      color: #fff;
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .save-btn:hover { background: #dc2626; }
+
+    /* ── Toast ────────────────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 72px; left: 50%;
+      transform: translateX(-50%) translateY(12px);
+      background: #1c0707;
+      border: 1px solid #7f1d1d;
+      color: #fca5a5;
+      padding: 9px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 400;
+      transition: all 0.2s;
+      white-space: nowrap;
+      max-width: calc(100vw - 32px);
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── Responsive ───────────────────────────────────────────────── */
+    @media (max-width: 480px) {
+      .form-row { flex-direction: column; }
+      .add-btn { width: 100%; justify-content: center; height: 40px; }
+      .price-grid { gap: 10px; }
+      .stats { gap: 14px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div class="brand">
+    <div class="brand-name">Pulled Apart</div>
+    <div class="brand-sub">Parts Logger</div>
+  </div>
+  <div class="header-right">
+    <div class="status-badge" id="badge">
+      <div class="status-dot"></div>
+      <span id="badge-text">...</span>
+    </div>
+    <button class="icon-btn" id="settings-btn" title="Settings">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<!-- Main -->
+<main class="main">
+
+  <!-- Add Form -->
+  <div class="add-form">
+    <div class="form-row">
+      <div class="field f-part">
+        <label>Part Number</label>
+        <input id="pn-input" type="text" placeholder="e.g. 5G0927225D"
+               autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+      </div>
+      <div class="field f-ref">
+        <label>Vehicle Ref</label>
+        <input id="ref-input" type="text" placeholder="e.g. VW-01">
+      </div>
+      <button class="add-btn" id="add-btn">
+        <div class="spinner"></div>
+        <span id="add-label">Add Part</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Parts section -->
+  <div class="sec-header">
+    <span class="sec-label" id="parts-count-label">Parts</span>
+    <button class="icon-btn" id="clear-btn" title="Clear all" style="display:none">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="3 6 5 6 21 6"/>
+        <path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/>
+        <path d="M9 6V4h6v2"/>
+      </svg>
+    </button>
+  </div>
+
+  <div id="empty-state" class="empty">
+    <div class="empty-icon">🔧</div>
+    <p>No parts logged yet.<br>Enter a part number above to get started.</p>
+  </div>
+
+  <div class="parts-list" id="parts-list"></div>
+
+</main>
+
+<!-- Stats bar -->
+<div class="stats-bar">
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-lbl">Parts</div>
+      <div class="stat-val" id="s-total">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-lbl">Priced</div>
+      <div class="stat-val" id="s-priced">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-lbl">Est. Value</div>
+      <div class="stat-val hi" id="s-value">£0.00</div>
+    </div>
+  </div>
+  <button class="export-btn" id="export-btn">&#8595; Export CSV</button>
+</div>
+
+<!-- Settings -->
+<div class="overlay" id="overlay"></div>
+<div class="panel" id="panel">
+  <div class="panel-head">
+    <span class="panel-title">Settings</span>
+    <button class="icon-btn" id="panel-close">&#x2715;</button>
+  </div>
+  <div class="panel-body">
+    <div class="setting">
+      <label>Backend URL</label>
+      <input type="text" id="s-url" placeholder="https://...">
+      <div class="hint">Your Railway deployment URL</div>
+    </div>
+    <div class="setting">
+      <div class="toggle-row">
+        <span class="tl">Demo Mode</span>
+        <label class="toggle">
+          <input type="checkbox" id="s-demo">
+          <div class="track"></div>
+          <div class="thumb"></div>
+        </label>
+      </div>
+      <div class="hint">Use mock data instead of live API calls</div>
+    </div>
+    <button class="save-btn" id="s-save">Save &amp; Reconnect</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+
+// ── Config ──────────────────────────────────────────────────────────────────
+const DEFAULT_URL = 'https://web-production-7a1f0.up.railway.app';
+
+function loadCfg() {
+  try { return JSON.parse(localStorage.getItem('pa_cfg') || '{}'); }
+  catch { return {}; }
+}
+function saveCfg() { localStorage.setItem('pa_cfg', JSON.stringify(cfg)); }
+
+const cfg = Object.assign({ url: DEFAULT_URL, demo: false }, loadCfg());
+
+// ── State ────────────────────────────────────────────────────────────────────
+let parts = [];
+
+// ── DOM ──────────────────────────────────────────────────────────────────────
+const $  = id => document.getElementById(id);
+const badge      = $('badge');
+const badgeText  = $('badge-text');
+const pnInput    = $('pn-input');
+const refInput   = $('ref-input');
+const addBtn     = $('add-btn');
+const addLabel   = $('add-label');
+const spinner    = addBtn.querySelector('.spinner');
+const partsList  = $('parts-list');
+const emptyState = $('empty-state');
+const clearBtn   = $('clear-btn');
+const sTotal     = $('s-total');
+const sPriced    = $('s-priced');
+const sValue     = $('s-value');
+const exportBtn  = $('export-btn');
+const overlay    = $('overlay');
+const panel      = $('panel');
+const settBtn    = $('settings-btn');
+const panelClose = $('panel-close');
+const sUrl       = $('s-url');
+const sDemo      = $('s-demo');
+const sSave      = $('s-save');
+const toastEl    = $('toast');
+const countLabel = $('parts-count-label');
+
+// ── Toast ────────────────────────────────────────────────────────────────────
+let toastTmr;
+function toast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTmr);
+  toastTmr = setTimeout(() => toastEl.classList.remove('show'), 3500);
+}
+
+// ── Status check ─────────────────────────────────────────────────────────────
+async function checkStatus() {
+  if (cfg.demo) { setMode('demo'); return; }
+  try {
+    const r = await fetch(cfg.url + '/health', { signal: AbortSignal.timeout(6000) });
+    if (!r.ok) throw new Error();
+    const d = await r.json();
+    setMode(d.mode === 'live' ? 'live' : 'demo');
+  } catch {
+    setMode('error');
+  }
+}
+
+function setMode(mode) {
+  badge.className = 'status-badge ' + mode;
+  badgeText.textContent = mode === 'live' ? 'LIVE' : mode === 'demo' ? 'DEMO' : 'OFFLINE';
+}
+
+// ── Lookup ───────────────────────────────────────────────────────────────────
+async function lookup(pn) {
+  const r = await fetch(cfg.url + '/lookup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ part_number: pn }),
+    signal: AbortSignal.timeout(22000),
+  });
+  if (!r.ok) {
+    const e = await r.json().catch(() => ({}));
+    throw new Error(e.detail || 'Lookup failed (' + r.status + ')');
+  }
+  return r.json();
+}
+
+// ── Add part ─────────────────────────────────────────────────────────────────
+async function addPart() {
+  const pn  = pnInput.value.trim().toUpperCase();
+  const ref = refInput.value.trim();
+  if (!pn) { pnInput.focus(); return; }
+
+  addBtn.disabled = true;
+  addBtn.classList.add('loading');
+  addLabel.textContent = 'Looking up...';
+
+  try {
+    const d = await lookup(pn);
+    parts.unshift({
+      id:          Date.now(),
+      part_number: d.part_number,
+      description: d.description,
+      avg_price:   d.avg_price,
+      low_price:   d.low_price,
+      high_price:  d.high_price,
+      total_listings: d.total_listings,
+      source:      d.source,
+      vehicle_ref: ref,
+      your_price:  d.avg_price != null ? d.avg_price : null,
+    });
+    pnInput.value = '';
+    refInput.value = '';
+    render();
+    updateStats();
+    pnInput.focus();
+  } catch (err) {
+    toast('\u26a0 ' + err.message);
+  } finally {
+    addBtn.disabled = false;
+    addBtn.classList.remove('loading');
+    addLabel.textContent = 'Add Part';
+  }
+}
+
+pnInput.addEventListener('keydown',  e => e.key === 'Enter' && addPart());
+refInput.addEventListener('keydown', e => e.key === 'Enter' && addPart());
+addBtn.addEventListener('click', addPart);
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmt(v) { return v == null ? '&mdash;' : '&pound;' + Number(v).toFixed(2); }
+
+function sourceTags(src) {
+  if (!src || src === 'none') return '';
+  const t = [];
+  if (src.includes('ebay'))   t.push('<span class="tag tag-ebay">eBay</span>');
+  if (src.includes('claude')) t.push('<span class="tag tag-claude">Claude</span>');
+  if (src === 'mock')         t.push('<span class="tag tag-mock">Mock</span>');
+  return t.join('');
+}
+
+// ── Render ───────────────────────────────────────────────────────────────────
+function render() {
+  const hasParts = parts.length > 0;
+  emptyState.style.display = hasParts ? 'none' : 'block';
+  clearBtn.style.display   = hasParts ? 'flex'  : 'none';
+  countLabel.textContent   = hasParts ? 'Parts (' + parts.length + ')' : 'Parts';
+
+  partsList.innerHTML = '';
+
+  parts.forEach(p => {
+    const hasPricing = p.avg_price != null;
+    const isPaint    = !hasPricing && p.total_listings === 0;
+
+    const pricingHtml = hasPricing
+      ? `<div class="price-grid">
+           <div class="price-cell"><div class="price-lbl">Avg</div><div class="price-val avg">${fmt(p.avg_price)}</div></div>
+           <div class="price-cell"><div class="price-lbl">Low</div><div class="price-val">${fmt(p.low_price)}</div></div>
+           <div class="price-cell"><div class="price-lbl">High</div><div class="price-val">${fmt(p.high_price)}</div></div>
+         </div>
+         <div class="listing-ct">${p.total_listings} listing${p.total_listings !== 1 ? 's' : ''}</div>`
+      : `<div class="no-price">${isPaint ? 'Paint code \u2014 no market pricing' : 'No pricing data'}</div>`;
+
+    const ypVal = p.your_price != null ? Number(p.your_price).toFixed(2) : '';
+
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.dataset.id = p.id;
+    div.innerHTML = `
+      <button class="remove-btn" data-rm="${p.id}" title="Remove">\u2715</button>
+      <div class="card-top">
+        <div class="card-id">
+          <div class="card-pn">${esc(p.part_number)}</div>
+          ${p.vehicle_ref ? `<div class="card-ref">${esc(p.vehicle_ref)}</div>` : ''}
+          <div class="card-desc">${esc(p.description)}</div>
+        </div>
+        <div class="card-tags">${sourceTags(p.source)}</div>
+      </div>
+      <div class="card-pricing">${pricingHtml}</div>
+      <div class="your-price-row">
+        <span class="yp-label">Your price</span>
+        <input type="text" class="yp-input" data-yp="${p.id}" placeholder="\u00a30.00" value="${esc(ypVal)}">
+        ${hasPricing ? `<span class="yp-hint">Suggested: ${fmt(p.avg_price)}</span>` : ''}
+      </div>`;
+    partsList.appendChild(div);
+  });
+}
+
+// ── Delegated events ──────────────────────────────────────────────────────────
+partsList.addEventListener('click', e => {
+  const rm = e.target.closest('[data-rm]');
+  if (!rm) return;
+  parts = parts.filter(p => p.id !== +rm.dataset.rm);
+  render();
+  updateStats();
+});
+
+partsList.addEventListener('input', e => {
+  const inp = e.target.closest('[data-yp]');
+  if (!inp) return;
+  const p = parts.find(x => x.id === +inp.dataset.yp);
+  if (!p) return;
+  const raw = inp.value.replace(/[^\d.]/g, '');
+  p.your_price = raw ? parseFloat(raw) : null;
+  updateStats();
+});
+
+clearBtn.addEventListener('click', () => {
+  if (!confirm('Clear all ' + parts.length + ' part' + (parts.length !== 1 ? 's' : '') + '?')) return;
+  parts = [];
+  render();
+  updateStats();
+});
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+function updateStats() {
+  const priced = parts.filter(p => p.your_price != null && p.your_price > 0);
+  const total  = parts.reduce((a, p) => a + (p.your_price || 0), 0);
+  sTotal.textContent  = parts.length;
+  sPriced.textContent = priced.length;
+  sValue.textContent  = '\u00a3' + total.toFixed(2);
+}
+
+// ── Export CSV ────────────────────────────────────────────────────────────────
+exportBtn.addEventListener('click', () => {
+  if (!parts.length) { toast('No parts to export'); return; }
+  const rows = [['Part Number','Part Description','Price','Ref']];
+  parts.forEach(p => rows.push([
+    p.part_number,
+    p.description,
+    p.your_price != null ? p.your_price.toFixed(2) : '',
+    p.vehicle_ref || '',
+  ]));
+  const csv = rows.map(r =>
+    r.map(c => {
+      const s = String(c);
+      return (s.includes(',') || s.includes('"') || s.includes('\n'))
+        ? '"' + s.replace(/"/g, '""') + '"' : s;
+    }).join(',')
+  ).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = 'parts-' + new Date().toISOString().slice(0, 10) + '.csv';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+
+// ── Settings panel ────────────────────────────────────────────────────────────
+function openPanel() {
+  sUrl.value   = cfg.url;
+  sDemo.checked = cfg.demo;
+  panel.classList.add('open');
+  overlay.classList.add('open');
+  settBtn.classList.add('active');
+}
+function closePanel() {
+  panel.classList.remove('open');
+  overlay.classList.remove('open');
+  settBtn.classList.remove('active');
+}
+
+settBtn.addEventListener('click', openPanel);
+panelClose.addEventListener('click', closePanel);
+overlay.addEventListener('click', closePanel);
+
+sSave.addEventListener('click', () => {
+  cfg.url  = (sUrl.value.trim().replace(/\/$/, '')) || DEFAULT_URL;
+  cfg.demo = sDemo.checked;
+  saveCfg();
+  closePanel();
+  checkStatus();
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+checkStatus();
+render();
+updateStats();
+pnInput.focus();
+</script>
+</body>
+</html>
