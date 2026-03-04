@@ -829,11 +829,15 @@ function updateStats() {
 }
 
 // ── Export CSV ────────────────────────────────────────────────────────────────
+function formatPartNumber(pn) {
+  return pn.replace(/(.{3})/g, '$1 ').trim();
+}
+
 exportBtn.addEventListener('click', () => {
   if (!parts.length) { toast('No parts to export'); return; }
   const rows = [['Part Number','Part Description','Price','Ref']];
   parts.forEach(p => rows.push([
-    p.part_number,
+    formatPartNumber(p.part_number),
     p.description,
     p.your_price != null ? p.your_price.toFixed(2) : '',
     p.vehicle_ref || '',

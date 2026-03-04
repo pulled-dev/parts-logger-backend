@@ -178,6 +178,21 @@ _TITLE_NOISE = frozenset({
     # Generation markers
     "mk1", "mk2", "mk3", "mk4", "mk5", "mk6", "mk7", "mk8", "mk9",
     "b5", "b6", "b7", "b8", "b9",
+    # Trim levels / spec lines
+    "comfort", "sport", "sportline", "highline", "trendline", "comfortline",
+    "elegance", "match", "life", "style", "edition", "plus", "basic",
+    "executive", "luxury", "premium", "base", "advanced",
+    # Performance / engine badges
+    "gti", "gtd", "gte", "gli", "tsi", "tdi", "tfsi", "fsi",
+    "r32", "vr6", "rs", "rline", "sline",
+    # Transmission / fuel
+    "dsg", "auto", "manual", "automatic", "petrol", "diesel", "hybrid", "electric",
+    # Body types
+    "estate", "saloon", "hatchback", "convertible", "coupe", "cabriolet", "sedan", "wagon", "van",
+    # Model additions
+    "cc", "up", "id3", "id4", "id5",
+    # Misc listing noise
+    "car", "vehicle", "brand", "lhd", "rhd", "uk", "euro", "type",
 })
 
 
@@ -218,7 +233,7 @@ def extract_description_from_titles(titles: list[str]) -> str | None:
     ngram_counts: Counter = Counter()
     for tokens in cleaned:
         seen: set = set()
-        for n in (3, 2):
+        for n in (3, 2, 1):
             for i in range(len(tokens) - n + 1):
                 gram = tuple(tokens[i : i + n])
                 if gram not in seen:
@@ -228,16 +243,26 @@ def extract_description_from_titles(titles: list[str]) -> str | None:
     if not ngram_counts:
         return None
 
-    # Require n-gram to appear in at least 1/3 of titles (min 1)
     min_support = max(1, len(cleaned) // 3)
-    candidates = [(gram, cnt) for gram, cnt in ngram_counts.items() if cnt >= min_support]
 
-    if not candidates:
-        candidates = list(ngram_counts.items())
+    # First try: multi-word n-grams (2+) that meet support threshold
+    multi_word = [(gram, cnt) for gram, cnt in ngram_counts.items()
+                  if cnt >= min_support and len(gram) >= 2]
+    if multi_word:
+        multi_word.sort(key=lambda x: (x[1], len(x[0])), reverse=True)
+        return " ".join(w.title() for w in multi_word[0][0])
 
-    # Sort: higher count first, then prefer longer n-grams on equal count
-    candidates.sort(key=lambda x: (x[1], len(x[0])), reverse=True)
-    return " ".join(w.title() for w in candidates[0][0])
+    # Second try: any n-gram meeting support (including 1-grams)
+    any_supported = [(gram, cnt) for gram, cnt in ngram_counts.items()
+                     if cnt >= min_support]
+    if any_supported:
+        any_supported.sort(key=lambda x: (x[1], len(x[0])), reverse=True)
+        return " ".join(w.title() for w in any_supported[0][0])
+
+    # Last resort: best of whatever we have
+    fallback = list(ngram_counts.items())
+    fallback.sort(key=lambda x: (x[1], len(x[0])), reverse=True)
+    return " ".join(w.title() for w in fallback[0][0])
 
 
 # ── CLAUDE API ───────────────────────────────────────────────────
