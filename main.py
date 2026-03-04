@@ -185,7 +185,7 @@ async def identify_with_claude(client: httpx.AsyncClient, part_number: str) -> s
             return None
         data = resp.json()
         text = data.get("content", [{}])[0].get("text", "").strip()
-        text = text.strip(".'\"").strip()
+        text = re.sub(r"[.\"']", "", text).strip()
         words = text.split()
         if len(words) > 6:
             text = " ".join(words[:5])
