@@ -245,24 +245,27 @@ def extract_description_from_titles(titles: list[str]) -> str | None:
 
     min_support = max(1, len(cleaned) // 3)
 
-    # First try: multi-word n-grams (2+) that meet support threshold
-    multi_word = [(gram, cnt) for gram, cnt in ngram_counts.items()
-                  if cnt >= min_support and len(gram) >= 2]
-    if multi_word:
-        multi_word.sort(key=lambda x: (x[1], len(x[0])), reverse=True)
-        return " ".join(w.title() for w in multi_word[0][0])
+    def best(items):
+        items.sort(key=lambda x: (x[1], len(x[0])), reverse=True)
+        return " ".join(w.title() for w in items[0][0])
 
-    # Second try: any n-gram meeting support (including 1-grams)
-    any_supported = [(gram, cnt) for gram, cnt in ngram_counts.items()
-                     if cnt >= min_support]
-    if any_supported:
-        any_supported.sort(key=lambda x: (x[1], len(x[0])), reverse=True)
-        return " ".join(w.title() for w in any_supported[0][0])
+    # 1. Multi-word (2+) meeting support threshold — ideal path
+    multi_supported = [(g, c) for g, c in ngram_counts.items() if c >= min_support and len(g) >= 2]
+    if multi_supported:
+        return best(multi_supported)
 
-    # Last resort: best of whatever we have
-    fallback = list(ngram_counts.items())
-    fallback.sort(key=lambda x: (x[1], len(x[0])), reverse=True)
-    return " ".join(w.title() for w in fallback[0][0])
+    # 2. Best multi-word regardless of support — always prefer 2+ words over a single word
+    all_multi = [(g, c) for g, c in ngram_counts.items() if len(g) >= 2]
+    if all_multi:
+        return best(all_multi)
+
+    # 3. Single-word fallback: only if it meets support threshold
+    uni_supported = [(g, c) for g, c in ngram_counts.items() if c >= min_support]
+    if uni_supported:
+        return best(uni_supported)
+
+    # 4. Absolute last resort
+    return best(list(ngram_counts.items()))
 
 
 # ── CLAUDE API ───────────────────────────────────────────────────
