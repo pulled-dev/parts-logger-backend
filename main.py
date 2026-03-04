@@ -150,6 +150,96 @@ def calculate_pricing(listings: list[dict]) -> dict:
     return {"avg_price": round(avg, 2), "low_price": trimmed[0], "high_price": trimmed[-1], "total_listings": len(prices)}
 
 
+# ── TITLE DESCRIPTION EXTRACTION ─────────────────────────────────
+
+# Words stripped from eBay listing titles before phrase extraction
+_TITLE_NOISE = frozenset({
+    # Brands
+    "vw", "volkswagen", "audi", "skoda", "seat", "cupra",
+    # Models
+    "golf", "polo", "passat", "tiguan", "touareg", "arteon", "phaeton",
+    "a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8", "q2", "q3", "q5", "q7", "q8",
+    "tt", "tts", "ttrs", "r8", "rs3", "rs4", "rs5", "rs6", "rs7",
+    "leon", "ibiza", "altea", "ateca", "formentor",
+    "octavia", "fabia", "yeti", "superb", "kodiaq", "karoq", "kamiq",
+    "caddy", "touran", "sharan", "t4", "t5", "t6", "transporter", "caravelle",
+    "beetle", "scirocco", "eos", "jetta", "bora", "lupo",
+    # Condition / quality
+    "genuine", "oem", "used", "tested", "good", "excellent", "perfect",
+    "clean", "original", "factory", "quality", "aftermarket", "pattern",
+    "working", "functional", "removed", "dismantled", "takeout", "pull",
+    # Market / listing boilerplate
+    "breaking", "breakers", "breaker", "sale", "spares", "repairs",
+    "free", "postage", "delivery", "shipping", "fits",
+    # Filler words
+    "the", "and", "or", "with", "to", "from", "of", "in", "on", "at",
+    "for", "by", "as", "is", "it", "its", "this", "that", "an", "a",
+    "no", "ref", "part", "number", "inc", "approx",
+    # Generation markers
+    "mk1", "mk2", "mk3", "mk4", "mk5", "mk6", "mk7", "mk8", "mk9",
+    "b5", "b6", "b7", "b8", "b9",
+})
+
+
+def _is_part_number_token(token: str) -> bool:
+    """True for alphanumeric tokens >= 5 chars that mix letters and digits (look like OEM part numbers)."""
+    return (
+        len(token) >= 5
+        and any(c.isdigit() for c in token)
+        and any(c.isalpha() for c in token)
+    )
+
+
+def extract_description_from_titles(titles: list[str]) -> str | None:
+    """Find the most common 2-3 word phrase across eBay listing titles after stripping noise."""
+    from collections import Counter
+
+    def clean(title: str) -> list[str]:
+        s = title.lower()
+        # Remove year ranges e.g. 2013-2020, 2015/20
+        s = re.sub(r"\b(19|20)\d{2}[-/](?:\d{2}|\d{4})\b", "", s)
+        # Remove standalone 4-digit years
+        s = re.sub(r"\b(19|20)\d{2}\b", "", s)
+        tokens = re.findall(r"\b[a-z0-9]+\b", s)
+        return [
+            t for t in tokens
+            if t.isalpha()
+            and len(t) >= 2
+            and t not in _TITLE_NOISE
+            and not _is_part_number_token(t)
+        ]
+
+    cleaned = [clean(t) for t in titles if t]
+    cleaned = [t for t in cleaned if t]  # drop empty lists
+
+    if not cleaned:
+        return None
+
+    ngram_counts: Counter = Counter()
+    for tokens in cleaned:
+        seen: set = set()
+        for n in (3, 2):
+            for i in range(len(tokens) - n + 1):
+                gram = tuple(tokens[i : i + n])
+                if gram not in seen:
+                    ngram_counts[gram] += 1
+                    seen.add(gram)
+
+    if not ngram_counts:
+        return None
+
+    # Require n-gram to appear in at least 1/3 of titles (min 1)
+    min_support = max(1, len(cleaned) // 3)
+    candidates = [(gram, cnt) for gram, cnt in ngram_counts.items() if cnt >= min_support]
+
+    if not candidates:
+        candidates = list(ngram_counts.items())
+
+    # Sort: higher count first, then prefer longer n-grams on equal count
+    candidates.sort(key=lambda x: (x[1], len(x[0])), reverse=True)
+    return " ".join(w.title() for w in candidates[0][0])
+
+
 # ── CLAUDE API ───────────────────────────────────────────────────
 
 async def identify_with_claude(client: httpx.AsyncClient, part_number: str) -> str | None:
@@ -241,33 +331,41 @@ async def lookup_part(req: LookupRequest):
                 source="claude", **pricing,
             )
 
-        # Part numbers -> Claude for description, eBay for pricing (parallel)
-        async def get_claude_desc():
-            return await identify_with_claude(client, clean)
+        # Step 1: search eBay
+        listings = []
+        try:
+            token = await get_ebay_token(client)
+            listings = await search_ebay(client, token, clean)
+        except Exception as e:
+            print(f"eBay lookup failed for {clean}: {e}")
 
-        async def get_ebay_pricing():
-            try:
-                token = await get_ebay_token(client)
-                listings = await search_ebay(client, token, clean)
-                if listings:
-                    return calculate_pricing(listings)
-            except Exception as e:
-                print(f"eBay lookup failed for {clean}: {e}")
-            return {"avg_price": None, "low_price": None, "high_price": None, "total_listings": 0}
+        if listings:
+            # Step 2: extract description from listing titles (primary source)
+            titles = [item.get("title", "") for item in listings if item.get("title")]
+            ebay_desc = extract_description_from_titles(titles)
+            pricing = calculate_pricing(listings)
 
-        claude_result, ebay_result = await asyncio.gather(
-            get_claude_desc(), get_ebay_pricing()
-        )
-
-        description = claude_result or "Unknown Part"
-        source = "claude"
-        pricing = ebay_result
-        if pricing.get("total_listings", 0) > 0:
-            source = "ebay+claude"
-
-        return LookupResponse(
-            part_number=clean, description=description, source=source, **pricing,
-        )
+            if ebay_desc:
+                # eBay titles gave us a clean description
+                return LookupResponse(
+                    part_number=clean, description=ebay_desc, source="ebay", **pricing,
+                )
+            else:
+                # Titles too noisy — fall back to Claude for description only
+                claude_desc = await identify_with_claude(client, clean)
+                return LookupResponse(
+                    part_number=clean,
+                    description=claude_desc or "Unknown Part",
+                    source="ebay+claude",
+                    **pricing,
+                )
+        else:
+            # Step 3: no eBay listings — Claude fallback for description, no pricing
+            desc = await identify_with_claude(client, clean)
+            return LookupResponse(
+                part_number=clean, description=desc or "Unknown Part",
+                source="claude", avg_price=None, low_price=None, high_price=None, total_listings=0,
+            )
 
 
 @app.post("/lookup/batch", response_model=list[LookupResponse])
