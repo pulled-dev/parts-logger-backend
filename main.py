@@ -23,6 +23,8 @@ USE_MOCK = not (EBAY_APP_ID and EBAY_CERT_ID)
 
 app = FastAPI(title="Pulled Apart Parts Logger API")
 
+# Deployment tracking: 2025-03-06 v3 (anthropic fix deployed)
+
 # Allow frontend to call this backend
 app.add_middleware(
     CORSMiddleware,
@@ -305,6 +307,8 @@ async def health():
         ebay_configured=bool(EBAY_APP_ID and EBAY_CERT_ID),
         claude_configured=bool(ANTHROPIC_API_KEY),
     )
+
+# Deployment version: 2025-03-06-v3 (anthropic package fix)
 
 
 @app.post("/lookup", response_model=LookupResponse)
