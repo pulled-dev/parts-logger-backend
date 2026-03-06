@@ -229,7 +229,7 @@ async def identify_with_claude(client: httpx.AsyncClient, part_number: str) -> s
                 "anthropic-version": "2023-06-01",
             },
             json={
-                "model": "claude-sonnet-4-20250929",
+                "model": "claude-3-5-sonnet-20241022",
                 "max_tokens": 80,
                 "messages": [{
                     "role": "user",
