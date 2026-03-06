@@ -3,4 +3,3 @@ uvicorn>=0.24.0
 httpx>=0.25.0
 pydantic>=2.5.0
 anthropic>=0.25.0
-anthropic>=0.20.0
