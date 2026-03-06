@@ -23,8 +23,6 @@ USE_MOCK = not (EBAY_APP_ID and EBAY_CERT_ID)
 
 app = FastAPI(title="Pulled Apart Parts Logger API")
 
-# Deployment tracking: 2025-03-06 v3 (anthropic fix deployed)
-
 # Allow frontend to call this backend
 app.add_middleware(
     CORSMiddleware,
@@ -219,23 +217,15 @@ def calculate_pricing(listings: list[dict]) -> dict:
 
 # ── CLAUDE API ───────────────────────────────────────────────────
 
-async def identify_with_claude(client: httpx.AsyncClient, part_number: str) -> str | None:
+async def identify_with_claude(part_number: str) -> str | None:
     """Identify a VAG part using Claude AI with breaker-yard context."""
-    print(f"DEBUG: ANTHROPIC_API_KEY present: {bool(ANTHROPIC_API_KEY)}")
-    if ANTHROPIC_API_KEY:
-        print(f"DEBUG: ANTHROPIC_API_KEY starts with: {ANTHROPIC_API_KEY[:8]}")
-    
     if not ANTHROPIC_API_KEY:
-        print(f"DEBUG: ANTHROPIC_API_KEY not set - returning None")
+        print("Claude API: ANTHROPIC_API_KEY not set")
         return None
     try:
-        # Use Anthropic SDK client
-        print(f"DEBUG: Creating Anthropic client for {part_number}")
-        sdk_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-        print(f"DEBUG: Anthropic client created successfully")
-        
-        message = sdk_client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+        sdk_client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
+        message = await sdk_client.messages.create(
+            model="claude-sonnet-4-20250514",
             max_tokens=80,
             messages=[
                 {
@@ -267,24 +257,16 @@ async def identify_with_claude(client: httpx.AsyncClient, part_number: str) -> s
                 }
             ],
         )
-        print(f"DEBUG: API call completed for {part_number}")
-        print(f"DEBUG: Message content type: {type(message.content)}, length: {len(message.content)}")
-        
         text = message.content[0].text.strip()
-        print(f"DEBUG: Raw text from API: '{text}'")
-        
         # Safe string cleaning: remove leading/trailing punctuation/whitespace
         text = re.sub(r'^[\s.\'"]+|[\s.\'"]+$', '', text)
-        
         # Limit to 6 words max
         words = text.split()
         if len(words) > 6:
             text = " ".join(words[:6])
-        
-        print(f"DEBUG: Claude returned for {part_number}: {text}")
         return text if text else None
     except Exception as e:
-        print(f"DEBUG: Claude API error for {part_number}: {type(e).__name__}: {str(e)}")
+        print(f"Claude API error: {type(e).__name__}: {e}")
         return None
 
 # ── HELPERS ──────────────────────────────────────────────────────
@@ -308,8 +290,6 @@ async def health():
         claude_configured=bool(ANTHROPIC_API_KEY),
     )
 
-# Deployment version: 2025-03-06-v3 (anthropic package fix)
-
 
 @app.post("/lookup", response_model=LookupResponse)
 async def lookup_part(req: LookupRequest):
@@ -328,14 +308,14 @@ async def lookup_part(req: LookupRequest):
     async with httpx.AsyncClient() as client:
         # Paint codes -> Claude only, skip eBay (they don't have market pricing)
         if is_paint_code(clean):
-            claude_desc = await identify_with_claude(client, clean)
+            claude_desc = await identify_with_claude(clean)
             return LookupResponse(
                 part_number=clean, description=claude_desc or "Paint Code",
                 source="claude", total_listings=0, confidence="none",
             )
 
         # Phase 1: Run Claude identification and eBay search IN PARALLEL for speed
-        claude_task = identify_with_claude(client, clean)
+        claude_task = identify_with_claude(clean)
         
         ebay_task = None
         try:
@@ -417,5 +397,3 @@ async def lookup_batch(parts: list[LookupRequest]):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
-# Deployment version: 2026-03-06 10:12:02
