@@ -11,6 +11,7 @@ import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import anthropic
 
 # ── CONFIG ───────────────────────────────────────────────────────
 EBAY_APP_ID = os.environ.get("EBAY_APP_ID", "")
@@ -219,19 +220,17 @@ def calculate_pricing(listings: list[dict]) -> dict:
 async def identify_with_claude(client: httpx.AsyncClient, part_number: str) -> str | None:
     """Identify a VAG part using Claude AI with breaker-yard context."""
     if not ANTHROPIC_API_KEY:
+        print(f"DEBUG: ANTHROPIC_API_KEY not set")
         return None
     try:
-        resp = await client.post(
-            "https://api.anthropic.com/v1/messages",
-            headers={
-                "x-api-key": ANTHROPIC_API_KEY,
-                "Content-Type": "application/json",
-                "anthropic-version": "2023-06-01",
-            },
-            json={
-                "model": "claude-3-5-sonnet-20241022",
-                "max_tokens": 80,
-                "messages": [{
+        # Use Anthropic SDK client
+        sdk_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        
+        message = sdk_client.messages.create(
+            model="claude-3-5-sonnet-20241022",
+            max_tokens=80,
+            messages=[
+                {
                     "role": "user",
                     "content": (
                         "You are a VAG Group (VW, Audi, SEAT, Skoda) parts identification specialist "
@@ -257,14 +256,11 @@ async def identify_with_claude(client: httpx.AsyncClient, part_number: str) -> s
                         "- 5E0 941 015 C → Headlight - Driver Side\n\n"
                         f"Part number: {part_number}"
                     ),
-                }],
-            },
-            timeout=15,
+                }
+            ],
         )
-        if resp.status_code != 200:
-            return None
-        data = resp.json()
-        text = data.get("content", [{}])[0].get("text", "").strip()
+        
+        text = message.content[0].text.strip()
         
         # Safe string cleaning: remove leading/trailing punctuation/whitespace
         text = re.sub(r'^[\s.\'"]+|[\s.\'"]+$', '', text)
@@ -274,8 +270,10 @@ async def identify_with_claude(client: httpx.AsyncClient, part_number: str) -> s
         if len(words) > 6:
             text = " ".join(words[:6])
         
+        print(f"DEBUG: Claude returned for {part_number}: {text}")
         return text if text else None
-    except Exception:
+    except Exception as e:
+        print(f"DEBUG: Claude API error for {part_number}: {type(e).__name__}: {str(e)}")
         return None
 
 # ── HELPERS ──────────────────────────────────────────────────────
