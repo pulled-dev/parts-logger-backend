@@ -219,12 +219,18 @@ def calculate_pricing(listings: list[dict]) -> dict:
 
 async def identify_with_claude(client: httpx.AsyncClient, part_number: str) -> str | None:
     """Identify a VAG part using Claude AI with breaker-yard context."""
+    print(f"DEBUG: ANTHROPIC_API_KEY present: {bool(ANTHROPIC_API_KEY)}")
+    if ANTHROPIC_API_KEY:
+        print(f"DEBUG: ANTHROPIC_API_KEY starts with: {ANTHROPIC_API_KEY[:8]}")
+    
     if not ANTHROPIC_API_KEY:
-        print(f"DEBUG: ANTHROPIC_API_KEY not set")
+        print(f"DEBUG: ANTHROPIC_API_KEY not set - returning None")
         return None
     try:
         # Use Anthropic SDK client
+        print(f"DEBUG: Creating Anthropic client for {part_number}")
         sdk_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        print(f"DEBUG: Anthropic client created successfully")
         
         message = sdk_client.messages.create(
             model="claude-3-5-sonnet-20241022",
@@ -259,8 +265,11 @@ async def identify_with_claude(client: httpx.AsyncClient, part_number: str) -> s
                 }
             ],
         )
+        print(f"DEBUG: API call completed for {part_number}")
+        print(f"DEBUG: Message content type: {type(message.content)}, length: {len(message.content)}")
         
         text = message.content[0].text.strip()
+        print(f"DEBUG: Raw text from API: '{text}'")
         
         # Safe string cleaning: remove leading/trailing punctuation/whitespace
         text = re.sub(r'^[\s.\'"]+|[\s.\'"]+$', '', text)
