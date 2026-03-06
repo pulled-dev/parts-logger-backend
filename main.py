@@ -406,3 +406,5 @@ async def lookup_batch(parts: list[LookupRequest]):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+# Deployment version: 2026-03-06 10:12:02
