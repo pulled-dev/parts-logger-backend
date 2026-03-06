@@ -743,7 +743,6 @@ async function addPart() {
       your_price:  d.suggested_price != null ? d.suggested_price : (d.avg_price != null ? d.avg_price : null),
     });
     pnInput.value = '';
-    refInput.value = '';
     render();
     updateStats();
     pnInput.focus();
