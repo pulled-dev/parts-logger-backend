@@ -277,6 +277,20 @@
     .tag-paint  { background: rgba(234,179,8,0.12);   color: #fbbf24; border: 1px solid rgba(234,179,8,0.25); }
     .tag-mock   { background: rgba(156,163,175,0.1);  color: #9ca3af; border: 1px solid rgba(156,163,175,0.2); }
 
+    .confidence-badge {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      padding: 2px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .confidence-badge.high    { background: rgba(34,197,94,0.12);     color: #22c55e; border: 1px solid rgba(34,197,94,0.25); }
+    .confidence-badge.medium  { background: rgba(234,179,8,0.12);     color: #fbbf24; border: 1px solid rgba(234,179,8,0.25); }
+    .confidence-badge.low     { background: rgba(239,68,68,0.12);    color: #ef4444; border: 1px solid rgba(239,68,68,0.25); }
+    .confidence-badge.none    { background: rgba(156,163,175,0.1);    color: #9ca3af; border: 1px solid rgba(156,163,175,0.2); }
+
     .card-pricing {
       display: flex;
       align-items: center;
@@ -299,7 +313,7 @@
       font-size: 13px;
       color: var(--text);
     }
-    .price-val.avg { color: var(--green); }
+    .price-val.suggested { color: var(--green); font-weight: 600; }
 
     .listing-ct {
       font-size: 10px;
@@ -313,6 +327,20 @@
       color: var(--dim);
       font-style: italic;
     }
+
+    .card-details {
+      display: none;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .card-details.open { display: flex; }
+    .detail-row { display: flex; justify-content: space-between; align-items: center; }
+    .detail-label { color: var(--dim); }
+    .detail-value { font-family: var(--mono); color: var(--text); }
 
     .your-price-row {
       display: flex;
@@ -704,12 +732,15 @@ async function addPart() {
       part_number: d.part_number,
       description: d.description,
       avg_price:   d.avg_price,
+      median_price: d.median_price,
       low_price:   d.low_price,
       high_price:  d.high_price,
+      suggested_price: d.suggested_price,
       total_listings: d.total_listings,
+      confidence: d.confidence,
       source:      d.source,
       vehicle_ref: ref,
-      your_price:  d.avg_price != null ? d.avg_price : null,
+      your_price:  d.suggested_price != null ? d.suggested_price : (d.avg_price != null ? d.avg_price : null),
     });
     pnInput.value = '';
     refInput.value = '';
@@ -717,7 +748,7 @@ async function addPart() {
     updateStats();
     pnInput.focus();
   } catch (err) {
-    toast('\u26a0 ' + err.message);
+    toast('⚠ ' + err.message);
   } finally {
     addBtn.disabled = false;
     addBtn.classList.remove('loading');
@@ -746,6 +777,11 @@ function sourceTags(src) {
   return t.join('');
 }
 
+function confidenceBadge(conf) {
+  if (!conf || conf === 'none') return '';
+  return `<span class="confidence-badge ${conf}">${conf.toUpperCase()}</span>`;
+}
+
 // ── Render ───────────────────────────────────────────────────────────────────
 function render() {
   const hasParts = parts.length > 0;
@@ -761,12 +797,14 @@ function render() {
 
     const pricingHtml = hasPricing
       ? `<div class="price-grid">
-           <div class="price-cell"><div class="price-lbl">Avg</div><div class="price-val avg">${fmt(p.avg_price)}</div></div>
+           <div class="price-cell"><div class="price-lbl">Suggested</div><div class="price-val suggested">${fmt(p.suggested_price)}</div></div>
+           <div class="price-cell"><div class="price-lbl">Avg</div><div class="price-val">${fmt(p.avg_price)}</div></div>
+           <div class="price-cell"><div class="price-lbl">Median</div><div class="price-val">${fmt(p.median_price)}</div></div>
            <div class="price-cell"><div class="price-lbl">Low</div><div class="price-val">${fmt(p.low_price)}</div></div>
            <div class="price-cell"><div class="price-lbl">High</div><div class="price-val">${fmt(p.high_price)}</div></div>
          </div>
          <div class="listing-ct">${p.total_listings} listing${p.total_listings !== 1 ? 's' : ''}</div>`
-      : `<div class="no-price">${isPaint ? 'Paint code \u2014 no market pricing' : 'No pricing data'}</div>`;
+      : `<div class="no-price">${isPaint ? 'Paint code — no market pricing' : 'No pricing data'}</div>`;
 
     const ypVal = p.your_price != null ? Number(p.your_price).toFixed(2) : '';
 
@@ -774,20 +812,23 @@ function render() {
     div.className = 'card';
     div.dataset.id = p.id;
     div.innerHTML = `
-      <button class="remove-btn" data-rm="${p.id}" title="Remove">\u2715</button>
+      <button class="remove-btn" data-rm="${p.id}" title="Remove">×</button>
       <div class="card-top">
         <div class="card-id">
           <div class="card-pn">${esc(p.part_number)}</div>
           ${p.vehicle_ref ? `<div class="card-ref">${esc(p.vehicle_ref)}</div>` : ''}
           <div class="card-desc">${esc(p.description)}</div>
         </div>
-        <div class="card-tags">${sourceTags(p.source)}</div>
+        <div class="card-tags">
+          ${sourceTags(p.source)}
+          ${confidenceBadge(p.confidence)}
+        </div>
       </div>
       <div class="card-pricing">${pricingHtml}</div>
       <div class="your-price-row">
         <span class="yp-label">Your price</span>
-        <input type="text" class="yp-input" data-yp="${p.id}" placeholder="\u00a30.00" value="${esc(ypVal)}">
-        ${hasPricing ? `<span class="yp-hint">Suggested: ${fmt(p.avg_price)}</span>` : ''}
+        <input type="text" class="yp-input" data-yp="${p.id}" placeholder="£0.00" value="${esc(ypVal)}">
+        ${hasPricing ? `<span class="yp-hint">Suggested: ${fmt(p.suggested_price)}</span>` : ''}
       </div>`;
     partsList.appendChild(div);
   });
@@ -825,7 +866,7 @@ function updateStats() {
   const total  = parts.reduce((a, p) => a + (p.your_price || 0), 0);
   sTotal.textContent  = parts.length;
   sPriced.textContent = priced.length;
-  sValue.textContent  = '\u00a3' + total.toFixed(2);
+  sValue.textContent  = '£' + total.toFixed(2);
 }
 
 // ── Export CSV ────────────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 """
 Pulled Apart — Parts Logger Backend
-FastAPI server that handles eBay Browse API lookups and Claude AI fallback.
+FastAPI server that handles eBay Browse API lookups and Claude AI identification.
 Keeps API keys secure on the server side.
 """
 
@@ -41,9 +41,12 @@ class LookupResponse(BaseModel):
     part_number: str
     description: str
     avg_price: float | None = None
+    median_price: float | None = None
     low_price: float | None = None
     high_price: float | None = None
+    suggested_price: float | None = None
     total_listings: int = 0
+    confidence: str = "none"  # high/medium/low/none
     source: str = "none"
 
 class HealthResponse(BaseModel):
@@ -71,10 +74,14 @@ def mock_lookup(part_number: str) -> LookupResponse:
     clean = part_number.strip().upper().replace(" ", "")
     if clean in MOCK_DATA:
         d = MOCK_DATA[clean]
+        avg_price = d["avg"]
+        suggested = round(avg_price * 0.875, 2)  # 12.5% below average
         return LookupResponse(
             part_number=clean, description=d["description"],
-            avg_price=d["avg"], low_price=d["low"], high_price=d["high"],
-            total_listings=d["count"], source="mock",
+            avg_price=avg_price, median_price=avg_price,
+            low_price=d["low"], high_price=d["high"],
+            suggested_price=suggested,
+            total_listings=d["count"], confidence="high", source="mock",
         )
     if clean == "N/A" or clean == "":
         return LookupResponse(part_number=clean, description="—", source="mock")
@@ -82,12 +89,15 @@ def mock_lookup(part_number: str) -> LookupResponse:
     descs = ["Control Module", "Relay Unit", "Sensor Assembly", "Switch Unit",
              "Bracket Mount", "Cover Panel", "Trim Piece", "Wiring Loom"]
     base = 15 + (hash_val % 60)
+    suggested = round(base * 0.875, 2)
     return LookupResponse(
         part_number=clean, description=descs[hash_val % len(descs)],
-        avg_price=float(base), low_price=round(base * 0.6, 2),
-        high_price=round(base * 1.4, 2), total_listings=3 + (hash_val % 20), source="mock",
+        avg_price=float(base), median_price=float(base),
+        low_price=round(base * 0.6, 2),
+        high_price=round(base * 1.4, 2),
+        suggested_price=suggested,
+        total_listings=3 + (hash_val % 20), confidence="medium", source="mock",
     )
-
 
 # ── EBAY API ─────────────────────────────────────────────────────
 
@@ -114,6 +124,7 @@ async def get_ebay_token(client: httpx.AsyncClient) -> str:
 
 
 async def search_ebay(client: httpx.AsyncClient, token: str, query: str) -> list[dict]:
+    """Search eBay by part number (exact match preferred) then by description."""
     resp = await client.get(
         "https://api.ebay.com/buy/browse/v1/item_summary/search",
         headers={
@@ -130,6 +141,13 @@ async def search_ebay(client: httpx.AsyncClient, token: str, query: str) -> list
 
 
 def calculate_pricing(listings: list[dict]) -> dict:
+    """
+    Extract pricing from eBay listings. 
+    - Remove top/bottom 20% as outliers (if 5+ listings)
+    - Calculate avg, median, low, high
+    - Add confidence level based on listing count
+    - Calculate suggested price (10-15% below average for competitive pricing)
+    """
     prices = []
     for item in listings:
         try:
@@ -140,137 +158,66 @@ def calculate_pricing(listings: list[dict]) -> dict:
                 prices.append(price)
         except (ValueError, TypeError):
             continue
+    
     if not prices:
-        return {"avg_price": None, "low_price": None, "high_price": None, "total_listings": 0}
+        return {
+            "avg_price": None, "median_price": None, "low_price": None, 
+            "high_price": None, "suggested_price": None, "confidence": "none", 
+            "total_listings": 0
+        }
+    
     prices.sort()
-    trim_start = max(1, int(len(prices) * 0.1))
-    trim_end = max(trim_start + 1, int(len(prices) * 0.9))
-    trimmed = prices[trim_start:trim_end] if len(prices) > 4 else prices
-    avg = sum(trimmed) / len(trimmed)
-    return {"avg_price": round(avg, 2), "low_price": trimmed[0], "high_price": trimmed[-1], "total_listings": len(prices)}
-
-
-# ── TITLE DESCRIPTION EXTRACTION ─────────────────────────────────
-
-# Words stripped from eBay listing titles before phrase extraction
-_TITLE_NOISE = frozenset({
-    # Brands
-    "vw", "volkswagen", "audi", "skoda", "seat", "cupra",
-    # Models
-    "golf", "polo", "passat", "tiguan", "touareg", "arteon", "phaeton",
-    "a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8", "q2", "q3", "q5", "q7", "q8",
-    "tt", "tts", "ttrs", "r8", "rs3", "rs4", "rs5", "rs6", "rs7",
-    "leon", "ibiza", "altea", "ateca", "formentor",
-    "octavia", "fabia", "yeti", "superb", "kodiaq", "karoq", "kamiq",
-    "caddy", "touran", "sharan", "t4", "t5", "t6", "transporter", "caravelle",
-    "beetle", "scirocco", "eos", "jetta", "bora", "lupo",
-    # Condition / quality
-    "genuine", "oem", "used", "tested", "good", "excellent", "perfect",
-    "clean", "original", "factory", "quality", "aftermarket", "pattern",
-    "working", "functional", "removed", "dismantled", "takeout", "pull",
-    # Market / listing boilerplate
-    "breaking", "breakers", "breaker", "sale", "spares", "repairs",
-    "free", "postage", "delivery", "shipping", "fits",
-    # Filler words
-    "the", "and", "or", "with", "to", "from", "of", "in", "on", "at",
-    "for", "by", "as", "is", "it", "its", "this", "that", "an", "a",
-    "no", "ref", "part", "number", "inc", "approx",
-    # Generation markers
-    "mk1", "mk2", "mk3", "mk4", "mk5", "mk6", "mk7", "mk8", "mk9",
-    "b5", "b6", "b7", "b8", "b9",
-    # Trim levels / spec lines
-    "comfort", "sport", "sportline", "highline", "trendline", "comfortline",
-    "elegance", "match", "life", "style", "edition", "plus", "basic",
-    "executive", "luxury", "premium", "base", "advanced",
-    # Performance / engine badges
-    "gti", "gtd", "gte", "gli", "tsi", "tdi", "tfsi", "fsi",
-    "r32", "vr6", "rs", "rline", "sline",
-    # Transmission / fuel
-    "dsg", "auto", "manual", "automatic", "petrol", "diesel", "hybrid", "electric",
-    # Body types
-    "estate", "saloon", "hatchback", "convertible", "coupe", "cabriolet", "sedan", "wagon", "van",
-    # Model additions
-    "cc", "up", "id3", "id4", "id5",
-    # Misc listing noise
-    "car", "vehicle", "brand", "lhd", "rhd", "uk", "euro", "type",
-})
-
-
-def _is_part_number_token(token: str) -> bool:
-    """True for alphanumeric tokens >= 5 chars that mix letters and digits (look like OEM part numbers)."""
-    return (
-        len(token) >= 5
-        and any(c.isdigit() for c in token)
-        and any(c.isalpha() for c in token)
+    total = len(prices)
+    
+    # Confidence level based on number of listings
+    if total >= 10:
+        confidence = "high"
+    elif total >= 5:
+        confidence = "medium"
+    elif total >= 1:
+        confidence = "low"
+    else:
+        confidence = "none"
+    
+    # Remove outliers: top/bottom 20% if 5+ items, otherwise use all
+    if total >= 5:
+        trim_start = max(1, int(total * 0.2))
+        trim_end = max(trim_start + 1, int(total * 0.8))
+        trimmed = prices[trim_start:trim_end]
+    else:
+        trimmed = prices
+    
+    # Calculate statistics
+    low_price = trimmed[0]
+    high_price = trimmed[-1]
+    avg_price = sum(trimmed) / len(trimmed)
+    
+    # Median from trimmed prices
+    sorted_trimmed = sorted(trimmed)
+    mid = len(sorted_trimmed) // 2
+    median_price = (
+        sorted_trimmed[mid] if len(sorted_trimmed) % 2 == 1
+        else (sorted_trimmed[mid - 1] + sorted_trimmed[mid]) / 2
     )
-
-
-def extract_description_from_titles(titles: list[str]) -> str | None:
-    """Find the most common 2-3 word phrase across eBay listing titles after stripping noise."""
-    from collections import Counter
-
-    def clean(title: str) -> list[str]:
-        s = title.lower()
-        # Remove year ranges e.g. 2013-2020, 2015/20
-        s = re.sub(r"\b(19|20)\d{2}[-/](?:\d{2}|\d{4})\b", "", s)
-        # Remove standalone 4-digit years
-        s = re.sub(r"\b(19|20)\d{2}\b", "", s)
-        tokens = re.findall(r"\b[a-z0-9]+\b", s)
-        return [
-            t for t in tokens
-            if t.isalpha()
-            and len(t) >= 2
-            and t not in _TITLE_NOISE
-            and not _is_part_number_token(t)
-        ]
-
-    cleaned = [clean(t) for t in titles if t]
-    cleaned = [t for t in cleaned if t]  # drop empty lists
-
-    if not cleaned:
-        return None
-
-    ngram_counts: Counter = Counter()
-    for tokens in cleaned:
-        seen: set = set()
-        for n in (3, 2, 1):
-            for i in range(len(tokens) - n + 1):
-                gram = tuple(tokens[i : i + n])
-                if gram not in seen:
-                    ngram_counts[gram] += 1
-                    seen.add(gram)
-
-    if not ngram_counts:
-        return None
-
-    min_support = max(1, len(cleaned) // 3)
-
-    def best(items):
-        items.sort(key=lambda x: (x[1], len(x[0])), reverse=True)
-        return " ".join(w.title() for w in items[0][0])
-
-    # 1. Multi-word (2+) meeting support threshold — ideal path
-    multi_supported = [(g, c) for g, c in ngram_counts.items() if c >= min_support and len(g) >= 2]
-    if multi_supported:
-        return best(multi_supported)
-
-    # 2. Best multi-word regardless of support — always prefer 2+ words over a single word
-    all_multi = [(g, c) for g, c in ngram_counts.items() if len(g) >= 2]
-    if all_multi:
-        return best(all_multi)
-
-    # 3. Single-word fallback: only if it meets support threshold
-    uni_supported = [(g, c) for g, c in ngram_counts.items() if c >= min_support]
-    if uni_supported:
-        return best(uni_supported)
-
-    # 4. Absolute last resort
-    return best(list(ngram_counts.items()))
-
+    
+    # Suggested price: 10-15% below average for competitive turnover
+    # Using 12.5% as middle ground
+    suggested_price = round(avg_price * 0.875, 2)
+    
+    return {
+        "avg_price": round(avg_price, 2),
+        "median_price": round(median_price, 2),
+        "low_price": round(low_price, 2),
+        "high_price": round(high_price, 2),
+        "suggested_price": suggested_price,
+        "confidence": confidence,
+        "total_listings": total
+    }
 
 # ── CLAUDE API ───────────────────────────────────────────────────
 
 async def identify_with_claude(client: httpx.AsyncClient, part_number: str) -> str | None:
+    """Identify a VAG part using Claude AI with breaker-yard context."""
     if not ANTHROPIC_API_KEY:
         return None
     try:
@@ -282,18 +229,33 @@ async def identify_with_claude(client: httpx.AsyncClient, part_number: str) -> s
                 "anthropic-version": "2023-06-01",
             },
             json={
-                "model": "claude-sonnet-4-20250514",
-                "max_tokens": 60,
+                "model": "claude-sonnet-4-20250929",
+                "max_tokens": 80,
                 "messages": [{
                     "role": "user",
                     "content": (
-                        "You are a VAG vehicle parts expert working in a UK breakers yard. "
-                        "Given this part number or paint code, respond with ONLY the short "
-                        "breaker-style description (2-5 words max). No explanation. No punctuation. "
-                        "Examples: Electric Handbrake Switch, Window Motor NSF, Bonnet Cable, "
-                        "Deep Black Pearl Paint, Steering Angle Sensor, Wiper Stalk, BCM Module, "
-                        "Accelerator Pedal, Slip Ring, Speedo Cluster.\n\n"
-                        f"Part number/code: {part_number}"
+                        "You are a VAG Group (VW, Audi, SEAT, Skoda) parts identification specialist "
+                        "working in a vehicle dismantling yard.\n\n"
+                        "Given a VAG OEM part number, return ONLY a short breaker-style description "
+                        "(2-6 words max). Include SIDE where applicable (Driver/Passenger, Nearside/Offside, "
+                        "Front/Rear). Be SPECIFIC about component type.\n\n"
+                        "Rules:\n"
+                        "- Be SPECIFIC: 'Window Regulator Control Module' not 'Control Module'\n"
+                        "- Include SIDE: '- Driver Side' or '- Passenger Side' when the part number indicates it\n"
+                        "- Include POSITION: Front, Rear, Upper, Lower when relevant\n"
+                        "- Use industry-standard breaker terminology\n"
+                        "- For N/A or empty codes: return '—'\n"
+                        "- Return ONLY the description. No quotes, no explanation, no part number.\n\n"
+                        "Examples:\n"
+                        "- 5G0927225D → Electric Handbrake Switch\n"
+                        "- 8P4 857 706 D → Seatbelt Pretensioner - Driver Side\n"
+                        "- 8P0 959 802 E → Electric Window Motor - Rear Passenger Side\n"
+                        "- 1K0 907 719 C → Steering Column Lock Module\n"
+                        "- 8P0 959 655 L → Window Regulator Control Module\n"
+                        "- 4F2 837 015 → Door Lock Mechanism - Driver Side\n"
+                        "- 1K0 820 808 B → Heater Blower Motor\n"
+                        "- 5E0 941 015 C → Headlight - Driver Side\n\n"
+                        f"Part number: {part_number}"
                     ),
                 }],
             },
@@ -303,24 +265,28 @@ async def identify_with_claude(client: httpx.AsyncClient, part_number: str) -> s
             return None
         data = resp.json()
         text = data.get("content", [{}])[0].get("text", "").strip()
-        text = re.sub(r"[.\"']", "", text).strip()
+        
+        # Safe string cleaning: remove leading/trailing punctuation/whitespace
+        text = re.sub(r'^[\s.\'"]+|[\s.\'"]+$', '', text)
+        
+        # Limit to 6 words max
         words = text.split()
         if len(words) > 6:
-            text = " ".join(words[:5])
+            text = " ".join(words[:6])
+        
         return text if text else None
     except Exception:
         return None
 
-
 # ── HELPERS ──────────────────────────────────────────────────────
 
 def is_paint_code(code: str) -> bool:
+    """Check if a code looks like a VAG paint code (e.g., LC9X, LB9A)."""
     if re.match(r'^L[A-Z][0-9][A-Z0-9]$', code):
         return True
-    if re.match(r'^[A-Z][0-9][A-Z0-9]$', code):
+    if re.match(r'^[A-Z][0-9][A-Z0-9]{2}$', code):
         return True
     return False
-
 
 # ── ENDPOINTS ────────────────────────────────────────────────────
 
@@ -345,55 +311,80 @@ async def lookup_part(req: LookupRequest):
 
     clean = part_number.upper().replace(" ", "")
 
-    if clean == "N/A":
+    if clean == "N/A" or clean == "":
         return LookupResponse(part_number=clean, description="—", source="none")
 
     async with httpx.AsyncClient() as client:
-        pricing = {"avg_price": None, "low_price": None, "high_price": None, "total_listings": 0}
-
-        # Paint codes -> Claude only, skip eBay
+        # Paint codes -> Claude only, skip eBay (they don't have market pricing)
         if is_paint_code(clean):
             claude_desc = await identify_with_claude(client, clean)
             return LookupResponse(
                 part_number=clean, description=claude_desc or "Paint Code",
-                source="claude", **pricing,
+                source="claude", total_listings=0, confidence="none",
             )
 
-        # Step 1: search eBay
-        listings = []
+        # Phase 1: Run Claude identification and eBay search IN PARALLEL for speed
+        claude_task = identify_with_claude(client, clean)
+        
+        ebay_task = None
         try:
             token = await get_ebay_token(client)
-            listings = await search_ebay(client, token, clean)
+            # eBay search using the RAW PART NUMBER (no description needed)
+            ebay_task = search_ebay(client, token, clean)
         except Exception as e:
-            print(f"eBay lookup failed for {clean}: {e}")
-
+            print(f"eBay init failed for {clean}: {e}")
+        
+        # Wait for both to complete
+        claude_desc, listings = await asyncio.gather(
+            claude_task,
+            ebay_task if ebay_task else asyncio.sleep(0, result=[]),
+        )
+        
+        # Phase 2: Use Claude description (always), and eBay for pricing only
+        description = claude_desc or "Unknown Part"
+        
+        # If we got listings from part number search, calculate pricing
         if listings:
-            # Step 2: extract description from listing titles (primary source)
-            titles = [item.get("title", "") for item in listings if item.get("title")]
-            ebay_desc = extract_description_from_titles(titles)
             pricing = calculate_pricing(listings)
-
-            if ebay_desc:
-                # eBay titles gave us a clean description
-                return LookupResponse(
-                    part_number=clean, description=ebay_desc, source="ebay", **pricing,
-                )
-            else:
-                # Titles too noisy — fall back to Claude for description only
-                claude_desc = await identify_with_claude(client, clean)
-                return LookupResponse(
-                    part_number=clean,
-                    description=claude_desc or "Unknown Part",
-                    source="ebay+claude",
-                    **pricing,
-                )
+            source = "claude+ebay"
         else:
-            # Step 3: no eBay listings — Claude fallback for description, no pricing
-            desc = await identify_with_claude(client, clean)
-            return LookupResponse(
-                part_number=clean, description=desc or "Unknown Part",
-                source="claude", avg_price=None, low_price=None, high_price=None, total_listings=0,
-            )
+            # No eBay listings from part number search
+            # Try a broader search with description + VAG terms
+            if claude_desc:
+                try:
+                    broader_query = f"{claude_desc} VAG"
+                    listings = await search_ebay(client, token, broader_query)
+                    if listings:
+                        pricing = calculate_pricing(listings)
+                        source = "claude+ebay"
+                    else:
+                        pricing = {
+                            "avg_price": None, "median_price": None, "low_price": None,
+                            "high_price": None, "suggested_price": None, "confidence": "none",
+                            "total_listings": 0
+                        }
+                        source = "claude"
+                except Exception:
+                    pricing = {
+                        "avg_price": None, "median_price": None, "low_price": None,
+                        "high_price": None, "suggested_price": None, "confidence": "none",
+                        "total_listings": 0
+                    }
+                    source = "claude"
+            else:
+                pricing = {
+                    "avg_price": None, "median_price": None, "low_price": None,
+                    "high_price": None, "suggested_price": None, "confidence": "none",
+                    "total_listings": 0
+                }
+                source = "none"
+        
+        return LookupResponse(
+            part_number=clean,
+            description=description,
+            source=source,
+            **pricing,
+        )
 
 
 @app.post("/lookup/batch", response_model=list[LookupResponse])
@@ -406,7 +397,9 @@ async def lookup_batch(parts: list[LookupRequest]):
             result = await lookup_part(part)
             results.append(result)
         except Exception:
-            results.append(LookupResponse(part_number=part.part_number, description="Lookup Failed", source="none"))
+            results.append(LookupResponse(
+                part_number=part.part_number, description="Lookup Failed", source="none"
+            ))
     return results
 
 
