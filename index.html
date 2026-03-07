@@ -255,11 +255,7 @@
       color: var(--dim);
       margin-top: 1px;
     }
-    .card-desc {
-      font-size: 13px;
-      color: var(--text);
-      margin-top: 4px;
-    }
+    /* .card-desc defined below with editable styles */
 
     .card-tags { display: flex; gap: 4px; flex-wrap: wrap; flex-shrink: 0; margin-top: 1px; }
 
@@ -272,10 +268,30 @@
       border-radius: 4px;
       white-space: nowrap;
     }
-    .tag-ebay   { background: rgba(59,130,246,0.12);  color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); }
-    .tag-claude { background: rgba(168,85,247,0.12);  color: #c084fc; border: 1px solid rgba(168,85,247,0.25); }
-    .tag-paint  { background: rgba(234,179,8,0.12);   color: #fbbf24; border: 1px solid rgba(234,179,8,0.25); }
-    .tag-mock   { background: rgba(156,163,175,0.1);  color: #9ca3af; border: 1px solid rgba(156,163,175,0.2); }
+    .tag-ebay     { background: rgba(59,130,246,0.12);  color: #60a5fa; border: 1px solid rgba(59,130,246,0.25); }
+    .tag-claude   { background: rgba(168,85,247,0.12);  color: #c084fc; border: 1px solid rgba(168,85,247,0.25); }
+    .tag-paint    { background: rgba(234,179,8,0.12);   color: #fbbf24; border: 1px solid rgba(234,179,8,0.25); }
+    .tag-mock     { background: rgba(156,163,175,0.1);  color: #9ca3af; border: 1px solid rgba(156,163,175,0.2); }
+    .tag-database { background: rgba(34,197,94,0.12);   color: #22c55e; border: 1px solid rgba(34,197,94,0.25); }
+    .tag-learned  { background: rgba(234,179,8,0.12);   color: #fbbf24; border: 1px solid rgba(234,179,8,0.25); }
+
+    /* Editable description */
+    .card-desc {
+      font-size: 13px; color: var(--text); margin-top: 4px;
+      cursor: pointer; border-bottom: 1px dashed transparent; transition: border-color 0.15s;
+      display: inline-block; max-width: 100%;
+    }
+    .card-desc:hover { border-bottom-color: var(--dim); }
+    .card-desc-input {
+      width: 100%; background: var(--bg); border: 1px solid var(--accent);
+      border-radius: 4px; color: var(--text); font-size: 13px;
+      padding: 4px 8px; font-family: var(--sans); margin-top: 4px;
+    }
+    .save-flash { font-size: 10px; color: var(--green); margin-left: 6px; }
+
+    /* BreakerPro historical price */
+    .bp-price { font-size: 11px; color: var(--muted); }
+    .bp-price strong { color: #94a3b8; font-weight: 600; }
 
     .confidence-badge {
       font-size: 9px;
@@ -727,20 +743,26 @@ async function addPart() {
 
   try {
     const d = await lookup(pn);
+    // Pre-fill your_price: BreakerPro historical price first, then eBay suggested
+    const prefill = d.breakerpro_price != null ? d.breakerpro_price
+                  : d.suggested_price  != null ? d.suggested_price
+                  : d.avg_price        != null ? d.avg_price
+                  : null;
     parts.unshift({
-      id:          Date.now(),
-      part_number: d.part_number,
-      description: d.description,
-      avg_price:   d.avg_price,
-      median_price: d.median_price,
-      low_price:   d.low_price,
-      high_price:  d.high_price,
+      id:              Date.now(),
+      part_number:     d.part_number,
+      description:     d.description,
+      avg_price:       d.avg_price,
+      median_price:    d.median_price,
+      low_price:       d.low_price,
+      high_price:      d.high_price,
       suggested_price: d.suggested_price,
-      total_listings: d.total_listings,
-      confidence: d.confidence,
-      source:      d.source,
-      vehicle_ref: ref,
-      your_price:  d.suggested_price != null ? d.suggested_price : (d.avg_price != null ? d.avg_price : null),
+      total_listings:  d.total_listings,
+      confidence:      d.confidence,
+      source:          d.source,
+      breakerpro_price: d.breakerpro_price || null,
+      vehicle_ref:     ref,
+      your_price:      prefill,
     });
     pnInput.value = '';
     render();
@@ -770,15 +792,80 @@ function fmt(v) { return v == null ? '&mdash;' : '&pound;' + Number(v).toFixed(2
 function sourceTags(src) {
   if (!src || src === 'none') return '';
   const t = [];
+  const primary = src.split('+')[0];
+  if (primary === 'database') t.push('<span class="tag tag-database">DB</span>');
+  else if (primary === 'learned') t.push('<span class="tag tag-learned">AI</span>');
+  else if (src.includes('claude')) t.push('<span class="tag tag-claude">AI</span>');
   if (src.includes('ebay'))   t.push('<span class="tag tag-ebay">eBay</span>');
-  if (src.includes('claude')) t.push('<span class="tag tag-claude">Claude</span>');
-  if (src === 'mock')         t.push('<span class="tag tag-mock">Mock</span>');
+  if (src === 'mock')         t.push('<span class="tag tag-mock">Demo</span>');
   return t.join('');
 }
 
 function confidenceBadge(conf) {
   if (!conf || conf === 'none') return '';
   return `<span class="confidence-badge ${conf}">${conf.toUpperCase()}</span>`;
+}
+
+// ── Editable description ─────────────────────────────────────────────────────
+async function sendCorrection(partNumber, newDesc, price) {
+  if (!cfg.url) return;
+  try {
+    await fetch(cfg.url + '/db-correct', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        part_number: partNumber,
+        corrected_description: newDesc,
+        price: price != null ? parseFloat(price) : null,
+      }),
+    });
+  } catch(e) {
+    console.warn('db-correct failed:', e);
+  }
+}
+
+function startEditDesc(partId) {
+  const p = parts.find(x => x.id === partId);
+  if (!p) return;
+  const card = partsList.querySelector(`[data-id="${partId}"]`);
+  if (!card) return;
+  const descEl = card.querySelector('.card-desc');
+  if (!descEl) return;
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'card-desc-input';
+  input.value = p.description;
+  descEl.replaceWith(input);
+  input.focus();
+  input.select();
+
+  async function finish() {
+    const newDesc = input.value.trim() || p.description;
+    const changed = newDesc !== p.description;
+
+    const newDescEl = document.createElement('div');
+    newDescEl.className = 'card-desc';
+    newDescEl.textContent = newDesc;
+    newDescEl.onclick = () => startEditDesc(partId);
+    input.replaceWith(newDescEl);
+
+    if (changed) {
+      p.description = newDesc;
+      const flash = document.createElement('span');
+      flash.className = 'save-flash';
+      flash.textContent = 'Saved \u2713';
+      newDescEl.after(flash);
+      setTimeout(() => flash.remove(), 2000);
+      await sendCorrection(p.part_number, newDesc, p.your_price);
+    }
+  }
+
+  input.addEventListener('blur', finish, { once: true });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter')  { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { input.value = p.description; input.blur(); }
+  });
 }
 
 // ── Render ───────────────────────────────────────────────────────────────────
@@ -805,7 +892,9 @@ function render() {
          <div class="listing-ct">${p.total_listings} listing${p.total_listings !== 1 ? 's' : ''}</div>`
       : `<div class="no-price">${isPaint ? 'Paint code — no market pricing' : 'No pricing data'}</div>`;
 
-    const ypVal = p.your_price != null ? Number(p.your_price).toFixed(2) : '';
+    const ypVal   = p.your_price != null ? Number(p.your_price).toFixed(2) : '';
+    const bpPrice = p.breakerpro_price != null
+      ? `<span class="bp-price">Your last: <strong>${fmt(p.breakerpro_price)}</strong></span>` : '';
 
     const div = document.createElement('div');
     div.className = 'card';
@@ -816,19 +905,23 @@ function render() {
         <div class="card-id">
           <div class="card-pn">${esc(p.part_number)}</div>
           ${p.vehicle_ref ? `<div class="card-ref">${esc(p.vehicle_ref)}</div>` : ''}
-          <div class="card-desc">${esc(p.description)}</div>
+          <div class="card-desc" title="Tap to correct description">${esc(p.description)}</div>
         </div>
         <div class="card-tags">
           ${sourceTags(p.source)}
           ${confidenceBadge(p.confidence)}
         </div>
       </div>
-      <div class="card-pricing">${pricingHtml}</div>
+      <div class="card-pricing">${pricingHtml}${bpPrice}</div>
       <div class="your-price-row">
         <span class="yp-label">Your price</span>
         <input type="text" class="yp-input" data-yp="${p.id}" placeholder="£0.00" value="${esc(ypVal)}">
         ${hasPricing ? `<span class="yp-hint">Suggested: ${fmt(p.suggested_price)}</span>` : ''}
       </div>`;
+
+    // Wire up editable description (after innerHTML is set)
+    const descEl = div.querySelector('.card-desc');
+    if (descEl) descEl.addEventListener('click', () => startEditDesc(p.id));
     partsList.appendChild(div);
   });
 }
