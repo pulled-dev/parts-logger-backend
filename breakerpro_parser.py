@@ -42,8 +42,9 @@ ENGINE_CODE_RE = re.compile(r'^[A-Za-z]{2,5}$')
 # Valid VAG part number: must contain at least one digit AND at least one letter
 VAG_PN_RE = re.compile(r'^(?=.*[0-9])(?=.*[A-Za-z])[A-Za-z0-9]{6,16}$')
 
-# Middle group: first sequence of exactly 6 consecutive digits
-MIDDLE_GROUP_RE = re.compile(r'(\d{6})')
+# Middle group: VAG part number structure is [digit][1-3 letters][opt digit][6-digit group][letters]
+# Backtracking resolves the ambiguous trailing-digit-of-prefix case automatically.
+MIDDLE_GROUP_RE = re.compile(r'^\d[A-Za-z]{1,3}\d?(\d{6})[A-Za-z]*$')
 
 
 def clean_part_number(raw: str) -> str | None:
@@ -85,9 +86,9 @@ def clean_part_number(raw: str) -> str | None:
 
 
 def extract_middle_group(part_number: str) -> str | None:
-    """Extract the 6-digit middle group from a normalised part number.
-    E.g. '6J3837401AJ' → '837401', '5Q0407272C' → '407272'"""
-    m = MIDDLE_GROUP_RE.search(part_number)
+    """Extract the 6-digit middle group from a normalised VAG part number.
+    E.g. '6J3837401AJ' -> '837401', '5Q0407272C' -> '407272', '5NA945096E' -> '945096'"""
+    m = MIDDLE_GROUP_RE.match(part_number)
     return m.group(1) if m else None
 
 

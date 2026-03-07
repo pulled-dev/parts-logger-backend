@@ -5,7 +5,7 @@
     "source": "BreakerPro CSV exports from Pulled Apart Ltd",
     "last_updated": "2026-03-07",
     "total_exact_entries": 2927,
-    "total_group_entries": 849,
+    "total_group_entries": 724,
     "total_learned_entries": 0
   },
   "exact": {
@@ -14646,459 +14646,471 @@
     }
   },
   "groups": {
-    "090737": {
+    "907379": {
       "description": "ABS PUMP/MODULATOR/CONTROL UNIT",
       "avg_price": 40.12
     },
-    "061451": {
+    "614517": {
       "description": "ABS PUMP/MODULATOR/CONTROL UNIT",
       "avg_price": 55.24
     },
-    "172352": {
+    "723523": {
       "description": "ACCELERATOR PEDAL",
       "avg_price": 9.99
     },
-    "272150": {
+    "721503": {
       "description": "ACCELERATOR PEDAL",
       "avg_price": 16.7
     },
-    "088020": {
+    "880201": {
       "description": "AIR BAG",
-      "avg_price": 45.77
+      "avg_price": 47.29
     },
-    "095965": {
+    "880204": {
+      "description": "AIR BAG",
+      "avg_price": 24.28
+    },
+    "959655": {
       "description": "AIR BAG MODULE",
-      "avg_price": 32.63
+      "avg_price": 36.09
     },
-    "081680": {
+    "816803": {
       "description": "AIR CON COMPRESSOR/PUMP",
       "avg_price": 37.99
     },
-    "012960": {
+    "129607": {
       "description": "AIR FILTER BOX",
-      "avg_price": 30.61
+      "avg_price": 32.99
     },
     "959653": {
       "description": "AIRBAG SQUIB/SLIP RING",
-      "avg_price": 19.99
+      "avg_price": 18.1
     },
-    "095160": {
+    "951605": {
       "description": "ALARM SIREN",
-      "avg_price": 18.99
+      "avg_price": 24.28
     },
-    "003522": {
+    "035223": {
       "description": "AMPLIFIER UNIT",
-      "avg_price": 38.74
+      "avg_price": 43.33
     },
-    "403522": {
+    "035225": {
       "description": "ANTENNA AMPLIFIER MODULE",
       "avg_price": 9.99
     },
-    "090771": {
+    "907719": {
       "description": "Anti Theft Control Module",
       "avg_price": 14.99
     },
-    "085795": {
+    "857951": {
       "description": "ASHTRAY (FRONT)",
       "avg_price": 14.99
     },
-    "906022": {
-      "description": "AUTO ENGINE ECU",
-      "avg_price": 69.99
-    },
-    "083990": {
+    "839901": {
       "description": "BLACK DOOR TRIM PASSENGER SIDE REAR",
-      "avg_price": 18.32
+      "avg_price": 19.99
     },
-    "082330": {
+    "823302": {
       "description": "BONNET HINGE",
-      "avg_price": 21.15
+      "avg_price": 24.85
     },
-    "082350": {
+    "823301": {
+      "description": "BONNET HINGE",
+      "avg_price": 16.91
+    },
+    "823509": {
       "description": "BONNET LOCK LATCH",
-      "avg_price": 18.92
+      "avg_price": 20.27
     },
-    "082335": {
+    "823359": {
       "description": "BONNET HOOD STRUT",
-      "avg_price": 11.66
+      "avg_price": 9.99
     },
-    "282353": {
+    "823533": {
+      "description": "BONNET RELEASE HANDLE",
+      "avg_price": 15.82
+    },
+    "823535": {
       "description": "BONNET RELEASE CABLE",
-      "avg_price": 20.29
+      "avg_price": 24.76
     },
-    "182353": {
+    "823531": {
       "description": "BONNET RELEASE CABLE",
-      "avg_price": 15.09
+      "avg_price": 28.32
     },
-    "082353": {
-      "description": "BONNET RELEASE CABLE",
-      "avg_price": 28.45
-    },
-    "090662": {
+    "906627": {
       "description": "BOOST PRESSURE SOLENOID",
-      "avg_price": 16.66
+      "avg_price": 13.74
     },
-    "086152": {
+    "861529": {
       "description": "BOOT CARPET LINER",
-      "avg_price": 24.99
+      "avg_price": 34.99
     },
-    "086153": {
+    "861531": {
       "description": "BOOT FLOOR COVER",
       "avg_price": 29.99
     },
-    "982738": {
+    "827383": {
       "description": "BOOT LOCK ASSEMBLY",
       "avg_price": 29.99
     },
-    "682755": {
+    "827550": {
       "description": "BOOTLID STRUTS (PAIR)",
-      "avg_price": 16.56
+      "avg_price": 17.99
     },
-    "061510": {
+    "615105": {
       "description": "BRAKE CALIPER( FRONT PASSENGER SIDE)",
       "avg_price": 14.99
     },
-    "261130": {
+    "611301": {
       "description": "BRAKE MASTER CYLINDER",
       "avg_price": 20.66
     },
-    "261410": {
+    "614105": {
       "description": "BRAKE SERVO",
       "avg_price": 34.71
     },
-    "203518": {
-      "description": "CD PLAYER HEAD UNIT",
-      "avg_price": 17.49
+    "035186": {
+      "description": "STEREO CD PLAYER",
+      "avg_price": 21.59
     },
-    "090706": {
+    "907063": {
       "description": "CENTRAL CONTROL UNIT",
-      "avg_price": 22.49
+      "avg_price": 19.99
     },
-    "093708": {
+    "937086": {
       "description": "CENTRAL CONTROL UNIT",
-      "avg_price": 29.76
+      "avg_price": 56.66
     },
-    "093709": {
+    "937090": {
       "description": "CENTRAL CONTROL UNIT",
       "avg_price": 73.32
     },
-    "092713": {
+    "927137": {
       "description": "CENTRAL LOCKING SWITCH",
-      "avg_price": 14.49
+      "avg_price": 14.21
     },
-    "081972": {
+    "819728": {
       "description": "CENTRE AIR VENTS",
-      "avg_price": 20.62
+      "avg_price": 20.49
     },
-    "086328": {
+    "863289": {
       "description": "CENTRE CONSOLE USB TRIM",
-      "avg_price": 16.49
+      "avg_price": 22.49
     },
-    "272105": {
+    "721059": {
       "description": "CLUTCH PEDAL",
-      "avg_price": 25.17
+      "avg_price": 24.49
     },
-    "094156": {
+    "941561": {
       "description": "COIN CARD HOLDER TRAY",
       "avg_price": 9.99
     },
-    "091950": {
+    "907064": {
+      "description": "COMFORT CONTROL MODULE",
+      "avg_price": 29.99
+    },
+    "919506": {
       "description": "COOLING FAN RELAY",
       "avg_price": 9.99
     },
-    "091960": {
-      "description": "INFOTAINMENT SYSTEM",
-      "avg_price": 66.16
+    "919603": {
+      "description": "DISPLAY SCREEN",
+      "avg_price": 34.99
     },
-    "285718": {
+    "857186": {
       "description": "DISPLAY SCREEN TRIM",
       "avg_price": 19.99
     },
-    "095979": {
+    "959795": {
+      "description": "DOOR CONTROL MODULE",
+      "avg_price": 19.99
+    },
+    "959792": {
       "description": "WINDOW MOTOR",
-      "avg_price": 16.23
+      "avg_price": 13.74
     },
-    "283711": {
+    "837114": {
       "description": "DOOR HANDLE - INTERIOR",
-      "avg_price": 15.99
-    },
-    "283701": {
-      "description": "DOOR LOCK MECH",
-      "avg_price": 18.42
+      "avg_price": 16.99
     },
     "837015": {
       "description": "DOOR LOCK MECH",
-      "avg_price": 23.59
-    },
-    "083901": {
-      "description": "DOOR LOCK MECH",
-      "avg_price": 17.32
+      "avg_price": 19.44
     },
     "839016": {
       "description": "DOOR LOCK MECH",
-      "avg_price": 21.66
+      "avg_price": 18.09
     },
     "839015": {
       "description": "DOOR LOCK MECH",
-      "avg_price": 20.19
+      "avg_price": 18.51
     },
-    "297155": {
+    "971558": {
       "description": "Door Wiring Loom (Driver Front)",
-      "avg_price": 17.49
+      "avg_price": 24.99
     },
-    "297112": {
+    "971120": {
       "description": "Door Wiring Loom (Drivers Front)",
-      "avg_price": 24.28
+      "avg_price": 32.49
     },
-    "097168": {
-      "description": "DOOR WIRING LOOM PASSENGER SIDE REAR",
-      "avg_price": 17.49
+    "971687": {
+      "description": "DOOR WIRING LOOM",
+      "avg_price": 15.59
     },
-    "040727": {
+    "407271": {
       "description": "DRIVESHAFT - PASSENGER FRONT (ABS)",
-      "avg_price": 52.65
+      "avg_price": 51.93
     },
-    "095956": {
+    "407272": {
+      "description": "DRIVESHAFT - DRIVER FRONT (ABS)",
+      "avg_price": 53.23
+    },
+    "959565": {
       "description": "WING MIRROR SWITCH",
-      "avg_price": 12.64
+      "avg_price": 13.48
     },
-    "907309": {
-      "description": "ENGINE ECU",
-      "avg_price": 44.4
-    },
-    "906023": {
-      "description": "ENGINE ECU",
-      "avg_price": 33.57
-    },
-    "019926": {
+    "199262": {
       "description": "ENGINE MOUNT",
-      "avg_price": 19.73
+      "avg_price": 20.78
     },
-    "019916": {
+    "199167": {
       "description": "ENGINE MOUNT",
       "avg_price": 34.79
     },
-    "083790": {
+    "839902": {
+      "description": "Exterior Door Trim (Driver Side Rear)",
+      "avg_price": 14.99
+    },
+    "837901": {
       "description": "Exterior Door Trim (Passenger Front Side)",
       "avg_price": 24.99
     },
-    "040725": {
+    "407256": {
       "description": "FRONT HUB",
-      "avg_price": 69.99
+      "avg_price": 89.99
     },
-    "098065": {
+    "980653": {
       "description": "FRONT LANE ASSIST CAMERA",
       "avg_price": 39.99
     },
-    "041303": {
+    "413031": {
       "description": "STRUT/SHOCK/LEG",
-      "avg_price": 55.99
+      "avg_price": 56.74
     },
-    "039931": {
+    "399315": {
       "description": "FRONT SUBFRAME",
       "avg_price": 139.99
     },
-    "295540": {
+    "955408": {
       "description": "FRONT WIPER ARM",
-      "avg_price": 14.34
+      "avg_price": 19.99
     },
-    "295541": {
+    "955407": {
       "description": "FRONT WIPER ARM",
-      "avg_price": 19.92
+      "avg_price": 17.39
     },
-    "012740": {
+    "955409": {
+      "description": "FRONT WIPER ARM",
+      "avg_price": 11.54
+    },
+    "955410": {
+      "description": "FRONT WIPER ARM",
+      "avg_price": 20.7
+    },
+    "127400": {
       "description": "FUEL FILTER HOUSING",
       "avg_price": 18.32
     },
-    "086215": {
+    "862153": {
       "description": "FUEL FLAP ACTUATOR",
       "avg_price": 15.0
     },
-    "081077": {
+    "810773": {
       "description": "FUEL FLAP ACTUATOR",
-      "avg_price": 15.49
+      "avg_price": 13.13
     },
-    "091905": {
+    "919051": {
       "description": "FUEL PUMP (IN TANK)",
-      "avg_price": 25.26
+      "avg_price": 22.68
     },
     "080999": {
       "description": "FUEL/PETROL FLAP",
-      "avg_price": 39.99
+      "avg_price": 49.99
     },
-    "090736": {
+    "907361": {
       "description": "Fuse & Relay Box",
       "avg_price": 27.49
     },
-    "090753": {
+    "907530": {
       "description": "GATEWAY CONTROL MODULE",
       "avg_price": 20.05
     },
-    "090746": {
+    "907468": {
       "description": "GATEWAY MODULE",
-      "avg_price": 19.99
+      "avg_price": 9.99
     },
-    "071111": {
+    "711113": {
       "description": "GEARSTICK",
-      "avg_price": 24.09
+      "avg_price": 25.78
     },
-    "071106": {
+    "711061": {
       "description": "GEAR SELECTOR + LINKAGE",
       "avg_price": 29.99
     },
-    "271346": {
-      "description": "GEAR SELECTOR CONTROL PANEL",
-      "avg_price": 23.32
-    },
-    "286426": {
+    "864263": {
       "description": "Gear Selector Surround Trim",
       "avg_price": 24.99
     },
-    "271304": {
+    "713041": {
       "description": "GEAR SHIFTER SELECTOR",
       "avg_price": 67.49
     },
-    "019955": {
+    "199555": {
       "description": "GEARBOX MOUNT",
       "avg_price": 16.35
     },
-    "271313": {
+    "713463": {
+      "description": "GEARSTICK",
+      "avg_price": 29.99
+    },
+    "713139": {
       "description": "GEARSTICK LEATHER",
       "avg_price": 34.99
     },
-    "038907": {
-      "description": "GLOW PLUG RELAY",
-      "avg_price": 14.99
+    "907801": {
+      "description": "HANDBRAKE CONTROL MODULE",
+      "avg_price": 17.49
     },
-    "090780": {
-      "description": "HAND BRAKE CONTROL MODULE",
-      "avg_price": 14.99
+    "927225": {
+      "description": "ELECTRIC HANDBRAKE SWITCH",
+      "avg_price": 25.28
     },
-    "292722": {
-      "description": "HANDBRAKE SWITCH",
-      "avg_price": 18.49
-    },
-    "085885": {
+    "858855": {
       "description": "BOOT FLOOR",
-      "avg_price": 53.32
+      "avg_price": 48.74
     },
-    "285376": {
+    "853769": {
       "description": "Hazard SRS Airbag Switch",
       "avg_price": 9.99
     },
-    "095323": {
+    "953235": {
       "description": "HAZARD SWITCH",
       "avg_price": 9.99
     },
-    "291922": {
+    "919225": {
       "description": "HAZARD SWITCH",
       "avg_price": 14.99
     },
-    "080692": {
+    "806929": {
       "description": "Headlight Support Bracket",
-      "avg_price": 24.99
+      "avg_price": 19.99
     },
-    "080593": {
+    "805932": {
       "description": "Headlight Support Bracket",
-      "avg_price": 14.66
+      "avg_price": 14.99
     },
-    "294153": {
+    "941531": {
       "description": "HEADLIGHT SWITCH",
-      "avg_price": 14.28
+      "avg_price": 13.23
     },
-    "094163": {
+    "941633": {
       "description": "HEADLIGHT SWITCH",
       "avg_price": 13.32
     },
-    "795568": {
+    "955681": {
       "description": "HEADLIGHT WASHER PUMP",
       "avg_price": 14.99
     },
-    "282002": {
+    "820021": {
       "description": "HEATER BLOWER MOTOR",
       "avg_price": 24.99
     },
-    "082052": {
+    "820521": {
       "description": "HEATER BLOWER MOTOR",
       "avg_price": 49.99
     },
-    "090742": {
+    "907426": {
       "description": "HEATER CONTROL PANEL",
       "avg_price": 12.49
     },
-    "282004": {
+    "820045": {
       "description": "HEATER CONTROL PANEL",
-      "avg_price": 20.99
+      "avg_price": 19.99
     },
-    "281937": {
+    "819379": {
       "description": "HEATER FLAP ACTUATOR",
       "avg_price": 22.49
     },
-    "594508": {
+    "945087": {
       "description": "HIGH LEVEL BRAKE LIGHT",
-      "avg_price": 24.32
+      "avg_price": 22.59
     },
-    "095118": {
+    "951181": {
       "description": "HORN",
-      "avg_price": 17.49
+      "avg_price": 19.99
     },
-    "090913": {
+    "909131": {
       "description": "IGNITION BARREL +KEY",
       "avg_price": 29.99
     },
-    "081097": {
+    "810972": {
       "description": "INNER WING/ARCH LINER",
       "avg_price": 39.99
     },
-    "094710": {
-      "description": "INTERIOR LIGHT",
-      "avg_price": 13.19
+    "810971": {
+      "description": "INNER WING/ARCH LINER",
+      "avg_price": 39.99
     },
-    "095117": {
+    "947109": {
+      "description": "Interior Front Make Up Light",
+      "avg_price": 9.99
+    },
+    "951177": {
       "description": "INTERIOR LIGHT",
       "avg_price": 14.99
     },
-    "086883": {
+    "868837": {
       "description": "INTERIOR LIGHT",
-      "avg_price": 69.99
+      "avg_price": 19.99
     },
-    "094711": {
+    "947111": {
       "description": "INTERIOR LIGHT REAR",
       "avg_price": 9.99
     },
-    "094729": {
+    "947291": {
       "description": "INTERIOR LIGHT REAR",
       "avg_price": 8.49
     },
-    "091923": {
+    "919234": {
       "description": "INTERIOR MIRROR TRIM",
-      "avg_price": 16.66
+      "avg_price": 19.99
     },
-    "085751": {
+    "857511": {
       "description": "INTERIOR REAR VIEW MIRROR",
-      "avg_price": 13.74
+      "avg_price": 13.77
     },
-    "095943": {
-      "description": "CENTRAL CONTROL UNIT",
-      "avg_price": 18.74
+    "959435": {
+      "description": "Keyless Control Module",
+      "avg_price": 14.99
     },
-    "288084": {
+    "880842": {
       "description": "Knee Airbag",
-      "avg_price": 29.28
+      "avg_price": 32.99
     },
-    "803581": {
+    "035816": {
       "description": "MMI HEAD UNIT",
       "avg_price": 139.99
     },
-    "103503": {
+    "035035": {
       "description": "MMI HEADUNIT",
-      "avg_price": 399.99
+      "avg_price": 349.99
     },
-    "003578": {
+    "035785": {
       "description": "MMI INTERFACE CONTROL UNIT",
       "avg_price": 24.99
     },
-    "091518": {
+    "915181": {
       "description": "Negative Battery Cable",
       "avg_price": 10.99
     },
@@ -15106,1191 +15118,1087 @@
       "description": "ONLINE SERVICES CONTROL UNIT",
       "avg_price": 34.99
     },
-    "686776": {
+    "867769": {
       "description": "PARCEL SHELF",
-      "avg_price": 36.66
+      "avg_price": 58.02
     },
-    "095967": {
+    "959673": {
       "description": "PARKING +TRACTION SWITCH",
-      "avg_price": 17.49
+      "avg_price": 24.99
     },
-    "092722": {
-      "description": "ELECTRIC HANDBRAKE SWITCH",
-      "avg_price": 17.49
-    },
-    "242351": {
+    "423510": {
       "description": "POWER STEERING COLUMN",
       "avg_price": 49.99
     },
-    "290914": {
+    "909144": {
       "description": "POWER STEERING COLUMN",
-      "avg_price": 49.99
+      "avg_price": 56.66
     },
-    "084530": {
+    "845300": {
       "description": "QUARTER WINDOW",
       "avg_price": 39.99
     },
-    "084541": {
+    "845412": {
       "description": "QUARTER WINDOW",
-      "avg_price": 18.99
+      "avg_price": 27.66
     },
-    "084529": {
-      "description": "QUARTER WINDOW GLASS",
-      "avg_price": 33.32
-    },
-    "384504": {
+    "845299": {
       "description": "QUARTER WINDOW",
-      "avg_price": 49.99
+      "avg_price": 40.49
     },
-    "003541": {
+    "845411": {
+      "description": "QUARTER WINDOW",
+      "avg_price": 30.99
+    },
+    "845042": {
+      "description": "QUARTER WINDOW",
+      "avg_price": 48.33
+    },
+    "845041": {
+      "description": "QUARTER WINDOW",
+      "avg_price": 55.62
+    },
+    "035411": {
       "description": "DOOR SPEAKER",
-      "avg_price": 16.09
+      "avg_price": 15.11
     },
-    "094509": {
-      "description": "REAR/TAIL LIGHT",
-      "avg_price": 36.19
+    "945097": {
+      "description": "HIGH LEVEL BRAKE LIGHT",
+      "avg_price": 18.49
     },
     "947290": {
       "description": "REAR ROOF READING LIGHT",
       "avg_price": 9.99
     },
-    "003538": {
+    "035382": {
       "description": "REAR SUBWOOFER",
-      "avg_price": 27.99
+      "avg_price": 28.99
     },
-    "594509": {
-      "description": "REAR/TAIL LIGHT",
-      "avg_price": 22.79
+    "945095": {
+      "description": "REAR/TAIL LIGHT ON BODY",
+      "avg_price": 45.45
     },
-    "088074": {
-      "description": "AIRBAG CURTAIN/SIDE",
-      "avg_price": 20.82
+    "945096": {
+      "description": "REAR/TAIL LIGHT ON BODY ( DRIVERS SIDE)",
+      "avg_price": 47.95
     },
-    "085760": {
-      "description": "ROOF GRAB HANDLE(SET)",
-      "avg_price": 29.99
-    },
-    "281944": {
-      "description": "SCUTTLE PANEL",
-      "avg_price": 34.99
-    },
-    "285770": {
-      "description": "SEAT BELT - DRIVER FRONT",
-      "avg_price": 58.49
-    },
-    "385770": {
-      "description": "SEAT BELT - DRIVER FRONT",
-      "avg_price": 62.12
-    },
-    "485770": {
-      "description": "SEAT BELT - PASSENGER FRONT",
-      "avg_price": 39.85
-    },
-    "085775": {
-      "description": "SEATBELT BUCKLE",
-      "avg_price": 18.39
-    },
-    "061210": {
-      "description": "SERVO & MASTER CYLINDER",
-      "avg_price": 33.74
-    },
-    "092094": {
-      "description": "SPEEDO CLOCKS",
-      "avg_price": 31.66
-    },
-    "242206": {
-      "description": "STEERING RACK  (POWER)",
-      "avg_price": 349.99
-    },
-    "041909": {
-      "description": "STEERING WHEEL",
-      "avg_price": 57.47
-    },
-    "041908": {
-      "description": "STEERING WHEEL",
-      "avg_price": 164.99
-    },
-    "003518": {
-      "description": "STEREO CD PLAYER",
-      "avg_price": 50.39
-    },
-    "085755": {
-      "description": "SUN VISOR",
-      "avg_price": 15.99
-    },
-    "082723": {
-      "description": "TAILGATE STOP BUFFER/PAIR",
-      "avg_price": 14.99
-    },
-    "082755": {
-      "description": "TAILGATE STRUTS (PAIR)",
-      "avg_price": 18.99
-    },
-    "382755": {
-      "description": "TAILGATE STRUTS (PAIR)",
-      "avg_price": 14.99
-    },
-    "133062": {
-      "description": "THROTTLE BODY",
-      "avg_price": 27.49
-    },
-    "001211": {
-      "description": "TOOL KIT TRAY",
-      "avg_price": 35.66
-    },
-    "986746": {
-      "description": "TRUNK BOOT TRIM",
-      "avg_price": 19.99
-    },
-    "145702": {
-      "description": "TURBOCHARGER",
-      "avg_price": 144.99
-    },
-    "603570": {
-      "description": "USB PORT SOCKET",
-      "avg_price": 19.99
-    },
-    "095545": {
-      "description": "WASHER BOTTLE",
-      "avg_price": 23.99
-    },
-    "080727": {
-      "description": "WASHER JET COVER",
-      "avg_price": 29.99
-    },
-    "095980": {
-      "description": "WINDOW MOTOR",
-      "avg_price": 19.57
-    },
-    "095940": {
-      "description": "WINDOW MOTOR",
-      "avg_price": 14.99
-    },
-    "295940": {
-      "description": "WINDOW MOTOR",
-      "avg_price": 14.99
-    },
-    "095981": {
-      "description": "WINDOW MOTOR",
-      "avg_price": 13.52
-    },
-    "495980": {
-      "description": "WINDOW MOTOR",
-      "avg_price": 13.43
-    },
-    "259540": {
-      "description": "Window Motor",
-      "avg_price": 29.99
-    },
-    "383740": {
-      "description": "WINDOW REGULATOR/MECH ELECTRIC",
-      "avg_price": 31.24
-    },
-    "837462": {
-      "description": "WINDOW REGULATOR/MECH ELECTRIC",
-      "avg_price": 23.99
-    },
-    "083746": {
-      "description": "WINDOW REGULATOR/MECH ELECTRIC",
-      "avg_price": 23.81
-    },
-    "837461": {
-      "description": "WINDOW REGULATOR/MECH ELECTRIC",
-      "avg_price": 23.74
-    },
-    "383746": {
-      "description": "WINDOW REGULATOR/MECH ELECTRIC",
-      "avg_price": 24.29
-    },
-    "083946": {
-      "description": "WINDOW REGULATOR/MECH ELECTRIC",
-      "avg_price": 19.28
-    },
-    "839462": {
-      "description": "WINDOW REGULATOR/MECH ELECTRIC",
-      "avg_price": 21.99
-    },
-    "583946": {
-      "description": "WINDOW REGULATOR/MECH ELECTRIC",
-      "avg_price": 29.99
-    },
-    "839461": {
-      "description": "WINDOW REGULATOR/MECH ELECTRIC",
-      "avg_price": 18.74
-    },
-    "095351": {
-      "description": "INDICATOR STALK",
-      "avg_price": 12.35
-    },
-    "095350": {
-      "description": "WIPER & INDICATOR STALK",
-      "avg_price": 26.94
-    },
-    "095352": {
-      "description": "WIPER & INDICATOR STALK",
-      "avg_price": 29.99
-    },
-    "195350": {
-      "description": "WIPER & INDICATOR STALK",
-      "avg_price": 28.32
-    },
-    "295511": {
-      "description": "WIPER MOTOR (FRONT) & LINKAGE",
-      "avg_price": 23.67
-    },
-    "395571": {
-      "description": "WIPER MOTOR (REAR)",
-      "avg_price": 24.99
-    },
-    "090763": {
-      "description": "YAW SENSOR",
-      "avg_price": 9.99
-    },
-    "003550": {
-      "description": "AERIAL ANTENNA",
-      "avg_price": 17.1
-    },
-    "129611": {
-      "description": "AIR FILTER BOX",
-      "avg_price": 22.49
+    "945094": {
+      "description": "REAR/TAIL LIGHT ON TAILGATE (DRIVERS SIDE)",
+      "avg_price": 37.82
     },
     "880742": {
       "description": "AIRBAG CURTAIN/SIDE",
-      "avg_price": 104.99
+      "avg_price": 36.42
     },
-    "095356": {
-      "description": "AIRBAG SQUIB/SLIP RING",
-      "avg_price": 87.99
+    "880741": {
+      "description": "AIRBAG CURTAIN/SIDE",
+      "avg_price": 37.76
     },
-    "903016": {
-      "description": "ALTERNATOR",
-      "avg_price": 49.99
-    },
-    "086420": {
-      "description": "ARMREST",
-      "avg_price": 40.99
-    },
-    "282363": {
-      "description": "BONNET RELEASE HANDLE",
-      "avg_price": 15.99
-    },
-    "082756": {
-      "description": "BOOTLID HANDLE",
+    "857607": {
+      "description": "ROOF GRAB HANDLE(SET)",
       "avg_price": 29.99
     },
-    "261160": {
-      "description": "BRAKE MASTER CYLINDER",
-      "avg_price": 32.5
-    },
-    "080730": {
-      "description": "BUMPER REINFORCER (REAR)",
-      "avg_price": 44.99
-    },
-    "837016": {
-      "description": "DOOR LOCK MECH",
-      "avg_price": 21.99
-    },
-    "497103": {
-      "description": "DOOR LOOM",
-      "avg_price": 17.66
-    },
-    "003545": {
-      "description": "Door Speaker",
-      "avg_price": 9.99
-    },
-    "084520": {
-      "description": "DOOR WINDOW",
+    "819447": {
+      "description": "SCUTTLE PANEL",
       "avg_price": 34.99
     },
-    "386725": {
-      "description": "ELECTRIC WINDOW SWITCH",
-      "avg_price": 12.49
+    "857706": {
+      "description": "SEAT BELT - DRIVER FRONT",
+      "avg_price": 50.44
     },
-    "095985": {
-      "description": "ELECTRIC WINDOW SWITCH",
-      "avg_price": 21.24
+    "857705": {
+      "description": "SEAT BELT - PASSENGER FRONT",
+      "avg_price": 43.67
     },
-    "906018": {
-      "description": "ENGINE ECU",
-      "avg_price": 24.99
+    "857755": {
+      "description": "SEATBELT BUCKLE",
+      "avg_price": 18.68
     },
-    "090711": {
-      "description": "ENGINE ECU",
-      "avg_price": 86.33
+    "857756": {
+      "description": "SEATBELT BUCKLE",
+      "avg_price": 21.81
     },
-    "906019": {
-      "description": "ENGINE ECU",
-      "avg_price": 25.66
-    },
-    "206127": {
-      "description": "FLOOR MATS",
-      "avg_price": 23.99
-    },
-    "580985": {
-      "description": "FUEL/PETROL FLAP",
-      "avg_price": 39.99
-    },
-    "809857": {
-      "description": "FUEL/PETROL FLAP",
-      "avg_price": 29.99
-    },
-    "093712": {
-      "description": "FUSE BOX (IN ENGINE BAY)",
-      "avg_price": 14.44
-    },
-    "271111": {
-      "description": "GEAR KNOB",
+    "612103": {
+      "description": "SERVO & MASTER CYLINDER",
       "avg_price": 32.49
     },
-    "094143": {
-      "description": "HEADLIGHT SWITCH",
-      "avg_price": 14.62
+    "920940": {
+      "description": "SPEEDO CLOCKS",
+      "avg_price": 22.49
     },
-    "094153": {
-      "description": "HEADLIGHT SWITCH",
-      "avg_price": 13.49
+    "920941": {
+      "description": "SPEEDO CLOCKS",
+      "avg_price": 31.66
     },
-    "094103": {
-      "description": "HEADLIGHT/HEADLAMP",
-      "avg_price": 79.99
+    "422065": {
+      "description": "STEERING RACK  (POWER)",
+      "avg_price": 349.99
     },
-    "094100": {
-      "description": "HEADLIGHT/HEADLAMP",
-      "avg_price": 107.76
+    "419091": {
+      "description": "STEERING WHEEL",
+      "avg_price": 57.03
     },
-    "094102": {
-      "description": "HEADLIGHT/HEADLAMP",
-      "avg_price": 84.99
+    "419089": {
+      "description": "STEERING WHEEL",
+      "avg_price": 164.99
     },
-    "082004": {
-      "description": "HEATER CONTROL PANEL",
-      "avg_price": 18.67
+    "857551": {
+      "description": "SUN VISOR",
+      "avg_price": 16.24
     },
-    "081903": {
-      "description": "HEATER MATRIX",
-      "avg_price": 24.99
+    "827239": {
+      "description": "TAILGATE STOP BUFFER/PAIR",
+      "avg_price": 14.99
     },
-    "494509": {
-      "description": "REAR/TAIL LIGHT ON BODY ( DRIVERS SIDE)",
-      "avg_price": 45.51
+    "827552": {
+      "description": "TAILGATE STRUTS (PAIR)",
+      "avg_price": 14.49
     },
     "012115": {
-      "description": "JACK & TOOL KIT",
-      "avg_price": 29.99
+      "description": "TOOL KIT TRAY",
+      "avg_price": 35.09
     },
-    "919605": {
-      "description": "MULTI MEDIA DISPLAY SCREEN",
-      "avg_price": 99.99
-    },
-    "386776": {
-      "description": "PARCEL SHELF",
-      "avg_price": 52.99
-    },
-    "586776": {
-      "description": "PARCEL SHELF",
-      "avg_price": 36.49
-    },
-    "086776": {
-      "description": "PARCEL SHELF",
-      "avg_price": 64.79
-    },
-    "091947": {
-      "description": "PARKING ASSISTANCE CONTROL ECU",
-      "avg_price": 26.99
-    },
-    "042315": {
-      "description": "POWER STEERING PUMP",
-      "avg_price": 69.41
-    },
-    "484529": {
-      "description": "QUARTER WINDOW GLASS",
-      "avg_price": 69.99
-    },
-    "394509": {
-      "description": "REAR/TAIL LIGHT",
-      "avg_price": 50.82
-    },
-    "085780": {
-      "description": "SEAT BELT - DRIVER REAR",
-      "avg_price": 48.99
-    },
-    "092098": {
-      "description": "SPEEDO CLOCKS",
-      "avg_price": 42.66
-    },
-    "090209": {
-      "description": "SPEEDO CLOCKS",
-      "avg_price": 30.0
-    },
-    "092096": {
-      "description": "SPEEDO CLOCKS",
-      "avg_price": 40.68
-    },
-    "911021": {
-      "description": "STARTER MOTOR",
+    "867464": {
+      "description": "TRUNK BOOT TRIM",
       "avg_price": 19.99
     },
-    "241975": {
-      "description": "STEERING COLUMN JOINT",
-      "avg_price": 99.99
+    "035700": {
+      "description": "USB PORT SOCKET",
+      "avg_price": 19.99
     },
-    "095354": {
-      "description": "AIRBAG SQUIB/SLIP RING",
-      "avg_price": 25.9
+    "955453": {
+      "description": "WASHER BOTTLE",
+      "avg_price": 23.74
     },
-    "403538": {
-      "description": "Subwoofer Speaker",
+    "807276": {
+      "description": "WASHER JET COVER",
       "avg_price": 29.99
     },
-    "082785": {
-      "description": "TAILGATE LIFT MOTOR",
-      "avg_price": 49.99
+    "959802": {
+      "description": "WINDOW MOTOR",
+      "avg_price": 20.16
     },
-    "382750": {
-      "description": "TAILGATE LOCK",
-      "avg_price": 24.99
+    "959408": {
+      "description": "WINDOW MOTOR",
+      "avg_price": 14.99
     },
-    "145713": {
-      "description": "TURBO",
-      "avg_price": 199.99
+    "959801": {
+      "description": "WINDOW MOTOR",
+      "avg_price": 23.31
     },
-    "094910": {
-      "description": "WING MIRROR INDICATOR",
-      "avg_price": 25.0
+    "959406": {
+      "description": "WINDOW MOTOR",
+      "avg_price": 14.99
     },
-    "295956": {
-      "description": "WING MIRROR SWITCH",
-      "avg_price": 16.0
+    "959811": {
+      "description": "WINDOW MOTOR",
+      "avg_price": 13.74
     },
-    "995571": {
+    "595405": {
+      "description": "Window Motor",
+      "avg_price": 29.99
+    },
+    "959407": {
+      "description": "Window Motor (Passenger Rear Side)",
+      "avg_price": 14.99
+    },
+    "959812": {
+      "description": "WINDOW MOTOR",
+      "avg_price": 14.49
+    },
+    "837402": {
+      "description": "WINDOW REGULATOR/MECH ELECTRIC",
+      "avg_price": 27.49
+    },
+    "837462": {
+      "description": "WINDOW REGULATOR/MECH ELECTRIC",
+      "avg_price": 25.59
+    },
+    "837461": {
+      "description": "WINDOW REGULATOR/MECH ELECTRIC",
+      "avg_price": 24.89
+    },
+    "839462": {
+      "description": "WINDOW REGULATOR/MECH ELECTRIC",
+      "avg_price": 21.14
+    },
+    "839461": {
+      "description": "WINDOW REGULATOR/MECH ELECTRIC",
+      "avg_price": 21.1
+    },
+    "953513": {
+      "description": "INDICATOR STALK",
+      "avg_price": 13.99
+    },
+    "953502": {
+      "description": "WIPER & INDICATOR STALK",
+      "avg_price": 31.66
+    },
+    "953521": {
+      "description": "WIPER & INDICATOR STALK",
+      "avg_price": 35.99
+    },
+    "953507": {
+      "description": "WIPER & INDICATOR STALK",
+      "avg_price": 23.09
+    },
+    "955119": {
+      "description": "WIPER MOTOR (FRONT) & LINKAGE",
+      "avg_price": 27.29
+    },
+    "955113": {
+      "description": "WIPER MOTOR (FRONT) & LINKAGE",
+      "avg_price": 22.49
+    },
+    "955711": {
       "description": "WIPER MOTOR (REAR)",
       "avg_price": 19.99
     },
-    "651021": {
-      "description": "ACCELERATOR PEDAL",
-      "avg_price": 29.99
+    "907637": {
+      "description": "YAW SENSOR",
+      "avg_price": 9.99
     },
-    "288020": {
-      "description": "AIR BAG",
-      "avg_price": 22.99
+    "035501": {
+      "description": "AERIAL ANTENNA",
+      "avg_price": 21.99
     },
-    "082085": {
+    "953568": {
+      "description": "AIRBAG SQUIB/SLIP RING",
+      "avg_price": 30.0
+    },
+    "953569": {
+      "description": "AIRBAG SQUIB/SLIP RING",
+      "avg_price": 84.08
+    },
+    "959654": {
+      "description": "AIRBAG SQUIB/SLIP RING",
+      "avg_price": 35.79
+    },
+    "864207": {
+      "description": "ARMREST",
+      "avg_price": 40.99
+    },
+    "035222": {
+      "description": "USB AUX PORT",
+      "avg_price": 24.99
+    },
+    "823633": {
+      "description": "BONNET RELEASE HANDLE",
+      "avg_price": 14.59
+    },
+    "827565": {
+      "description": "BOOTLID HANDLE",
+      "avg_price": 32.49
+    },
+    "611601": {
+      "description": "BRAKE MASTER CYLINDER",
+      "avg_price": 32.5
+    },
+    "807305": {
+      "description": "BUMPER REINFORCER (REAR)",
+      "avg_price": 44.99
+    },
+    "959433": {
+      "description": "CENTRAL CONTROL UNIT",
+      "avg_price": 19.99
+    },
+    "937089": {
+      "description": "CENTRAL CONTROL UNIT",
+      "avg_price": 34.99
+    },
+    "837016": {
+      "description": "DOOR LOCK MECH",
+      "avg_price": 18.05
+    },
+    "971030": {
+      "description": "DOOR LOOM",
+      "avg_price": 19.99
+    },
+    "035454": {
+      "description": "Door Speaker",
+      "avg_price": 9.99
+    },
+    "035415": {
+      "description": "DOOR SPEAKER",
+      "avg_price": 17.32
+    },
+    "845202": {
+      "description": "DOOR WINDOW",
+      "avg_price": 37.21
+    },
+    "845201": {
+      "description": "DOOR WINDOW",
+      "avg_price": 38.56
+    },
+    "867255": {
+      "description": "ELECTRIC WINDOW SWITCH",
+      "avg_price": 18.57
+    },
+    "959857": {
+      "description": "ELECTRIC WINDOW SWITCH",
+      "avg_price": 27.49
+    },
+    "907115": {
+      "description": "ENGINE ECU",
+      "avg_price": 86.33
+    },
+    "061270": {
+      "description": "FLOOR MATS",
+      "avg_price": 23.99
+    },
+    "407255": {
+      "description": "FRONT HUB",
+      "avg_price": 80.0
+    },
+    "919050": {
+      "description": "FUEL PUMP (IN TANK)",
+      "avg_price": 28.99
+    },
+    "809857": {
+      "description": "FUEL/PETROL FLAP",
+      "avg_price": 34.49
+    },
+    "937125": {
+      "description": "FUSE BOX (IN ENGINE BAY)",
+      "avg_price": 14.99
+    },
+    "941431": {
+      "description": "HEADLIGHT SWITCH",
+      "avg_price": 12.56
+    },
+    "941030": {
+      "description": "HEADLIGHT/HEADLAMP",
+      "avg_price": 52.49
+    },
+    "941004": {
+      "description": "HEADLIGHT/HEADLAMP",
+      "avg_price": 111.66
+    },
+    "941029": {
+      "description": "HEADLIGHT/HEADLAMP",
+      "avg_price": 57.49
+    },
+    "820043": {
+      "description": "HEATER CONTROL PANEL",
+      "avg_price": 21.99
+    },
+    "819031": {
+      "description": "HEATER MATRIX",
+      "avg_price": 24.99
+    },
+    "945093": {
+      "description": "REAR/TAIL LIGHT ON TAILGATE",
+      "avg_price": 37.7
+    },
+    "919605": {
+      "description": "INFOTAINMENT SYSTEM",
+      "avg_price": 59.33
+    },
+    "919604": {
+      "description": "NAV + HEAD UNIT",
+      "avg_price": 49.99
+    },
+    "919475": {
+      "description": "Parking Sensor Module",
+      "avg_price": 25.71
+    },
+    "423156": {
+      "description": "POWER STEERING PUMP",
+      "avg_price": 69.41
+    },
+    "845298": {
+      "description": "QUARTER WINDOW GLASS",
+      "avg_price": 65.99
+    },
+    "945092": {
+      "description": "REAR/TAIL LIGHT ON BODY ( DRIVERS SIDE)",
+      "avg_price": 109.99
+    },
+    "857805": {
+      "description": "SEAT BELT - DRIVER REAR",
+      "avg_price": 76.49
+    },
+    "920981": {
+      "description": "SPEEDO CLOCKS",
+      "avg_price": 41.33
+    },
+    "920960": {
+      "description": "SPEEDO CLOCKS",
+      "avg_price": 45.45
+    },
+    "419753": {
+      "description": "STEERING COLUMN JOINT",
+      "avg_price": 99.99
+    },
+    "953549": {
+      "description": "AIRBAG SQUIB/SLIP RING",
+      "avg_price": 25.9
+    },
+    "827852": {
+      "description": "TAILGATE LIFT MOTOR",
+      "avg_price": 49.99
+    },
+    "827851": {
+      "description": "TAILGATE LIFT MOTOR",
+      "avg_price": 84.99
+    },
+    "827505": {
+      "description": "BOOTLID LOCK MECH",
+      "avg_price": 15.39
+    },
+    "949102": {
+      "description": "WING MIRROR INDICATOR",
+      "avg_price": 25.0
+    },
+    "953501": {
+      "description": "WIPER & INDICATOR STALK",
+      "avg_price": 41.59
+    },
+    "953503": {
+      "description": "WIPER & INDICATOR STALK",
+      "avg_price": 24.62
+    },
+    "820859": {
       "description": "AIR CON COMPRESSOR/PUMP",
       "avg_price": 32.49
     },
-    "036129": {
-      "description": "AIR FILTER BOX",
-      "avg_price": 19.99
-    },
-    "081970": {
+    "819704": {
       "description": "AIR VENT",
-      "avg_price": 15.99
+      "avg_price": 11.74
     },
-    "060102": {
+    "601025": {
       "description": "ALLOY WHEEL - SINGLE",
-      "avg_price": 84.15
+      "avg_price": 102.45
     },
-    "271302": {
-      "description": "AUTO GEAR SHIFTER LEVER",
-      "avg_price": 56.42
+    "713025": {
+      "description": "GEAR SELECTOR SHIFTER",
+      "avg_price": 52.85
     },
-    "986346": {
+    "863463": {
       "description": "BOOT FLOOR CARPET",
       "avg_price": 44.99
     },
-    "080705": {
+    "807050": {
       "description": "BUMPER MOUNT BRACKET",
       "avg_price": 9.99
     },
-    "819728": {
-      "description": "CENTRE AIR VENTS",
-      "avg_price": 19.99
+    "937084": {
+      "description": "CENTRAL CONTROL UNIT",
+      "avg_price": 25.76
     },
-    "286328": {
+    "863284": {
       "description": "CENTRE CONSOLE ASH TRAY",
-      "avg_price": 9.99
+      "avg_price": 10.32
     },
-    "020181": {
+    "201813": {
       "description": "CHARCOAL FILTER",
-      "avg_price": 24.99
+      "avg_price": 19.99
     },
     "121407": {
-      "description": "COOLANT BOTTLE",
-      "avg_price": 24.99
+      "description": "RADIATOR EXPANSION BOTTLE",
+      "avg_price": 14.62
     },
-    "095959": {
+    "959592": {
       "description": "DOOR CONTROL MODULE",
-      "avg_price": 14.68
+      "avg_price": 15.13
     },
-    "095939": {
+    "959395": {
       "description": "DOOR CONTROL MODULE",
-      "avg_price": 14.85
-    },
-    "483901": {
-      "description": "DOOR LOCK MECH",
-      "avg_price": 18.07
-    },
-    "285750": {
-      "description": "DOOR MIRROR MANUAL",
-      "avg_price": 32.49
-    },
-    "484520": {
-      "description": "DOOR WINDOW",
-      "avg_price": 44.99
-    },
-    "684520": {
-      "description": "DOOR WINDOW",
-      "avg_price": 26.66
-    },
-    "982785": {
-      "description": "ELECTRIC TAILGATE STRUT",
-      "avg_price": 119.99
-    },
-    "495985": {
-      "description": "ELECTRIC WINDOW SWITCH",
-      "avg_price": 24.99
-    },
-    "086725": {
-      "description": "ELECTRIC WINDOW SWITCH",
-      "avg_price": 20.36
-    },
-    "906024": {
-      "description": "ENGINE ECU",
       "avg_price": 19.99
     },
-    "199262": {
-      "description": "ENGINE MOUNT",
-      "avg_price": 39.99
+    "837113": {
+      "description": "DOOR HANDLE - INTERIOR",
+      "avg_price": 14.16
     },
-    "019985": {
+    "857501": {
+      "description": "DOOR MIRROR MANUAL",
+      "avg_price": 34.99
+    },
+    "845206": {
+      "description": "DOOR WINDOW",
+      "avg_price": 31.66
+    },
+    "845205": {
+      "description": "DOOR WINDOW",
+      "avg_price": 34.99
+    },
+    "199855": {
       "description": "ENGINE MOUNT (LOWER)",
       "avg_price": 14.99
     },
-    "105266": {
-      "description": "FLYWHEEL DUAL MASS",
-      "avg_price": 139.99
+    "853665": {
+      "description": "FRONT BUMPER LOWER GRILL PASSENGER SIDE",
+      "avg_price": 20.7
     },
-    "085366": {
-      "description": "LOWER GRILLE",
-      "avg_price": 26.55
-    },
-    "085365": {
+    "853651": {
       "description": "FRONT GRILL",
-      "avg_price": 63.99
+      "avg_price": 61.19
     },
-    "095541": {
-      "description": "FRONT WIPER ARMS /PAIR",
-      "avg_price": 26.49
+    "407257": {
+      "description": "FRONT HUB (N/S)",
+      "avg_price": 39.99
     },
-    "095512": {
+    "955120": {
       "description": "FRONT WIPER MOTOR LINKAGE",
       "avg_price": 57.49
     },
-    "095511": {
-      "description": "FRONT WIPER MOTOR LINKAGE",
-      "avg_price": 54.99
-    },
     "127399": {
       "description": "FUEL FILTER HOUSING",
-      "avg_price": 37.49
+      "avg_price": 36.66
     },
-    "012722": {
+    "127224": {
       "description": "FUEL FILTER HOUSING",
       "avg_price": 16.66
     },
-    "086376": {
+    "713023": {
+      "description": "GEAR LINKAGE",
+      "avg_price": 49.99
+    },
+    "863764": {
       "description": "HANDBRAKE COVER TRIM",
       "avg_price": 19.99
     },
-    "071146": {
+    "711461": {
       "description": "HANDBRAKE LEVER COVER",
       "avg_price": 14.99
     },
-    "080560": {
+    "805607": {
       "description": "HEADLIGHT BRACKET",
       "avg_price": 29.99
     },
-    "894143": {
-      "description": "HEADLIGHT SWITCH",
-      "avg_price": 8.99
-    },
-    "294100": {
+    "941006": {
       "description": "HEADLIGHT/HEADLAMP",
-      "avg_price": 87.99
+      "avg_price": 111.79
     },
-    "090704": {
+    "941005": {
+      "description": "HEADLIGHT/HEADLAMP",
+      "avg_price": 107.49
+    },
+    "907044": {
       "description": "HEATER CONTROL PANEL",
-      "avg_price": 33.59
+      "avg_price": 49.68
     },
-    "290751": {
+    "907511": {
       "description": "HEATER FLAP ACTUATOR",
-      "avg_price": 12.99
+      "avg_price": 13.54
     },
-    "321380": {
-      "description": "HORN",
-      "avg_price": 14.99
-    },
-    "014580": {
+    "145804": {
       "description": "INTERCOOLER",
       "avg_price": 44.99
     },
-    "040715": {
-      "description": "LOWER ARM/WISHBONE",
-      "avg_price": 23.43
+    "947105": {
+      "description": "INTERIOR LIGHT",
+      "avg_price": 17.19
     },
-    "003534": {
+    "407152": {
+      "description": "LOWER ARM/WISHBONE",
+      "avg_price": 23.59
+    },
+    "407151": {
+      "description": "LOWER ARM/WISHBONE",
+      "avg_price": 23.24
+    },
+    "035342": {
       "description": "MMI Control Module",
       "avg_price": 16.66
     },
-    "036776": {
+    "367769": {
       "description": "PARCEL SHELF",
       "avg_price": 49.99
     },
-    "986787": {
+    "867871": {
       "description": "PARCEL SHELF",
-      "avg_price": 146.24
+      "avg_price": 149.99
     },
-    "292713": {
+    "927132": {
       "description": "PARKING AID TRACTION SWITCH",
       "avg_price": 16.24
     },
-    "984529": {
+    "845297": {
       "description": "QUARTER WINDOW GLASS",
-      "avg_price": 72.85
+      "avg_price": 64.99
     },
-    "050522": {
+    "505226": {
       "description": "REAR CONTROL ARM +HUB",
       "avg_price": 99.99
     },
-    "997110": {
+    "505225": {
+      "description": "REAR CONTROL ARM +HUB( PASSENGER SIDE)",
+      "avg_price": 99.99
+    },
+    "971104": {
       "description": "REAR PARKING SENSOR LOOM",
       "avg_price": 77.49
     },
-    "088567": {
+    "885671": {
       "description": "REAR SEAT FOLDING SWITCH (N/S)",
       "avg_price": 19.99
     },
-    "051201": {
+    "512011": {
       "description": "REAR SHOCK ABSORBERS PAIR",
       "avg_price": 32.49
     },
-    "694511": {
+    "945112": {
       "description": "REAR/TAIL LIGHT",
-      "avg_price": 33.74
+      "avg_price": 36.59
     },
-    "085770": {
-      "description": "SEAT BELT - DRIVER FRONT",
-      "avg_price": 31.14
-    },
-    "485775": {
-      "description": "SEATBELT BUCKLE",
-      "avg_price": 23.66
-    },
-    "580558": {
+    "805588": {
       "description": "SLAM PANEL",
-      "avg_price": 499.99
+      "avg_price": 217.26
     },
-    "092095": {
+    "920951": {
       "description": "SPEEDO CLOCKS",
-      "avg_price": 55.28
+      "avg_price": 73.99
     },
-    "092090": {
+    "920903": {
       "description": "SPEEDO CLOCKS",
-      "avg_price": 25.16
-    },
-    "911022": {
-      "description": "STARTER MOTOR",
-      "avg_price": 23.99
+      "avg_price": 23.01
     },
     "911023": {
       "description": "STARTER MOTOR",
-      "avg_price": 25.82
-    },
-    "788020": {
-      "description": "Steering Airbag",
       "avg_price": 29.99
     },
-    "242305": {
+    "423051": {
       "description": "STEERING RACK  (POWER)",
-      "avg_price": 71.42
+      "avg_price": 69.99
     },
-    "003515": {
+    "035156": {
       "description": "STEREO SYSTEM",
-      "avg_price": 29.28
+      "avg_price": 31.66
     },
-    "083799": {
+    "857552": {
+      "description": "SUN VISOR",
+      "avg_price": 17.49
+    },
+    "837994": {
       "description": "TWEETER SPEAKER",
-      "avg_price": 16.66
+      "avg_price": 14.99
     },
-    "080597": {
+    "837993": {
+      "description": "TWEETER SPEAKER",
+      "avg_price": 19.99
+    },
+    "805977": {
       "description": "WHEEL ARCH LINER",
       "avg_price": 23.99
     },
-    "283740": {
-      "description": "WINDOW MOTOR",
-      "avg_price": 28.74
-    },
-    "495981": {
-      "description": "WINDOW MOTOR (N/S/R)",
-      "avg_price": 15.99
-    },
-    "983946": {
+    "837401": {
       "description": "WINDOW REGULATOR/MECH ELECTRIC",
-      "avg_price": 23.32
+      "avg_price": 26.1
     },
-    "084501": {
+    "845011": {
       "description": "WINDSCREEN",
       "avg_price": 119.99
     },
-    "082113": {
-      "description": "WING MOUNTING BRACKET",
-      "avg_price": 15.29
+    "821135": {
+      "description": "WING SUPPORT BRACKET",
+      "avg_price": 13.99
     },
-    "195352": {
-      "description": "WIPER & INDICATOR STALK",
-      "avg_price": 69.99
-    },
-    "295502": {
+    "955023": {
       "description": "WIPER MOTOR (FRONT) & LINKAGE",
-      "avg_price": 22.63
+      "avg_price": 28.34
     },
-    "019929": {
+    "953519": {
+      "description": "WIPER STALK",
+      "avg_price": 10.71
+    },
+    "199295": {
       "description": "WISHBONE MOUNT BRACKET",
       "avg_price": 19.99
     },
-    "082080": {
-      "description": "AIR CON COMPRESSOR/PUMP",
-      "avg_price": 31.16
+    "820808": {
+      "description": "AC COMPRESSOR",
+      "avg_price": 26.99
     },
-    "272350": {
+    "723503": {
       "description": "ACCELERATOR PEDAL",
       "avg_price": 19.99
     },
-    "013187": {
+    "131877": {
       "description": "AD BLUE TANK",
       "avg_price": 99.99
     },
-    "880204": {
-      "description": "AIR BAG",
-      "avg_price": 19.99
+    "035507": {
+      "description": "AERIAL ANTENNA",
+      "avg_price": 11.7
     },
-    "090960": {
+    "909605": {
       "description": "AIR BAG MODULE",
       "avg_price": 14.99
     },
-    "012962": {
+    "129620": {
       "description": "AIR FILTER BOX",
       "avg_price": 39.99
     },
-    "195356": {
-      "description": "AIRBAG SQUIB/SLIP RING",
-      "avg_price": 37.49
+    "129601": {
+      "description": "AIR FILTER BOX",
+      "avg_price": 26.66
     },
-    "906461": {
-      "description": "AIRFLOW METER SENSOR",
-      "avg_price": 13.49
+    "819703": {
+      "description": "AIR VENT",
+      "avg_price": 14.49
     },
-    "895160": {
-      "description": "ALARM SIREN",
-      "avg_price": 37.49
-    },
-    "036903": {
-      "description": "ALTERNATOR",
-      "avg_price": 29.99
-    },
-    "262353": {
+    "623533": {
       "description": "BONNET RELEASE HANDLE",
       "avg_price": 17.99
     },
-    "082750": {
-      "description": "BOOTLID LOCK MECH",
-      "avg_price": 9.99
-    },
-    "061540": {
+    "615405": {
       "description": "BRAKE CALIPER (N/S/R)",
-      "avg_price": 31.74
+      "avg_price": 33.5
     },
-    "193704": {
+    "615406": {
+      "description": "BRAKE CALIPER (O/S/R)",
+      "avg_price": 29.99
+    },
+    "937085": {
       "description": "CENTRAL CONTROL UNIT",
-      "avg_price": 37.5
+      "avg_price": 24.24
     },
-    "012140": {
-      "description": "RADIATOR EXPANSION BOTTLE",
-      "avg_price": 13.13
+    "937087": {
+      "description": "CENTRAL CONTROL UNIT",
+      "avg_price": 36.88
     },
-    "183701": {
-      "description": "DOOR LOCK MECH",
-      "avg_price": 19.99
+    "937049": {
+      "description": "CENTRAL CONTROL UNIT",
+      "avg_price": 29.99
     },
-    "984502": {
+    "959593": {
+      "description": "DOOR CONTROL MODULE",
+      "avg_price": 15.99
+    },
+    "857508": {
+      "description": "DOOR MIRROR MANUAL",
+      "avg_price": 29.99
+    },
+    "845025": {
       "description": "DOOR WINDOW",
       "avg_price": 39.99
     },
-    "271320": {
+    "713203": {
       "description": "GEAR KNOB",
-      "avg_price": 41.66
+      "avg_price": 38.56
     },
-    "906016": {
-      "description": "ECU (ENGINE)",
-      "avg_price": 37.49
+    "959855": {
+      "description": "ELECTRIC WINDOW SWITCH",
+      "avg_price": 10.49
     },
-    "094166": {
+    "941662": {
       "description": "FOG LIGHT",
-      "avg_price": 37.49
+      "avg_price": 34.99
     },
-    "094170": {
+    "941700": {
       "description": "FOG LIGHT",
       "avg_price": 16.66
     },
-    "094169": {
+    "941661": {
+      "description": "FOG LIGHT",
+      "avg_price": 39.99
+    },
+    "941699": {
       "description": "FOG LIGHT",
       "avg_price": 28.99
     },
-    "085367": {
+    "853677": {
       "description": "Front Bumper Lower Grill",
       "avg_price": 22.49
     },
-    "090755": {
+    "907550": {
       "description": "FRONT DISTANCE RADAR SENSOR",
       "avg_price": 99.99
     },
-    "680985": {
-      "description": "FUEL/PETROL FLAP",
-      "avg_price": 28.32
-    },
-    "094133": {
+    "941333": {
       "description": "Headlight Height/ Dimmer Switch",
       "avg_price": 6.5
     },
+    "941003": {
+      "description": "HEADLIGHT/HEADLAMP",
+      "avg_price": 74.97
+    },
     "819021": {
       "description": "HEATER BLOWER MOTOR",
-      "avg_price": 24.99
+      "avg_price": 38.99
     },
-    "090751": {
-      "description": "Heater Flap Actuator",
-      "avg_price": 13.59
-    },
-    "094508": {
-      "description": "HIGH LEVEL BRAKE LIGHT",
-      "avg_price": 19.99
-    },
-    "090585": {
+    "905851": {
       "description": "IGNITION BARREL +KEY",
       "avg_price": 47.49
     },
-    "130277": {
-      "description": "INJECTOR (DIESEL)",
-      "avg_price": 69.99
+    "853666": {
+      "description": "LOWER GRILLE",
+      "avg_price": 23.33
     },
     "035858": {
       "description": "MMI HEAD UNIT",
       "avg_price": 155.0
     },
-    "994531": {
+    "945312": {
       "description": "OUTER TAIL LIGHT",
-      "avg_price": 75.74
+      "avg_price": 76.49
     },
-    "085710": {
+    "857100": {
       "description": "REAR AIR VENTS COMPLETE SET",
       "avg_price": 54.0
     },
-    "695570": {
+    "955707": {
       "description": "REAR WIPER ARM",
-      "avg_price": 12.49
+      "avg_price": 13.32
     },
-    "694509": {
+    "945111": {
       "description": "REAR/TAIL LIGHT",
-      "avg_price": 25.29
+      "avg_price": 36.99
     },
-    "994509": {
-      "description": "REAR/TAIL LIGHT ON BODY ( DRIVERS SIDE)",
-      "avg_price": 58.63
+    "945311": {
+      "description": "REAR/TAIL LIGHT ON BODY",
+      "avg_price": 74.99
     },
-    "092097": {
+    "857806": {
+      "description": "SEAT BELT - DRIVER REAR",
+      "avg_price": 12.99
+    },
+    "920971": {
       "description": "SPEEDO CLOCKS",
-      "avg_price": 33.59
+      "avg_price": 32.49
     },
-    "041990": {
+    "419901": {
       "description": "STEERING WHEEL",
       "avg_price": 29.99
     },
-    "503582": {
+    "035820": {
       "description": "MMI HEAD UNIT",
-      "avg_price": 129.99
+      "avg_price": 87.85
     },
-    "007145": {
+    "071455": {
       "description": "WHEEL TRIM - SINGLE",
       "avg_price": 24.99
     },
-    "195980": {
-      "description": "WINDOW MOTOR",
-      "avg_price": 61.24
-    },
-    "483775": {
+    "837756": {
       "description": "WINDOW REGULATOR/MECH ELECTRIC",
       "avg_price": 15.0
     },
-    "683975": {
+    "839755": {
       "description": "WINDOW REGULATOR/MECH ELECTRIC",
       "avg_price": 19.99
     },
-    "695571": {
-      "description": "WIPER MOTOR (REAR)",
+    "821136": {
+      "description": "WING MOUNTING BRACKET",
+      "avg_price": 17.39
+    },
+    "199296": {
+      "description": "WISHBONE MOUNT BRACKET",
       "avg_price": 19.99
     },
-    "488074": {
-      "description": "AIRBAG CURTAIN/SIDE",
-      "avg_price": 46.49
+    "880202": {
+      "description": "AIR BAG",
+      "avg_price": 17.99
     },
-    "560102": {
-      "description": "ALLOY WHEEL - SINGLE",
-      "avg_price": 59.99
+    "820803": {
+      "description": "AIR CON COMPRESSOR/PUMP",
+      "avg_price": 31.99
     },
-    "903023": {
-      "description": "ALTERNATOR",
-      "avg_price": 34.49
-    },
-    "086428": {
+    "864283": {
       "description": "ARMREST",
       "avg_price": 19.99
     },
-    "482755": {
-      "description": "BOOTLID STRUTS (PAIR)",
-      "avg_price": 16.49
+    "721058": {
+      "description": "Brake and Accelerator",
+      "avg_price": 39.99
     },
-    "091927": {
+    "919275": {
       "description": "BUMPER PARKING SENSORS",
       "avg_price": 9.99
     },
-    "080718": {
+    "807184": {
       "description": "Bumper Wing Bracket",
-      "avg_price": 11.49
+      "avg_price": 13.32
     },
-    "285736": {
+    "857368": {
       "description": "CENTRE CONSOLE STORAGE TRIM",
       "avg_price": 9.99
     },
-    "383701": {
+    "959595": {
+      "description": "DOOR CONTROL MODULE",
+      "avg_price": 8.32
+    },
+    "837019": {
       "description": "DOOR HANDLE - INTERIOR",
       "avg_price": 17.49
     },
-    "083788": {
+    "837885": {
       "description": "DOOR HANDLE EXTERIOR",
       "avg_price": 34.99
     },
-    "083141": {
+    "831411": {
       "description": "Door Hinge (Passengers Front)",
       "avg_price": 19.99
     },
-    "083341": {
+    "833411": {
       "description": "Door Hinge (Passengers Rear)",
       "avg_price": 19.99
     },
-    "483990": {
-      "description": "Door Piller Trim",
-      "avg_price": 14.99
-    },
-    "403541": {
-      "description": "DOOR SPEAKER",
-      "avg_price": 11.49
-    },
-    "483790": {
+    "837902": {
       "description": "Door Trim",
       "avg_price": 14.99
     },
-    "497168": {
-      "description": "DOOR WIRING LOOM",
-      "avg_price": 14.32
-    },
-    "310942": {
-      "description": "ENGINE MOUNT",
-      "avg_price": 49.99
-    },
-    "103925": {
-      "description": "ENGINE COVER",
-      "avg_price": 36.99
-    },
-    "041302": {
+    "413023": {
       "description": "FRONT LEG & HUB DRIVERS SIDE",
       "avg_price": 129.99
     },
-    "095955": {
+    "959551": {
       "description": "Fuel Tank Switch",
       "avg_price": 9.99
     },
-    "480990": {
+    "809906": {
       "description": "FUEL/PETROL FLAP",
       "avg_price": 24.99
     },
-    "093711": {
-      "description": "FUSE BOX (IN ENGINE BAY)",
-      "avg_price": 19.99
-    },
-    "486152": {
-      "description": "HARD BOOT FLOOR",
-      "avg_price": 44.99
-    },
-    "095111": {
+    "951117": {
       "description": "INTERIOR LIGHT REAR",
       "avg_price": 14.99
     },
-    "091961": {
+    "880841": {
+      "description": "Knee Airbag",
+      "avg_price": 19.99
+    },
+    "919614": {
       "description": "MMI Control Panel",
       "avg_price": 94.99
     },
-    "003587": {
+    "035874": {
       "description": "MMI HEAD UNIT",
       "avg_price": 85.83
     },
-    "035192": {
-      "description": "MMI HEAD UNIT",
-      "avg_price": 179.99
-    },
-    "486776": {
-      "description": "PARCEL SHELF",
-      "avg_price": 69.99
-    },
-    "051302": {
+    "513025": {
       "description": "REAR SHOCK ABSORBER",
       "avg_price": 19.99
     },
-    "206141": {
-      "description": "REAR VIEW MIRROR",
-      "avg_price": 19.99
-    },
-    "494506": {
+    "945069": {
       "description": "REAR/TAIL LIGHT ON BODY",
       "avg_price": 54.99
     },
-    "085781": {
+    "857807": {
+      "description": "SEAT BELT - CENTRE REAR (3-POINT)",
+      "avg_price": 29.99
+    },
+    "857811": {
       "description": "SEAT BELT - PASSENGER 3RD ROW",
       "avg_price": 29.99
     },
-    "085847": {
+    "858471": {
       "description": "SEATBELT BUCKLE (N/S/F)",
       "avg_price": 24.99
     },
-    "092091": {
-      "description": "SPEEDO CLOCKS",
-      "avg_price": 21.66
+    "035503": {
+      "description": "Shark Fin Ariel",
+      "avg_price": 16.24
     },
-    "092530": {
+    "920982": {
+      "description": "SPEEDO CLOCKS",
+      "avg_price": 27.49
+    },
+    "920911": {
+      "description": "SPEEDO CLOCKS",
+      "avg_price": 22.49
+    },
+    "925301": {
       "description": "START STOP HAZARD SWITCH",
       "avg_price": 17.66
     },
-    "911024": {
-      "description": "STARTER MOTOR",
-      "avg_price": 26.66
+    "601027": {
+      "description": "14 INCH STEEL WHEEL",
+      "avg_price": 49.07
     },
-    "095152": {
+    "423055": {
+      "description": "STEERING RACK  (POWER)",
+      "avg_price": 74.99
+    },
+    "951527": {
       "description": "STEERING WHEEL SWITCHES",
       "avg_price": 22.99
     },
-    "003516": {
+    "035161": {
       "description": "STEREO CD PLAYER",
       "avg_price": 19.99
     },
-    "185755": {
-      "description": "SUN VISOR",
-      "avg_price": 19.99
-    },
-    "253010": {
-      "description": "TURBO",
-      "avg_price": 189.99
-    },
-    "253016": {
-      "description": "TURBO",
-      "avg_price": 129.99
-    },
-    "003539": {
+    "035398": {
       "description": "Tweeter Speaker",
       "avg_price": 9.99
     },
-    "261204": {
+    "612041": {
       "description": "VACUUM PIPE",
       "avg_price": 19.99
     },
-    "092032": {
+    "920320": {
       "description": "VIRTUAL SPEEDO CLUSTER",
       "avg_price": 399.99
     },
-    "095544": {
+    "955448": {
       "description": "WASHER BOTTLE",
       "avg_price": 35.0
     },
-    "286737": {
+    "867372": {
       "description": "WINDOW CONTROL SWITCH",
       "avg_price": 19.99
     },
-    "095970": {
-      "description": "WINDOW MOTOR",
-      "avg_price": 17.64
+    "959704": {
+      "description": "WINDOW MOTOR (O/S/R)",
+      "avg_price": 16.66
     },
-    "283773": {
+    "837730": {
       "description": "WINDOW REGULATOR/MECH ELECTRIC",
       "avg_price": 35.0
     },
-    "483746": {
-      "description": "WINDOW REGULATOR/MECH ELECTRIC",
-      "avg_price": 29.04
-    },
-    "283772": {
+    "837729": {
       "description": "WINDOW REGULATOR/MECH ELECTRIC",
       "avg_price": 30.99
     },
-    "095502": {
-      "description": "WIPER MOTOR (FRONT)",
-      "avg_price": 43.99
-    },
-    "003557": {
+    "035575": {
       "description": "AERIAL ANTENNA",
       "avg_price": 14.99
     },
-    "094545": {
+    "945459": {
       "description": "Brake Master Cylinder Sensor",
       "avg_price": 9.99
     },
-    "793708": {
-      "description": "CENTRAL CONTROL UNIT",
-      "avg_price": 110.66
-    },
-    "082090": {
+    "820901": {
       "description": "DASH AIR VENTS",
       "avg_price": 29.99
     },
-    "085727": {
+    "857273": {
       "description": "DISPLAY SCREEN",
       "avg_price": 28.32
     },
-    "383702": {
-      "description": "DOOR HANDLE - INTERIOR",
-      "avg_price": 10.0
+    "971035": {
+      "description": "Door Card Loom",
+      "avg_price": 14.32
     },
-    "283706": {
+    "837020": {
+      "description": "DOOR HANDLE - INTERIOR",
+      "avg_price": 11.66
+    },
+    "831412": {
+      "description": "Door Hinge (Drivers Front)",
+      "avg_price": 19.99
+    },
+    "833412": {
+      "description": "Door Hinge (Drivers Rear)",
+      "avg_price": 19.99
+    },
+    "837061": {
       "description": "DOOR LOCK MECH",
       "avg_price": 20.0
     },
-    "097155": {
+    "971557": {
       "description": "Door Loom/NSF",
       "avg_price": 9.99
     },
-    "403579": {
+    "035794": {
       "description": "DOOR SPEAKER & GRILL",
       "avg_price": 6.0
     },
-    "906051": {
-      "description": "DPF Pressure Sensor",
-      "avg_price": 9.99
+    "959858": {
+      "description": "ELECTRIC WINDOW SWITCH",
+      "avg_price": 20.66
     },
-    "906070": {
-      "description": "ECU (ENGINE)",
-      "avg_price": 21.99
-    },
-    "907425": {
-      "description": "ENGINE ECU",
-      "avg_price": 99.99
-    },
-    "097109": {
+    "971095": {
       "description": "FRONT PARKING SENSOR LOOM",
       "avg_price": 79.99
     },
@@ -16298,17 +16206,17 @@
       "description": "FRONT WING BRACKET",
       "avg_price": 5.0
     },
-    "082114": {
+    "821142": {
       "description": "FRONT WING BRACKET",
-      "avg_price": 19.33
+      "avg_price": 15.99
     },
-    "090609": {
+    "906093": {
       "description": "FUEL PUMP CONTROL MODULE",
       "avg_price": 14.99
     },
-    "594100": {
-      "description": "HEADLIGHT/HEADLAMP",
-      "avg_price": 189.99
+    "805931": {
+      "description": "Headlight Bracket (Passengers)",
+      "avg_price": 14.24
     },
     "941082": {
       "description": "HEADLIGHT/HEADLAMP",
@@ -16318,195 +16226,175 @@
       "description": "HEADLIGHT/HEADLAMP",
       "avg_price": 489.99
     },
-    "282001": {
+    "820015": {
       "description": "HEATER BLOWER MOTOR",
       "avg_price": 31.0
     },
-    "281901": {
+    "819015": {
       "description": "HEATER BLOWER MOTOR",
       "avg_price": 19.16
     },
-    "907044": {
-      "description": "HEATER CONTROL PANEL",
-      "avg_price": 103.32
-    },
-    "003584": {
+    "035842": {
       "description": "Multimedia Head Unit",
       "avg_price": 147.99
     },
-    "480737": {
+    "807377": {
       "description": "REAR BUMPER BRACKET PASSENGER SIDE",
       "avg_price": 19.99
     },
-    "494525": {
+    "945258": {
       "description": "REAR OUTER BULB HOLDER",
-      "avg_price": 19.99
+      "avg_price": 27.66
     },
-    "494507": {
+    "945257": {
+      "description": "REAR OUTER BULB HOLDER",
+      "avg_price": 26.74
+    },
+    "945070": {
       "description": "REAR/TAIL LIGHT ON BODY ( DRIVERS SIDE)",
       "avg_price": 54.99
     },
-    "585770": {
+    "857702": {
       "description": "SEAT BELT - DRIVER FRONT",
-      "avg_price": 62.5
+      "avg_price": 41.66
     },
-    "951523": {
-      "description": "STEERING CONTROL BUTTON",
-      "avg_price": 69.99
+    "906625": {
+      "description": "SOLENOID VACUUM VALVE",
+      "avg_price": 22.49
     },
-    "019936": {
+    "199369": {
       "description": "SUBFRAME (FRONT)",
       "avg_price": 84.99
     },
-    "383750": {
+    "959701": {
+      "description": "Window Motor (Drivers Front)",
+      "avg_price": 23.33
+    },
+    "959702": {
+      "description": "WINDOW MOTOR (N/S/F)",
+      "avg_price": 16.66
+    },
+    "837502": {
       "description": "WINDOW REGULATOR/MECH ELECTRIC",
-      "avg_price": 36.74
+      "avg_price": 37.49
     },
-    "880201": {
-      "description": "AIR BAG",
-      "avg_price": 24.99
+    "837501": {
+      "description": "WINDOW REGULATOR/MECH ELECTRIC",
+      "avg_price": 35.99
     },
-    "012961": {
+    "129618": {
       "description": "AIR INLET PIPE",
       "avg_price": 19.99
     },
-    "041130": {
+    "411303": {
       "description": "ANTI ROLL BAR (FRONT)",
       "avg_price": 34.99
     },
-    "050523": {
+    "953527": {
+      "description": "AUTO IGNITION BARREL LOCK SENSOR",
+      "avg_price": 9.99
+    },
+    "505235": {
       "description": "AXLE (REAR)",
       "avg_price": 279.99
     },
-    "682330": {
-      "description": "BONNET HINGES (PAIR)",
-      "avg_price": 19.99
-    },
-    "082318": {
+    "823186": {
       "description": "BONNET LOCK LATCH CATCH",
       "avg_price": 14.99
     },
-    "682353": {
-      "description": "BONNET RELEASE CABLE",
-      "avg_price": 14.99
-    },
-    "182363": {
-      "description": "BONNET RELEASE HANDLE",
-      "avg_price": 12.49
-    },
-    "272111": {
+    "721117": {
       "description": "Brake And Accelerator Pedal",
       "avg_price": 24.99
     },
-    "296212": {
+    "962125": {
       "description": "Central Locking Switch",
-      "avg_price": 6.99
+      "avg_price": 10.99
     },
-    "688074": {
-      "description": "CURTAIN SRS ABAG",
-      "avg_price": 19.99
+    "959393": {
+      "description": "DOOR CONTOL MODULE",
+      "avg_price": 13.79
     },
-    "083702": {
-      "description": "DOOR HANDLE - INTERIOR",
-      "avg_price": 9.99
+    "959793": {
+      "description": "WINDOW MOTOR",
+      "avg_price": 19.42
     },
-    "083711": {
-      "description": "DOOR HANDLE - INTERIOR",
-      "avg_price": 9.99
+    "857502": {
+      "description": "DOOR MIRROR MANUAL",
+      "avg_price": 32.49
     },
-    "845202": {
-      "description": "DOOR WINDOW",
-      "avg_price": 42.49
-    },
-    "845201": {
-      "description": "DOOR WINDOW",
-      "avg_price": 42.49
-    },
-    "497169": {
+    "971121": {
       "description": "DOOR WIRING LOOM",
-      "avg_price": 15.85
+      "avg_price": 18.56
     },
-    "097103": {
-      "description": "Door Wiring Loom/OSF",
-      "avg_price": 9.99
+    "971694": {
+      "description": "DOOR WIRING LOOM",
+      "avg_price": 16.49
     },
-    "097102": {
-      "description": "Door Wiring Loom/OSF",
-      "avg_price": 14.99
+    "971693": {
+      "description": "DOOR WIRING LOOM",
+      "avg_price": 15.59
     },
-    "040721": {
+    "971029": {
+      "description": "DOOR WIRING LOOM",
+      "avg_price": 13.99
+    },
+    "407212": {
       "description": "DRIVESHAFT - DRIVER FRONT (ABS)",
       "avg_price": 59.99
     },
-    "927225": {
-      "description": "ELECTRIC HANDBRAKE SWITCH",
-      "avg_price": 69.99
-    },
-    "295952": {
+    "959522": {
       "description": "ELECTRIC WINDOW SWITCH",
       "avg_price": 14.99
-    },
-    "906021": {
-      "description": "ENGINE ECU",
-      "avg_price": 26.66
     },
     "094713": {
       "description": "Front Interior Roof Light",
       "avg_price": 9.99
     },
-    "080558": {
-      "description": "SLAM PANEL",
-      "avg_price": 188.99
-    },
-    "041201": {
+    "412015": {
       "description": "FRONT SUSPENSION LEG & HUB (DRIVERS SIDE)",
       "avg_price": 119.99
     },
-    "040005": {
+    "400054": {
       "description": "FRONT SUSPENSION LEG DRIVERS SIDE",
+      "avg_price": 59.99
+    },
+    "400053": {
+      "description": "FRONT SUSPENSION LEG PASSENGER SIDE",
       "avg_price": 59.99
     },
     "035736": {
       "description": "FRONT USB PORTS",
       "avg_price": 24.99
     },
-    "380990": {
-      "description": "FUEL/PETROL FLAP",
-      "avg_price": 32.5
+    "955024": {
+      "description": "FRONT WIPER MOTOR (O/S)",
+      "avg_price": 29.99
     },
-    "680990": {
+    "809905": {
+      "description": "FUEL/PETROL FLAP",
+      "avg_price": 32.99
+    },
+    "809909": {
       "description": "FUEL/PETROL FLAP",
       "avg_price": 29.99
     },
-    "285709": {
+    "937124": {
+      "description": "FUSE RELAY BOX UNIT",
+      "avg_price": 9.99
+    },
+    "857095": {
       "description": "GLOVE BOX",
       "avg_price": 24.99
     },
-    "294143": {
-      "description": "HEADLIGHT SWITCH",
-      "avg_price": 11.49
-    },
-    "090752": {
+    "907521": {
       "description": "HEATER BLOWER MOTOR",
       "avg_price": 31.59
     },
-    "155700": {
-      "description": "HEATER BLOWER MOTOR",
-      "avg_price": 19.99
-    },
-    "095121": {
+    "951210": {
       "description": "HORN",
       "avg_price": 19.99
     },
-    "003582": {
-      "description": "MMI HEAD UNIT",
-      "avg_price": 56.24
-    },
-    "867769": {
-      "description": "PARCEL SHELF",
-      "avg_price": 124.99
-    },
-    "097108": {
+    "971085": {
       "description": "REAR PARKING SENSOR LOOM",
       "avg_price": 39.99
     },
@@ -16514,235 +16402,135 @@
       "description": "REAR TRIM AIR VENTS",
       "avg_price": 149.99
     },
-    "094511": {
-      "description": "REAR/TAIL LIGHT",
-      "avg_price": 19.99
-    },
-    "945096": {
-      "description": "REAR/TAIL LIGHT ON BODY ( DRIVERS SIDE)",
-      "avg_price": 84.99
-    },
-    "945095": {
-      "description": "REAR/TAIL LIGHT ON BODY",
-      "avg_price": 83.32
-    },
-    "945093": {
-      "description": "REAR/TAIL LIGHT ON TAILGATE",
-      "avg_price": 49.99
-    },
-    "086750": {
+    "867501": {
       "description": "ROOF LINER",
-      "avg_price": 99.99
+      "avg_price": 114.99
     },
-    "185775": {
-      "description": "SEATBELT BUCKLE",
-      "avg_price": 29.99
+    "920980": {
+      "description": "SPEEDO CLOCKS",
+      "avg_price": 38.32
     },
-    "601025": {
-      "description": "SINGLE ALLOY (18 INCH)",
-      "avg_price": 110.0
-    },
-    "092092": {
+    "920927": {
       "description": "SPEEDO CLOCKS",
       "avg_price": 19.99
     },
-    "692097": {
+    "920907": {
       "description": "SPEEDO CLOCKS",
-      "avg_price": 29.99
+      "avg_price": 19.99
     },
-    "920951": {
+    "920974": {
       "description": "SPEEDO CLOCKS",
-      "avg_price": 79.99
+      "avg_price": 24.99
     },
-    "927137": {
-      "description": "START STOP PARK SWITCH",
-      "avg_price": 12.49
+    "920975": {
+      "description": "SPEEDO CLOCKS",
+      "avg_price": 69.99
     },
     "919041": {
       "description": "VOLTAGE STABILISER ECU",
       "avg_price": 11.66
     },
-    "695545": {
-      "description": "WASHER BOTTLE",
-      "avg_price": 14.99
-    },
-    "081506": {
+    "815065": {
       "description": "WEB ASTO AUXILIARY HEATER",
       "avg_price": 69.99
     },
-    "683746": {
-      "description": "WINDOW REGULATOR/MECH ELECTRIC",
-      "avg_price": 23.32
+    "959703": {
+      "description": "WINDOW MOTOR",
+      "avg_price": 16.66
     },
-    "683946": {
-      "description": "WINDOW REGULATOR/MECH ELECTRIC",
-      "avg_price": 21.66
-    },
-    "483946": {
-      "description": "WINDOW REGULATOR/MECH ELECTRIC",
-      "avg_price": 21.24
-    },
-    "595350": {
-      "description": "WIPER & INDICATOR STALK",
-      "avg_price": 27.49
-    },
-    "012965": {
+    "129654": {
       "description": "AIR INTAKE PIPE",
       "avg_price": 30.0
     },
-    "060101": {
+    "601015": {
       "description": "ALLOY WHEEL - SINGLE",
-      "avg_price": 33.49
+      "avg_price": 42.0
     },
-    "903021": {
-      "description": "ALTERNATOR",
-      "avg_price": 29.99
+    "035183": {
+      "description": "CD HEAD UNIT",
+      "avg_price": 149.0
     },
-    "182350": {
-      "description": "BONNET LOCK LATCH",
-      "avg_price": 24.99
-    },
-    "880741": {
-      "description": "CURTAIN SRS PASSENGER SIDE",
-      "avg_price": 174.99
-    },
-    "907445": {
-      "description": "ENGINE ECU",
-      "avg_price": 29.99
-    },
-    "971612": {
-      "description": "ENGINE WIRING LOOM",
-      "avg_price": 49.99
-    },
-    "086327": {
+    "863279": {
       "description": "Gear Knob And Gaiter",
       "avg_price": 9.99
     },
-    "080507": {
+    "805071": {
       "description": "Headlight Bracket (Passengers)",
       "avg_price": 29.99
     },
-    "091909": {
+    "919094": {
       "description": "HEADLIGHT SWITCH",
-      "avg_price": 19.99
+      "avg_price": 14.99
     },
-    "094101": {
+    "941016": {
       "description": "HEADLIGHT/HEADLAMP",
       "avg_price": 170.0
     },
-    "294101": {
+    "941018": {
       "description": "HEADLIGHT/HEADLAMP",
-      "avg_price": 149.0
+      "avg_price": 140.5
     },
-    "919475": {
-      "description": "PARKING SENSOR MODULE",
-      "avg_price": 22.49
+    "941017": {
+      "description": "HEADLIGHT/HEADLAMP",
+      "avg_price": 157.49
     },
-    "945094": {
-      "description": "REAR/TAIL LIGHT ON TAILGATE (DRIVERS SIDE)",
-      "avg_price": 56.66
+    "941007": {
+      "description": "HEADLIGHT/HEADLAMP",
+      "avg_price": 20.0
     },
-    "080569": {
+    "805696": {
       "description": "WHEEL ARCH LINER",
       "avg_price": 61.0
-    },
-    "895502": {
-      "description": "WIPER MOTOR (FRONT) & LINKAGE",
-      "avg_price": 24.99
     },
     "614109": {
       "description": "ABS PUMP/MODULATOR/CONTROL UNIT",
       "avg_price": 19.99
     },
-    "131723": {
-      "description": "ALTERNATOR",
-      "avg_price": 299.99
+    "035456": {
+      "description": "ANTENNA AMPLIFIER MODULE",
+      "avg_price": 9.99
     },
-    "703550": {
-      "description": "ANTENNA/AMPLIFIER MODULE",
-      "avg_price": 14.99
-    },
-    "086425": {
+    "864251": {
       "description": "ARMREST STORAGE BOX",
       "avg_price": 39.99
     },
-    "582750": {
-      "description": "BOOTLID LOCK MECH",
-      "avg_price": 11.99
-    },
-    "281573": {
+    "815735": {
       "description": "CENTRE AIR VENTS",
       "avg_price": 18.32
     },
-    "286423": {
+    "864236": {
       "description": "CENTRE CONSOLE CUP HOLDER TRIM",
       "avg_price": 39.99
     },
-    "959433": {
-      "description": "Comfort Control Module",
-      "avg_price": 19.99
-    },
-    "095935": {
+    "959351": {
       "description": "Crash Sensor",
       "avg_price": 7.49
     },
-    "281959": {
+    "819593": {
       "description": "Dash Trim",
       "avg_price": 9.99
     },
-    "495959": {
-      "description": "DOOR CONTROL MODULE (N/F/S)",
-      "avg_price": 10.0
+    "959392": {
+      "description": "Door Control Module (Passenger Front Side)",
+      "avg_price": 12.49
     },
-    "183702": {
-      "description": "DOOR HANDLE - INTERIOR",
-      "avg_price": 14.99
+    "407762": {
+      "description": "DRIVESHAFT - DRIVER FRONT (ABS)",
+      "avg_price": 32.49
     },
-    "076906": {
-      "description": "DPF Pressure Sensor",
-      "avg_price": 9.99
+    "853654": {
+      "description": "FRONT GRILL",
+      "avg_price": 76.66
     },
-    "040776": {
-      "description": "DRIVE SHAFT",
-      "avg_price": 30.37
-    },
-    "395985": {
-      "description": "ELECTRIC WINDOW SWITCH",
-      "avg_price": 19.99
-    },
-    "906014": {
-      "description": "ENGINE ECU",
-      "avg_price": 19.99
-    },
-    "906204": {
-      "description": "ENGINE ECU",
-      "avg_price": 19.99
-    },
-    "103954": {
-      "description": "ENGINE TOP COVER",
-      "avg_price": 39.99
-    },
-    "380718": {
-      "description": "FRONT BUMPER SUPPORT BRACKET",
-      "avg_price": 16.99
-    },
-    "985365": {
-      "description": "FRONT BUMPER UPPER GRILL",
-      "avg_price": 49.99
-    },
-    "681077": {
-      "description": "Fuel Flap Actuator",
-      "avg_price": 9.99
-    },
-    "093750": {
+    "937503": {
       "description": "FUSE BOX (IN ENGINE BAY)",
       "avg_price": 14.99
     },
-    "071130": {
+    "711303": {
       "description": "HAND BRAKE",
-      "avg_price": 15.0
+      "avg_price": 14.99
     },
-    "695565": {
+    "955651": {
       "description": "Headlight Washer Pump",
       "avg_price": 19.99
     },
@@ -16750,287 +16538,207 @@
       "description": "HEATER CONTROL PANEL",
       "avg_price": 19.99
     },
-    "890733": {
+    "907336": {
       "description": "HEATER CONTROL PANEL",
       "avg_price": 12.49
     },
-    "095122": {
+    "951223": {
       "description": "HORN",
-      "avg_price": 15.19
+      "avg_price": 16.49
     },
-    "085349": {
+    "853492": {
       "description": "PAIR SIDE SILL COVER PLATES",
       "avg_price": 34.99
     },
-    "192723": {
+    "927238": {
       "description": "PARKING SENSOR SWITCH",
-      "avg_price": 9.99
+      "avg_price": 27.99
     },
-    "051342": {
+    "513425": {
       "description": "REAR SHOCKS",
       "avg_price": 24.99
     },
-    "395540": {
-      "description": "REAR WIPER ARM",
+    "880241": {
+      "description": "SEAT SRS ABAG (N/S/F)",
       "avg_price": 19.99
     },
-    "395570": {
-      "description": "REAR WIPER ARM",
-      "avg_price": 14.99
-    },
-    "885770": {
-      "description": "SEAT BELT - PASSENGER FRONT",
-      "avg_price": 16.66
-    },
-    "185770": {
-      "description": "SEAT BELT - PASSENGER FRONT",
-      "avg_price": 44.99
-    },
-    "088024": {
-      "description": "FRONT SEAT SRS ABAG",
-      "avg_price": 19.49
-    },
-    "085385": {
+    "853856": {
       "description": "SIDE SKIRT",
       "avg_price": 49.99
     },
-    "192713": {
-      "description": "START STOP & MODE SWITCH",
-      "avg_price": 14.99
+    "853855": {
+      "description": "SIDE SKIRT",
+      "avg_price": 49.99
     },
-    "841909": {
-      "description": "STEERING WHEEL",
-      "avg_price": 33.33
+    "920961": {
+      "description": "SPEEDO CLOCKS",
+      "avg_price": 32.19
     },
-    "253019": {
-      "description": "TURBO",
-      "avg_price": 199.99
-    },
-    "012125": {
+    "121251": {
       "description": "WATER COOLANT RADIATOR",
       "avg_price": 59.99
     },
-    "795911": {
+    "959111": {
       "description": "WIND DEFLECTOR MOTOR",
       "avg_price": 9.99
     },
-    "083740": {
-      "description": "WINDOW MOTOR",
-      "avg_price": 14.99
-    },
-    "839755": {
-      "description": "WINDOW REGULATOR/MECH ELECTRIC",
-      "avg_price": 19.99
-    },
-    "955023": {
-      "description": "WIPER MOTOR (FRONT) & LINKAGE",
-      "avg_price": 22.99
-    },
-    "497112": {
-      "description": "Wiring Loom",
-      "avg_price": 21.66
-    },
-    "060114": {
+    "601147": {
       "description": "15 INCH WHEEL TRIM",
-      "avg_price": 17.49
+      "avg_price": 16.66
     },
-    "050005": {
+    "500051": {
       "description": "AXLE (REAR) DRUMS/ABS",
       "avg_price": 59.99
     },
-    "003573": {
+    "035730": {
       "description": "Bluetooth Module",
       "avg_price": 29.99
     },
-    "685885": {
-      "description": "BOOT FLOOR",
-      "avg_price": 34.99
-    },
-    "080772": {
+    "807724": {
       "description": "BUMPER SUPPORT BRACKET",
       "avg_price": 9.99
     },
-    "131512": {
-      "description": "EGR COOLER",
-      "avg_price": 59.99
+    "959851": {
+      "description": "ELECTRIC WINDOW SWITCH",
+      "avg_price": 16.49
     },
-    "103945": {
-      "description": "ENGINE TOP COVER",
-      "avg_price": 34.99
-    },
-    "286339": {
+    "863391": {
       "description": "FRONT CONSOLE ASHTRAY",
       "avg_price": 14.99
     },
-    "985366": {
-      "description": "FRONT FOGLIGHT GRILL",
-      "avg_price": 19.99
-    },
-    "919050": {
-      "description": "FUEL PUMP (IN TANK)",
-      "avg_price": 24.99
-    },
-    "080990": {
-      "description": "FUEL/PETROL FLAP",
-      "avg_price": 29.99
-    },
-    "927238": {
-      "description": "Handbrake Switch",
-      "avg_price": 45.99
-    },
-    "080788": {
+    "807889": {
       "description": "Headlight Support Bracket",
       "avg_price": 14.99
     },
-    "941006": {
-      "description": "HEADLIGHT/HEADLAMP",
-      "avg_price": 38.0
-    },
-    "281902": {
-      "description": "HEATER BLOWER MOTOR",
-      "avg_price": 42.49
-    },
-    "003555": {
+    "035554": {
       "description": "MEDIA IN ADAPTER CABLE",
       "avg_price": 14.99
     },
-    "281940": {
+    "819404": {
       "description": "SCUTTLE PANEL/PAIR",
-      "avg_price": 39.99
+      "avg_price": 37.49
+    },
+    "880242": {
+      "description": "SEAT SRS ABAG (O/S/F)",
+      "avg_price": 18.99
+    },
+    "601017": {
+      "description": "SPACE SAVER WHEEL",
+      "avg_price": 24.99
     },
     "920970": {
       "description": "SPEEDO CLOCKS",
-      "avg_price": 19.99
+      "avg_price": 20.99
     },
-    "582746": {
+    "827469": {
       "description": "TAILGATE HANDLE",
       "avg_price": 24.99
     },
-    "253056": {
-      "description": "TURBO",
-      "avg_price": 140.0
-    },
-    "795980": {
-      "description": "WINDOW MOTOR",
-      "avg_price": 55.0
-    },
-    "959703": {
-      "description": "WINDOW MOTOR (N/S/R)",
-      "avg_price": 17.0
-    },
-    "090713": {
+    "907137": {
       "description": "WIPER & INDICATOR STALK",
       "avg_price": 19.99
     },
-    "095571": {
-      "description": "WIPER MOTOR (REAR)",
-      "avg_price": 14.99
-    },
-    "001221": {
+    "012219": {
       "description": "17MM WHEEL BRACE SPANNER",
       "avg_price": 9.99
     },
-    "082067": {
+    "820679": {
       "description": "A.C MATRIX",
       "avg_price": 24.99
     },
-    "000444": {
+    "004441": {
       "description": "ABAG SENSOR",
       "avg_price": 99.99
     },
-    "000159": {
+    "001597": {
       "description": "ABS PUMP/MODULATOR/CONTROL UNIT",
       "avg_price": 299.99
     },
-    "000199": {
+    "001997": {
       "description": "AC CONDITIONING PIPE CONNECTOR",
       "avg_price": 99.99
     },
-    "095905": {
+    "959053": {
       "description": "AIRBAG SQUIB/SLIP RING",
       "avg_price": 14.99
     },
-    "096210": {
+    "962109": {
       "description": "Alarm Deactivation Switch",
       "avg_price": 6.99
     },
-    "000240": {
+    "002405": {
       "description": "ALARM SIREN",
       "avg_price": 149.99
     },
-    "803557": {
+    "035570": {
       "description": "ANTENNA AMPLIFIER",
       "avg_price": 13.99
     },
-    "000287": {
+    "002873": {
       "description": "AUDIO AMPLIFIER",
       "avg_price": 99.99
     },
-    "000169": {
+    "001697": {
       "description": "AUXILIARY WATER PUMP",
       "avg_price": 44.99
     },
-    "000300": {
+    "003009": {
       "description": "BONNET CABLE",
       "avg_price": 79.99
     },
-    "000280": {
+    "002807": {
       "description": "CAMERA CONTROL UNIT",
       "avg_price": 199.99
     },
-    "937087": {
-      "description": "CENTRAL CONTROL UNIT",
-      "avg_price": 27.49
-    },
-    "000251": {
+    "002516": {
       "description": "CHARGING FLAP (DRIVERS SIDE)",
-      "avg_price": 94.99
+      "avg_price": 89.99
     },
-    "086032": {
+    "002515": {
+      "description": "CHARGING FLAP",
+      "avg_price": 99.99
+    },
+    "860321": {
       "description": "COLLAPSIBLE WHEEL CHOCKS",
       "avg_price": 19.99
     },
-    "000243": {
+    "002433": {
       "description": "COLLISION WARNING CONTROL UNIT",
       "avg_price": 219.99
     },
-    "000301": {
+    "003019": {
       "description": "COOLANT BOTTLE",
       "avg_price": 69.99
     },
-    "388074": {
-      "description": "CURTAIN SRS ABAG",
-      "avg_price": 23.32
-    },
-    "000322": {
+    "003226": {
       "description": "DOOR HANDLE - INTERIOR",
       "avg_price": 59.99
     },
-    "000179": {
+    "001797": {
       "description": "DOOR LOCK MECH",
       "avg_price": 79.99
     },
-    "000158": {
+    "001585": {
       "description": "DOOR LOCK MECH",
       "avg_price": 149.99
     },
-    "083701": {
-      "description": "DOOR LOCK MECH",
-      "avg_price": 24.99
-    },
-    "000163": {
+    "001635": {
       "description": "DOOR LOCK MECH",
       "avg_price": 149.99
     },
-    "483961": {
+    "839615": {
       "description": "DOOR LOCK MECH",
       "avg_price": 14.99
     },
-    "084502": {
-      "description": "DOOR WINDOW",
-      "avg_price": 39.99
+    "035412": {
+      "description": "DOOR TWEETER SPEAKER PASSENGER SIDE",
+      "avg_price": 19.99
     },
-    "040772": {
+    "845026": {
+      "description": "DOOR WINDOW",
+      "avg_price": 38.82
+    },
+    "407721": {
       "description": "DRIVE SHAFT( FRONT PASSENGER SIDE)",
       "avg_price": 34.99
     },
@@ -17038,35 +16746,31 @@
       "description": "ELECTRIC WINDOW SWITCH",
       "avg_price": 39.99
     },
-    "906201": {
-      "description": "ENGINE ECU",
-      "avg_price": 34.99
+    "853667": {
+      "description": "FRONT BUMPER LOWER GRILL",
+      "avg_price": 69.99
     },
-    "000385": {
+    "003857": {
       "description": "FRONT DOOR SPEAKER",
       "avg_price": 39.99
     },
-    "955410": {
-      "description": "FRONT WIPER ARM/PAIR",
-      "avg_price": 19.99
-    },
-    "000285": {
+    "002850": {
       "description": "FRONT WIPER ARMS (PAIR)",
       "avg_price": 49.99
     },
-    "000284": {
+    "002848": {
       "description": "FRONT WIPER MOTOR",
-      "avg_price": 63.32
+      "avg_price": 79.99
     },
-    "093713": {
+    "002846": {
+      "description": "FRONT WIPER MOTOR",
+      "avg_price": 79.99
+    },
+    "937132": {
       "description": "FUSE RELAY BOX TRIM",
       "avg_price": 11.99
     },
-    "711113": {
-      "description": "GEAR LEVER KNOB",
-      "avg_price": 27.49
-    },
-    "286321": {
+    "863212": {
       "description": "GEAR LEVER SURROUND TRIM",
       "avg_price": 19.99
     },
@@ -17074,7 +16778,7 @@
       "description": "HAZARD LIGHT SWITCH",
       "avg_price": 9.99
     },
-    "090735": {
+    "907357": {
       "description": "HEADLIGHT CONTROL MODULE",
       "avg_price": 14.99
     },
@@ -17082,115 +16786,99 @@
       "description": "HORN",
       "avg_price": 14.99
     },
-    "000268": {
+    "002683": {
       "description": "INTERCOM CONTROL UNIT",
       "avg_price": 149.99
     },
-    "000176": {
+    "001761": {
       "description": "POWER STEERING PUMP",
       "avg_price": 419.99
     },
-    "384530": {
-      "description": "QUARTER WINDOW",
-      "avg_price": 39.99
-    },
-    "384529": {
-      "description": "QUARTER WINDOW",
-      "avg_price": 36.0
-    },
-    "081920": {
-      "description": "REAR AIR VENTS",
-      "avg_price": 19.99
-    },
     "819203": {
-      "description": "REAR AIR VENTS TRIM",
-      "avg_price": 39.99
-    },
-    "323322": {
-      "description": "REAR BRAKE CLIPER",
-      "avg_price": 34.99
+      "description": "REAR AIR VENTS",
+      "avg_price": 26.66
     },
     "857739": {
       "description": "REAR CENTRE SEATBELT BUCKLE",
-      "avg_price": 19.99
+      "avg_price": 21.24
     },
-    "000218": {
+    "002180": {
       "description": "REAR ELECTRIC BRAKE CALIPER (DRIVERS SIDE)",
       "avg_price": 139.99
     },
-    "000217": {
+    "002179": {
       "description": "REAR ELECTRIC BRAKE CALIPER",
       "avg_price": 139.99
     },
-    "000106": {
+    "001065": {
       "description": "REAR SEATBELT BUCKLE",
       "avg_price": 39.99
     },
-    "000261": {
+    "001063": {
+      "description": "REAR SEATBELT BUCKLE",
+      "avg_price": 39.99
+    },
+    "002619": {
       "description": "REAR VIEW MIRROR",
       "avg_price": 49.99
     },
     "945208": {
       "description": "REAR/TAIL LIGHT ON BODY ( DRIVERS SIDE)",
-      "avg_price": 119.99
+      "avg_price": 104.66
     },
     "945308": {
       "description": "REAR/TAIL LIGHT ON TAILGATE (DRIVERS SIDE)",
-      "avg_price": 49.99
+      "avg_price": 53.74
     },
     "945307": {
       "description": "REAR/TAIL LIGHT ON TAILGATE",
-      "avg_price": 49.99
+      "avg_price": 63.33
     },
-    "316879": {
-      "description": "SPEEDO CLOCKS",
-      "avg_price": 449.99
-    },
-    "920971": {
-      "description": "SPEEDO CLOCKS",
+    "002845": {
+      "description": "SHARK FIN ANTENNA",
       "avg_price": 29.99
     },
-    "000120": {
+    "920905": {
+      "description": "SPEEDO CLOCKS",
+      "avg_price": 34.99
+    },
+    "920947": {
+      "description": "SPEEDO CLOCKS",
+      "avg_price": 49.99
+    },
+    "001209": {
       "description": "SPEEDO TRIM",
       "avg_price": 49.99
     },
-    "000101": {
+    "001011": {
       "description": "STEERING WHEEL",
       "avg_price": 69.99
     },
-    "095954": {
+    "959542": {
       "description": "STEERING WHEEL",
       "avg_price": 79.99
-    },
-    "316679": {
-      "description": "STEREO HEAD UNIT",
-      "avg_price": 149.99
     },
     "858069": {
       "description": "STEREO HEAD UNIT TRIM",
       "avg_price": 9.99
     },
-    "682750": {
-      "description": "TAILGATE LOCK CATCH",
-      "avg_price": 19.99
-    },
-    "000245": {
+    "002456": {
       "description": "VOLTAGE POWER CONVERTER",
       "avg_price": 289.99
     },
-    "000103": {
+    "001033": {
       "description": "WASHER BOTTLE",
       "avg_price": 59.99
     },
-    "000183": {
+    "001837": {
       "description": "WATER PUMP",
       "avg_price": 99.99
     },
-    "000248": {
+    "002480": {
       "description": "WINDOW REGULATOR/MECH ELECTRIC",
       "avg_price": 119.99
     },
-    "000247": {
+    "002479": {
       "description": "WINDOW REGULATOR/MECH ELECTRIC",
       "avg_price": 89.99
     },
@@ -17198,523 +16886,399 @@
       "description": "WINDOW REGULATOR/MECH ELECTRIC",
       "avg_price": 29.99
     },
-    "083973": {
+    "839730": {
       "description": "WINDOW REGULATOR/MECH ELECTRIC",
-      "avg_price": 19.99
+      "avg_price": 18.32
     },
-    "000257": {
+    "002577": {
       "description": "WINDOW REGULATOR/MECH ELECTRIC",
       "avg_price": 89.99
     },
-    "821142": {
-      "description": "WING SUPPORT BRACKET DRIVERS SIDE FRONT",
-      "avg_price": 14.99
+    "919237": {
+      "description": "Airbag Deactivation Switch",
+      "avg_price": 9.99
     },
-    "955119": {
-      "description": "WIPER MOTOR (FRONT) & LINKAGE",
-      "avg_price": 29.99
-    },
-    "096212": {
-      "description": "Central Locking Swtich",
-      "avg_price": 14.99
-    },
-    "082095": {
+    "820951": {
       "description": "CENTRE AIR VENTS",
       "avg_price": 20.34
     },
-    "384520": {
-      "description": "DOOR WINDOW",
-      "avg_price": 34.99
-    },
     "907561": {
-      "description": "FRONT DISTANCE RADAR SENSOR",
-      "avg_price": 75.0
+      "description": "RADAR DISTANCE SENSOR",
+      "avg_price": 79.0
     },
-    "090612": {
+    "906121": {
       "description": "FUEL INJECTION UNIT",
       "avg_price": 59.99
     },
-    "713203": {
-      "description": "GEAR KNOB + GAITER",
-      "avg_price": 20.0
-    },
-    "713025": {
-      "description": "GEAR SELECTOR SHIFTER",
-      "avg_price": 24.99
-    },
-    "907801": {
-      "description": "HANDBRAKE CONTROL MODULE",
-      "avg_price": 18.32
+    "294153": {
+      "description": "HEADLIGHT SWITCH",
+      "avg_price": 25.0
     },
     "941751": {
       "description": "HEADLIGHT/HEADLAMP XENON",
       "avg_price": 239.99
     },
-    "090756": {
-      "description": "RADAR DISTANCE SENSOR",
-      "avg_price": 80.0
-    },
-    "094530": {
-      "description": "REAR INNER TAIL LIGHT",
-      "avg_price": 27.49
-    },
-    "594511": {
-      "description": "REAR/TAIL LIGHT",
-      "avg_price": 64.99
-    },
     "945207": {
       "description": "REAR/TAIL LIGHT ON BODY",
-      "avg_price": 119.99
+      "avg_price": 97.66
     },
-    "094531": {
+    "945310": {
       "description": "REAR/TAIL LIGHT ON TAILGATE (DRIVERS SIDE)",
       "avg_price": 29.99
     },
-    "803527": {
+    "945309": {
+      "description": "REAR/TAIL LIGHT ON TAILGATE",
+      "avg_price": 29.99
+    },
+    "035279": {
       "description": "SAT NAV STEREO PLAYER",
-      "avg_price": 69.99
+      "avg_price": 64.99
     },
-    "085773": {
-      "description": "Seatbelt Buckle",
-      "avg_price": 21.66
+    "857701": {
+      "description": "SEAT BELT - PASSENGER FRONT",
+      "avg_price": 34.99
     },
-    "888020": {
-      "description": "STEERING AIRBAG",
-      "avg_price": 20.0
+    "920983": {
+      "description": "SPEEDO CLOCKS",
+      "avg_price": 89.99
     },
-    "003527": {
-      "description": "STEREO CD PLAYER",
-      "avg_price": 59.99
-    },
-    "082348": {
+    "823480": {
       "description": "Upper Bonnet Catch",
       "avg_price": 14.99
     },
-    "085481": {
+    "854819": {
       "description": "WHEEL ARCH TRIM PASSENGER SIDE REAR",
       "avg_price": 29.99
+    },
+    "095980": {
+      "description": "WINDOW MOTOR(DRIVER FRONT SIDE)",
+      "avg_price": 34.99
     },
     "837755": {
       "description": "WINDOW REGULATOR/MECH ELECTRIC",
       "avg_price": 24.99
     },
-    "795571": {
-      "description": "WIPER MOTOR (REAR)",
-      "avg_price": 20.0
-    },
-    "091051": {
+    "910517": {
       "description": "ABS PUMP/MODULATOR/CONTROL UNIT",
       "avg_price": 19.99
     },
-    "959655": {
-      "description": "AIR BAG MODULE",
-      "avg_price": 49.99
-    },
-    "903315": {
-      "description": "AUX BELT TENSIONER",
-      "avg_price": 12.99
-    },
-    "086233": {
+    "862335": {
       "description": "Bluetooth Control Module",
       "avg_price": 14.99
     },
-    "890715": {
+    "907159": {
       "description": "BODY SOUND CONTROL MODULE",
       "avg_price": 19.99
     },
-    "882353": {
-      "description": "BONNET RELEASE CABLE",
-      "avg_price": 24.99
-    },
-    "882755": {
-      "description": "BOOTLID STRUTS (PAIR)",
-      "avg_price": 17.49
-    },
-    "097027": {
+    "970279": {
       "description": "CENTRAL CONTROL UNIT",
       "avg_price": 19.99
     },
-    "293704": {
-      "description": "CENTRAL CONTROL UNIT",
-      "avg_price": 19.99
-    },
-    "081911": {
+    "819110": {
       "description": "CENTRE AIR VENT GRILLE",
       "avg_price": 10.0
     },
-    "281972": {
-      "description": "CENTRE AIR VENTS",
-      "avg_price": 19.99
-    },
-    "272131": {
+    "721318": {
       "description": "CLUTCH PEDAL",
       "avg_price": 19.99
     },
-    "281971": {
+    "819710": {
       "description": "DASH AIR VENT",
       "avg_price": 14.99
     },
-    "083724": {
+    "837249": {
       "description": "DOOR CHECK STRAP (DRIVER FRONT SIDE)",
       "avg_price": 9.99
     },
-    "906020": {
-      "description": "ECU (ENGINE)",
-      "avg_price": 24.99
+    "407761": {
+      "description": "DRIVE SHAFT",
+      "avg_price": 28.24
     },
-    "090608": {
+    "906089": {
       "description": "ELECTRIC FUEL PUMP",
       "avg_price": 34.99
     },
-    "080588": {
+    "805885": {
       "description": "FRONT PANEL WITH RAD PACK",
       "avg_price": 349.99
     },
-    "019931": {
+    "199315": {
       "description": "FRONT SUBFRAME",
       "avg_price": 54.99
     },
-    "093754": {
+    "937548": {
       "description": "FUSEBOX DISTRIBUTER",
       "avg_price": 19.99
     },
-    "071104": {
+    "711049": {
       "description": "GEAR SHIFTER LINKAGE",
       "avg_price": 37.49
     },
-    "019585": {
+    "195851": {
       "description": "GEARBOX MOUNT - LOWER",
       "avg_price": 14.99
     },
-    "285711": {
+    "857114": {
       "description": "GLOVE BOX",
       "avg_price": 29.99
     },
-    "038906": {
-      "description": "Glow Plug Relay",
-      "avg_price": 5.99
-    },
-    "086333": {
+    "863339": {
       "description": "HANDBRAKE TRIM",
       "avg_price": 15.0
     },
-    "081904": {
+    "819045": {
       "description": "HEATER CONTROL PANEL",
       "avg_price": 9.99
-    },
-    "110281": {
-      "description": "INTERIOR REARVIEW MIRROR",
-      "avg_price": 19.99
     },
     "121253": {
       "description": "PETROL RADIATOR NON AC",
       "avg_price": 34.99
     },
-    "080786": {
+    "423057": {
+      "description": "POWER STEERING RACK",
+      "avg_price": 69.99
+    },
+    "807863": {
       "description": "REAR BUMPER CENTRE BRACKET",
       "avg_price": 14.99
     },
-    "084504": {
-      "description": "REAR QUARTER GLASS",
-      "avg_price": 55.0
-    },
-    "885751": {
-      "description": "REAR VIEW MIRROR",
-      "avg_price": 13.99
-    },
-    "986750": {
-      "description": "ROOF LINER",
-      "avg_price": 129.99
-    },
-    "085774": {
+    "857740": {
       "description": "SEATBELT BUCKLE",
       "avg_price": 29.99
     },
-    "892097": {
+    "920972": {
       "description": "SPEEDO CLOCKS",
-      "avg_price": 39.99
+      "avg_price": 30.0
     },
-    "095944": {
-      "description": "STEERING WHEEL",
-      "avg_price": 41.49
-    },
-    "803519": {
-      "description": "STEREO DISPLAY SCREEN",
-      "avg_price": 44.99
-    },
-    "059145": {
-      "description": "THROTTLE BODY",
-      "avg_price": 79.99
-    },
-    "080995": {
-      "description": "WHEEL ARCH LINER",
-      "avg_price": 39.99
-    },
-    "295980": {
-      "description": "WINDOW MOTOR",
-      "avg_price": 22.49
-    },
-    "295988": {
-      "description": "WINDOW MOTOR",
-      "avg_price": 21.66
-    },
-    "959802": {
-      "description": "WINDOW MOTOR",
-      "avg_price": 14.99
-    },
-    "883740": {
-      "description": "WINDOW REGULATOR/MECH ELECTRIC",
-      "avg_price": 54.99
-    },
-    "882113": {
-      "description": "WING SUPPORT BRACKET",
-      "avg_price": 13.99
-    },
-    "095355": {
-      "description": "WIPER & INDICATOR STALK",
-      "avg_price": 24.99
-    },
-    "279948": {
-      "description": "AIRBAG SQUIB/SLIP RING",
-      "avg_price": 44.99
-    },
-    "903025": {
-      "description": "ALTERNATOR",
-      "avg_price": 24.99
-    },
-    "882330": {
-      "description": "BONNET HINGES (PAIR)",
-      "avg_price": 34.0
-    },
-    "482756": {
-      "description": "BOOT OPENING SWITCH",
-      "avg_price": 34.99
-    },
-    "094525": {
-      "description": "BULB HOLDER",
-      "avg_price": 23.33
-    },
-    "495939": {
-      "description": "DOOR CONTROL MODULE (O/S/F)",
-      "avg_price": 9.99
-    },
-    "086722": {
-      "description": "ELECTRIC WINDOW SWITCH",
-      "avg_price": 9.99
-    },
-    "019918": {
-      "description": "ENGINE MOUNT",
-      "avg_price": 15.0
-    },
-    "080985": {
-      "description": "FUEL/PETROL FLAP",
-      "avg_price": 43.33
-    },
-    "285791": {
-      "description": "GLOVE BOX FRONT DRIVER SIDE",
-      "avg_price": 19.99
-    },
-    "094520": {
-      "description": "REAR/TAIL LIGHT",
-      "avg_price": 91.0
-    },
-    "881942": {
-      "description": "SCUTTLE PANEL (PAIR)",
-      "avg_price": 39.99
-    },
-    "885775": {
-      "description": "SEATBELT BUCKLE DRIVERS SIDE FRONT",
-      "avg_price": 19.99
-    },
-    "292082": {
-      "description": "SPEEDO CLOCKS",
-      "avg_price": 29.99
-    },
-    "080996": {
-      "description": "WHEEL ARCH LINER",
-      "avg_price": 26.66
-    },
-    "959801": {
-      "description": "WINDOW MOTOR",
-      "avg_price": 14.99
-    },
-    "282090": {
-      "description": "4X DASH AIR VENTS/ SET",
-      "avg_price": 29.99
-    },
-    "182010": {
-      "description": "A.C MATRIX",
-      "avg_price": 34.99
-    },
-    "012925": {
-      "description": "AIR INLET",
-      "avg_price": 44.99
-    },
-    "195354": {
-      "description": "AIRBAG SQUIB/SLIP RING",
-      "avg_price": 29.99
-    },
-    "060116": {
-      "description": "ALLOY WHEEL CENTRE CAP",
-      "avg_price": 14.99
-    },
-    "982755": {
-      "description": "BOOTLID STRUTS (PAIR)",
-      "avg_price": 18.99
-    },
-    "093704": {
-      "description": "CENTRAL CONTROL UNIT",
-      "avg_price": 24.99
-    },
-    "072140": {
-      "description": "COOLANT EXPANSION TANK",
-      "avg_price": 19.99
-    },
-    "281970": {
-      "description": "DASH AIRVENTS",
-      "avg_price": 10.66
-    },
-    "083920": {
-      "description": "DOOR HANDLE EXTERIOR",
-      "avg_price": 19.99
-    },
-    "086711": {
-      "description": "DOOR PANEL/CARD",
-      "avg_price": 39.99
-    },
-    "085328": {
-      "description": "DOOR WINDOW MOULDING",
-      "avg_price": 17.49
-    },
-    "085376": {
-      "description": "DOOR WINDOW MOULDING",
-      "avg_price": 19.99
-    },
-    "297116": {
-      "description": "Door Wiring Loom",
-      "avg_price": 19.99
-    },
-    "595953": {
-      "description": "ELECTRIC WINDOW SWITCH",
-      "avg_price": 54.99
-    },
-    "695985": {
-      "description": "ELECTRIC WINDOW SWITCH",
-      "avg_price": 6.99
-    },
-    "181940": {
-      "description": "FRONT SCUTTLE PANEL(PAIR)",
-      "avg_price": 34.99
-    },
-    "285792": {
-      "description": "GLOVE BOX",
-      "avg_price": 19.99
-    },
-    "086147": {
-      "description": "HARD BOOT FLOOR",
-      "avg_price": 39.99
-    },
-    "820045": {
-      "description": "HEAD UNIT & CLIMATE CONTROL SWITCH",
-      "avg_price": 49.99
-    },
-    "291909": {
-      "description": "HEADLIGHT ADJUSTMENT SWITCH",
-      "avg_price": 9.99
-    },
-    "941531": {
-      "description": "HEADLIGHT SWITCH",
-      "avg_price": 14.99
-    },
-    "282051": {
-      "description": "HEATER FLAP ACTUATOR",
-      "avg_price": 12.33
-    },
-    "524104": {
-      "description": "HEATER FLAP MOTOR",
-      "avg_price": 29.99
-    },
-    "283714": {
-      "description": "INNER DOOR HANDLE (O/S/F)",
-      "avg_price": 19.99
-    },
-    "001210": {
-      "description": "JACK AND TOOlKIT",
-      "avg_price": 34.99
-    },
-    "091929": {
-      "description": "PARKING DISTANCE ECU",
-      "avg_price": 19.99
-    },
-    "091928": {
-      "description": "PARKING SENSOR MODULE",
-      "avg_price": 19.99
-    },
-    "042237": {
-      "description": "POWER STEERING FLUID RESERVOIR",
-      "avg_price": 14.99
-    },
-    "090727": {
-      "description": "POWER SUPPLY CONTROL MODULE",
-      "avg_price": 19.99
-    },
-    "845041": {
-      "description": "QUARTER GLASS",
-      "avg_price": 47.49
-    },
-    "680739": {
-      "description": "REAR BUMPER BRACKET",
-      "avg_price": 19.99
-    },
-    "094510": {
-      "description": "REAR INNER TAIL LIGHT",
-      "avg_price": 19.32
-    },
-    "594525": {
-      "description": "REAR LIGHT",
-      "avg_price": 39.99
-    },
-    "110156": {
-      "description": "Rear View Interior Mirror",
-      "avg_price": 9.99
-    },
-    "994520": {
-      "description": "REAR/TAIL LIGHT ON BODY ( DRIVERS SIDE)",
-      "avg_price": 92.49
-    },
-    "994530": {
-      "description": "REAR/TAIL LIGHT ON TAILGATE (DRIVERS SIDE)",
-      "avg_price": 49.99
-    },
-    "090743": {
-      "description": "SLIDING DOOR CONTACT CONNECTOR",
-      "avg_price": 29.99
-    },
-    "920961": {
-      "description": "SPEEDO CLOCKS",
-      "avg_price": 49.99
-    },
-    "041968": {
+    "959442": {
       "description": "STEERING WHEEL",
       "avg_price": 69.99
     },
-    "575419": {
-      "description": "STEERING WHEEL",
-      "avg_price": 59.99
+    "035195": {
+      "description": "STEREO DISPLAY SCREEN",
+      "avg_price": 44.99
     },
-    "803515": {
+    "809958": {
+      "description": "WHEEL ARCH LINER",
+      "avg_price": 39.99
+    },
+    "959882": {
+      "description": "WINDOW MOTOR",
+      "avg_price": 24.99
+    },
+    "612105": {
+      "description": "BRAKE SERVO",
+      "avg_price": 34.99
+    },
+    "837014": {
+      "description": "DOOR LOCK MECH",
+      "avg_price": 39.99
+    },
+    "837013": {
+      "description": "DOOR LOCK MECH",
+      "avg_price": 29.99
+    },
+    "867225": {
+      "description": "ELECTRIC WINDOW SWITCH",
+      "avg_price": 9.99
+    },
+    "199185": {
+      "description": "ENGINE MOUNT",
+      "avg_price": 15.0
+    },
+    "853655": {
+      "description": "FRONT GRILL",
+      "avg_price": 50.0
+    },
+    "821141": {
+      "description": "FRONT WING BRACKET",
+      "avg_price": 25.0
+    },
+    "857919": {
+      "description": "GLOVE BOX FRONT DRIVER SIDE",
+      "avg_price": 19.99
+    },
+    "711301": {
+      "description": "HAND BREAK HANDLE LEVER",
+      "avg_price": 15.0
+    },
+    "867768": {
+      "description": "PARCEL SHELF",
+      "avg_price": 39.99
+    },
+    "819426": {
+      "description": "SCUTTLE PANEL (PAIR)",
+      "avg_price": 39.99
+    },
+    "920820": {
+      "description": "SPEEDO CLOCKS",
+      "avg_price": 29.99
+    },
+    "035152": {
+      "description": "STEREO",
+      "avg_price": 15.0
+    },
+    "809962": {
+      "description": "WHEEL ARCH LINER",
+      "avg_price": 17.5
+    },
+    "959881": {
+      "description": "WINDOW MOTOR (DRIVER FRONT SIDE)",
+      "avg_price": 19.99
+    },
+    "820902": {
+      "description": "4X DASH AIR VENTS/ SET",
+      "avg_price": 29.99
+    },
+    "820105": {
+      "description": "A.C MATRIX",
+      "avg_price": 34.99
+    },
+    "129254": {
+      "description": "AIR INLET",
+      "avg_price": 44.99
+    },
+    "953541": {
+      "description": "AIRBAG SQUIB/SLIP RING",
+      "avg_price": 29.99
+    },
+    "601165": {
+      "description": "ALLOY WHEEL CENTRE CAP",
+      "avg_price": 14.99
+    },
+    "721407": {
+      "description": "COOLANT EXPANSION TANK",
+      "avg_price": 19.99
+    },
+    "959441": {
+      "description": "CRUISE CONTROL SWITCH",
+      "avg_price": 12.99
+    },
+    "839205": {
+      "description": "DOOR HANDLE EXTERIOR",
+      "avg_price": 19.99
+    },
+    "867114": {
+      "description": "DOOR PANEL/CARD",
+      "avg_price": 49.99
+    },
+    "867113": {
+      "description": "DOOR PANEL/CARD",
+      "avg_price": 29.99
+    },
+    "853283": {
+      "description": "DOOR WINDOW MOULDING",
+      "avg_price": 19.99
+    },
+    "853763": {
+      "description": "DOOR WINDOW MOULDING",
+      "avg_price": 19.99
+    },
+    "853764": {
+      "description": "DOOR WINDOW MOULDING",
+      "avg_price": 19.99
+    },
+    "971161": {
+      "description": "Door Wiring Loom",
+      "avg_price": 19.99
+    },
+    "959539": {
+      "description": "ELECTRIC WINDOW SWITCH",
+      "avg_price": 54.99
+    },
+    "019926": {
+      "description": "ENGINE MOUNT",
+      "avg_price": 19.99
+    },
+    "857924": {
+      "description": "GLOVE BOX",
+      "avg_price": 19.99
+    },
+    "861475": {
+      "description": "HARD BOOT FLOOR",
+      "avg_price": 39.99
+    },
+    "959672": {
+      "description": "HAZARD START STOP SWITCH",
+      "avg_price": 9.99
+    },
+    "959674": {
+      "description": "HEATED SEAT SWITCH",
+      "avg_price": 9.99
+    },
+    "820511": {
+      "description": "HEATER FLAP ACTUATOR",
+      "avg_price": 12.33
+    },
+    "951182": {
+      "description": "HORN",
+      "avg_price": 14.99
+    },
+    "919606": {
+      "description": "INFOTAINMENT SYSTEM",
+      "avg_price": 239.99
+    },
+    "837144": {
+      "description": "INNER DOOR HANDLE (O/S/F)",
+      "avg_price": 19.99
+    },
+    "012109": {
+      "description": "JACK AND TOOlKIT",
+      "avg_price": 34.99
+    },
+    "919294": {
+      "description": "PARKING DISTANCE ECU",
+      "avg_price": 19.99
+    },
+    "919283": {
+      "description": "PARKING SENSOR MODULE",
+      "avg_price": 19.99
+    },
+    "422373": {
+      "description": "POWER STEERING FLUID RESERVOIR",
+      "avg_price": 14.99
+    },
+    "907279": {
+      "description": "POWER SUPPLY CONTROL MODULE",
+      "avg_price": 19.99
+    },
+    "807394": {
+      "description": "REAR BUMPER BRACKET",
+      "avg_price": 19.99
+    },
+    "807393": {
+      "description": "REAR BUMPER BRACKET",
+      "avg_price": 19.99
+    },
+    "945105": {
+      "description": "REAR BUMPER REFLECTOR",
+      "avg_price": 17.99
+    },
+    "907437": {
+      "description": "SLIDING DOOR CONTACT CONNECTOR",
+      "avg_price": 29.99
+    },
+    "920950": {
+      "description": "SPEEDO CLOCKS",
+      "avg_price": 32.32
+    },
+    "920906": {
+      "description": "SPEEDO CLOCKS",
+      "avg_price": 27.99
+    },
+    "920910": {
+      "description": "SPEEDO CLOCKS",
+      "avg_price": 19.99
+    },
+    "419685": {
+      "description": "STEERING WHEEL",
+      "avg_price": 69.99
+    },
+    "035150": {
       "description": "STEREO HEADUNIT",
       "avg_price": 59.99
     },
-    "903538": {
-      "description": "SUBWOOFER +AMPLIFIER",
-      "avg_price": 34.99
-    },
-    "965084": {
-      "description": "TAIL LIGHT BULB HOLDER",
-      "avg_price": 14.99
-    },
-    "686771": {
+    "867715": {
       "description": "TAIL LIGHT UPPER TRIM",
       "avg_price": 19.99
     },
@@ -17722,183 +17286,155 @@
       "description": "TYRE PRESSURE SWITCH",
       "avg_price": 14.99
     },
-    "092079": {
+    "920790": {
       "description": "VIRTUAL COCKPIT",
       "avg_price": 349.99
     },
-    "601147": {
-      "description": "14 INCH WHEEL CAP",
-      "avg_price": 14.99
+    "082113": {
+      "description": "WING SUPPORT BRACKET",
+      "avg_price": 9.99
     },
-    "085360": {
+    "853601": {
       "description": "BADGE",
       "avg_price": 29.99
     },
-    "286253": {
+    "862534": {
       "description": "DASHBOARD CUPHOLDER",
       "avg_price": 19.99
     },
-    "085396": {
-      "description": "DOOR MOULDING TRIM SET",
-      "avg_price": 99.99
+    "853284": {
+      "description": "DOOR WINDOW MOULDING",
+      "avg_price": 15.0
     },
-    "197102": {
-      "description": "DOOR WIRING LOOM",
-      "avg_price": 12.0
-    },
-    "082523": {
+    "825236": {
       "description": "ENGINE UNDER TRAY",
-      "avg_price": 32.49
+      "avg_price": 39.99
     },
-    "095540": {
-      "description": "FRONT WIPER ARM",
-      "avg_price": 10.0
-    },
-    "326800": {
-      "description": "HEATER FLAP MOTOR  ACTUATOR",
-      "avg_price": 6.0
-    },
-    "845042": {
-      "description": "QUARTER GLASS",
-      "avg_price": 49.99
-    },
-    "003519": {
+    "035193": {
       "description": "RADIO HEAD UNIT",
       "avg_price": 132.0
     },
-    "084365": {
+    "843653": {
       "description": "SLIDING DOOR LOCK MECH",
       "avg_price": 119.99
     },
-    "145722": {
-      "description": "TURBO",
-      "avg_price": null
+    "809961": {
+      "description": "WHEEL ARCH LINER",
+      "avg_price": 44.99
     },
-    "955453": {
-      "description": "WASHER BOTTLE",
-      "avg_price": 30.0
-    },
-    "285738": {
+    "857388": {
       "description": "WING MIRROR",
       "avg_price": 139.99
     },
-    "085796": {
+    "951227": {
+      "description": "Alarm Siren",
+      "avg_price": 9.99
+    },
+    "857961": {
       "description": "ASH TRAY",
       "avg_price": 9.99
     },
-    "082382": {
+    "823823": {
       "description": "BONNET ACTUATOR",
       "avg_price": 49.99
     },
-    "085728": {
+    "857289": {
       "description": "CENTRE CONTROL TRIM +VENTS",
       "avg_price": 19.99
     },
-    "906033": {
-      "description": "ECU (ENGINE)",
-      "avg_price": 19.99
+    "201810": {
+      "description": "CHARCOAL CANNISTER",
+      "avg_price": 29.99
     },
-    "080590": {
+    "819701": {
+      "description": "DASH GRILL",
+      "avg_price": 9.99
+    },
+    "805903": {
       "description": "FRONT BUMPER LOWER TRIM",
       "avg_price": 29.99
     },
-    "071305": {
+    "713052": {
       "description": "GEAR SHIFTING MECHANISM",
       "avg_price": 29.99
     },
-    "097167": {
+    "971679": {
       "description": "Glove Box Wiring Harness",
       "avg_price": 24.99
     },
-    "090759": {
+    "907599": {
       "description": "GLOW PLUG",
       "avg_price": 19.99
     },
-    "857511": {
-      "description": "INTERIOR REARVIEW MIRROR",
-      "avg_price": 49.99
-    },
-    "294710": {
-      "description": "INTERIOR ROOF READING LIGHT",
-      "avg_price": 29.99
-    },
-    "080768": {
+    "807681": {
       "description": "LOWER GRILLE",
       "avg_price": 44.99
     },
-    "503503": {
-      "description": "MMI HEAD UNIT",
-      "avg_price": 299.99
-    },
-    "007510": {
+    "075101": {
       "description": "MUD GUARD",
       "avg_price": 19.99
     },
-    "097122": {
+    "971228": {
       "description": "Positive Battery Wiring",
       "avg_price": 9.99
     },
-    "503541": {
-      "description": "REAR CENTRE SUBWOOFER",
-      "avg_price": 19.99
-    },
-    "385775": {
-      "description": "SEATBELT BUCKLE",
-      "avg_price": 15.0
-    },
-    "083798": {
+    "837985": {
       "description": "SPEAKER TWEETER",
       "avg_price": 9.99
     },
-    "090914": {
-      "description": "STEERING RACK",
-      "avg_price": 69.99
+    "920963": {
+      "description": "SPEEDO CLOCKS",
+      "avg_price": 39.99
     },
-    "261193": {
+    "611931": {
       "description": "VACUUM PIPE",
       "avg_price": 19.99
     },
-    "080591": {
+    "805911": {
       "description": "WHEEL ARCH SPLASH GUARD",
       "avg_price": 19.99
     },
-    "483740": {
-      "description": "WINDOW REGULATOR/MECH ELECTRIC",
+    "805912": {
+      "description": "WHEEL ARCH SPLASH GUARD",
       "avg_price": 19.99
     },
-    "986356": {
+    "863560": {
       "description": "WINDOW MOTOR",
       "avg_price": 19.99
     },
-    "686746": {
+    "867461": {
       "description": "BOOT FLOOR SUPPORT TRIM (N/S)",
-      "avg_price": 10.0
+      "avg_price": 5.0
     },
-    "272195": {
+    "867462": {
+      "description": "BOOT FLOOR SUPPORT TRIM (O/S)",
+      "avg_price": 14.99
+    },
+    "721959": {
       "description": "CLUTCH PEDAL",
       "avg_price": 14.99
     },
-    "684502": {
-      "description": "DOOR WINDOW",
-      "avg_price": 36.49
+    "819702": {
+      "description": "DASH GRILL",
+      "avg_price": 14.99
     },
-    "286725": {
-      "description": "ELECTRIC WINDOW SWITCH",
-      "avg_price": 19.99
+    "825235": {
+      "description": "ENGINE COVER UNDERTRAY",
+      "avg_price": 24.99
     },
-    "994170": {
+    "941702": {
       "description": "FOG LIGHT",
       "avg_price": 15.0
     },
-    "012739": {
-      "description": "FUEL FILTER HOUSING",
-      "avg_price": 34.99
+    "941701": {
+      "description": "FOG LIGHT",
+      "avg_price": 15.0
     },
-    "001050": {
+    "010508": {
       "description": "FUEL/PETROL FLAP",
       "avg_price": 17.49
     },
-    "986141": {
+    "861411": {
       "description": "HARD BOOT FLOOR",
       "avg_price": 55.0
     },
@@ -17906,19 +17442,19 @@
       "description": "HEADLIGHT/HEADLAMP",
       "avg_price": 119.99
     },
-    "080596": {
-      "description": "INTAKE BOX DUCT",
-      "avg_price": 14.99
-    },
-    "094523": {
+    "945232": {
       "description": "Rear Inner Bulb Holder",
       "avg_price": 24.99
     },
-    "483973": {
-      "description": "WINDOW REGULATOR/MECH ELECTRIC",
-      "avg_price": 17.49
+    "945231": {
+      "description": "Rear Inner Bulb Holder",
+      "avg_price": 24.99
     },
-    "483972": {
+    "041909": {
+      "description": "STEERING WHEEL",
+      "avg_price": 24.99
+    },
+    "839729": {
       "description": "WINDOW REGULATOR/MECH ELECTRIC",
       "avg_price": 27.49
     },
@@ -17926,119 +17462,83 @@
       "description": "BOOT CARPET",
       "avg_price": 39.99
     },
-    "084364": {
+    "959794": {
+      "description": "DOOR CONTROL MODULE",
+      "avg_price": 9.99
+    },
+    "843641": {
       "description": "DOOR HANDLE - INTERIOR",
       "avg_price": 9.99
     },
-    "483911": {
+    "839113": {
       "description": "DOOR HANDLE - INTERIOR",
       "avg_price": 9.99
     },
-    "283901": {
-      "description": "DOOR LOCK MECH",
-      "avg_price": 19.99
-    },
-    "845025": {
-      "description": "DOOR WINDOW",
+    "853653": {
+      "description": "FRONT GRILL",
       "avg_price": 39.99
-    },
-    "510805": {
-      "description": "FRONT PANEL",
-      "avg_price": 389.99
     },
     "867705": {
       "description": "HARD BOOT FLOOR",
       "avg_price": 119.99
     },
-    "203515": {
+    "035153": {
       "description": "HEAD UNIT CD PLAYER",
       "avg_price": 19.99
     },
-    "694102": {
-      "description": "HEADLIGHT/HEADLAMP",
-      "avg_price": 29.99
-    },
-    "845412": {
-      "description": "QUARTER WINDOW",
-      "avg_price": 44.99
-    },
-    "884504": {
-      "description": "QUARTER WINDOW",
-      "avg_price": 79.99
-    },
-    "845411": {
-      "description": "QUARTER WINDOW",
-      "avg_price": 54.99
-    },
-    "061542": {
+    "615423": {
       "description": "REAR BRAKE CALIPER",
-      "avg_price": 12.5
+      "avg_price": 10.0
     },
-    "894511": {
-      "description": "REAR/TAIL LIGHT ON BODY",
-      "avg_price": 31.5
-    },
-    "510837": {
-      "description": "WINDOW REGULATOR/MECH ELECTRIC",
+    "945108": {
+      "description": "REAR INNER TAIL LIGHT",
       "avg_price": 19.99
     },
-    "084369": {
+    "920904": {
+      "description": "SPEEDO CLOCKS",
+      "avg_price": 19.99
+    },
+    "920901": {
+      "description": "SPEEDO CLOCKS",
+      "avg_price": 24.99
+    },
+    "843699": {
       "description": "WINDOW REGULATOR/MECH ELECTRIC",
       "avg_price": 29.99
     },
-    "510839": {
-      "description": "WINDOW REGULATOR/MECH ELECTRIC",
-      "avg_price": 22.49
-    },
-    "085363": {
+    "853633": {
       "description": "BONNET CHROME TRIM",
       "avg_price": 20.0
     },
-    "131051": {
-      "description": "Boost Control Solenoid (N75)",
-      "avg_price": 14.99
+    "937088": {
+      "description": "CENTRAL CONTROL UNIT",
+      "avg_price": 20.0
     },
-    "845026": {
-      "description": "DOOR WINDOW",
-      "avg_price": 39.99
-    },
-    "097112": {
-      "description": "DOOR WIRING LOOM (N/S/F)",
-      "avg_price": 24.99
-    },
-    "086717": {
+    "867171": {
       "description": "ELECTRIC WINDOW SWITCH",
       "avg_price": 19.99
     },
-    "585366": {
-      "description": "FOG LIGHT GRILL",
-      "avg_price": 49.99
+    "809999": {
+      "description": "FUEL/PETROL FLAP",
+      "avg_price": 29.99
     },
-    "510853": {
-      "description": "FRONT GRILL",
-      "avg_price": 100.0
-    },
-    "880990": {
-      "description": "FUEL FLAP",
+    "907461": {
+      "description": "RADAR SENSOR BRACKET",
       "avg_price": 39.99
     },
-    "518941": {
-      "description": "HEADLIGHT/HEADLAMP",
-      "avg_price": 120.0
+    "615424": {
+      "description": "REAR BRAKE CALIPER",
+      "avg_price": 14.99
     },
-    "694103": {
-      "description": "HEADLIGHT/HEADLAMP",
-      "avg_price": 25.0
+    "945107": {
+      "description": "REAR INNER TAIL LIGHT",
+      "avg_price": 19.99
     },
-    "594530": {
-      "description": "INNER TAIL LIGHT",
-      "avg_price": 90.0
+    "858472": {
+      "description": "SEAT BELT BUCKLE (O/S/F)",
+      "avg_price": 24.99
     },
-    "583740": {
-      "description": "WINDOW MOTOR DRIVERS SIDE FRONT",
-      "avg_price": 15.0
-    },
-    "483940": {
+    "839401": {
       "description": "WINDOW REGULATOR/MECH ELECTRIC",
       "avg_price": 14.99
     }
