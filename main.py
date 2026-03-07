@@ -7,11 +7,16 @@ Keeps API keys secure on the server side.
 import os
 import re
 import asyncio
+from datetime import datetime, timezone
 import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import Optional
 import anthropic
+
+from vag_lookup import lookup_part as db_lookup, save_learned, reload_db, get_db, save_db
+from claude_prompt import build_identification_prompt
 
 # ── CONFIG ───────────────────────────────────────────────────────
 EBAY_APP_ID = os.environ.get("EBAY_APP_ID", "")
@@ -49,6 +54,12 @@ class LookupResponse(BaseModel):
     total_listings: int = 0
     confidence: str = "none"  # high/medium/low/none
     source: str = "none"
+    breakerpro_price: float | None = None  # historical price from BreakerPro database
+
+class CorrectionRequest(BaseModel):
+    part_number: str
+    corrected_description: str
+    price: Optional[float] = None
 
 class HealthResponse(BaseModel):
     status: str
@@ -218,7 +229,7 @@ def calculate_pricing(listings: list[dict]) -> dict:
 # ── CLAUDE API ───────────────────────────────────────────────────
 
 async def identify_with_claude(part_number: str) -> str | None:
-    """Identify a VAG part using Claude AI with breaker-yard context."""
+    """Identify a VAG part using Claude AI with comprehensive VAG knowledge."""
     if not ANTHROPIC_API_KEY:
         print("Claude API: ANTHROPIC_API_KEY not set")
         return None
@@ -230,50 +241,17 @@ async def identify_with_claude(part_number: str) -> str | None:
             messages=[
                 {
                     "role": "user",
-                    "content": (
-                        "You are a VAG Group (VW, Audi, SEAT, Skoda) parts identification specialist "
-                        "working in a vehicle dismantling yard.\n\n"
-                        "Given a VAG OEM part number, return ONLY a short breaker-style description "
-                        "(2-6 words max). Include SIDE where applicable (Driver/Passenger, Nearside/Offside, "
-                        "Front/Rear). Be SPECIFIC about component type.\n\n"
-                        "Rules:\n"
-                        "- Be SPECIFIC: 'Window Regulator Control Module' not 'Control Module'\n"
-                        "- Include SIDE: '- Driver Side' or '- Passenger Side' when the part number indicates it\n"
-                        "- Include POSITION: Front, Rear, Upper, Lower when relevant\n"
-                        "- Use industry-standard breaker terminology\n"
-                        "- Part numbers starting with 03G253, 04L253, or 06K145 followed by any suffix are TURBOCHARGERS, not DPFs or oil pipes\n"
-                        "- For N/A or empty codes: return '—'\n"
-                        "- Return ONLY the description. No quotes, no explanation, no part number.\n\n"
-                        "Examples:\n"
-                        "- 5G0927225D → Electric Handbrake Switch\n"
-                        "- 8P4 857 706 D → Seatbelt Pretensioner - Driver Side\n"
-                        "- 8P0 959 802 E → Electric Window Motor - Rear Passenger Side\n"
-                        "- 1K0 907 719 C → Steering Column Lock Module\n"
-                        "- 8P0 959 655 L → Window Regulator Control Module\n"
-                        "- 4F2 837 015 → Door Lock Mechanism - Driver Side\n"
-                        "- 1K0 820 808 B → Heater Blower Motor\n"
-                        "- 5E0 941 015 C → Headlight - Driver Side\n"
-                        "- 04L253016H → Turbocharger 1.6 TDI\n"
-                        "- 06K145722H → Turbocharger 2.0 TFSI\n"
-                        "- 03G253014F → Turbocharger 1.9 TDI\n"
-                        "- 8P0953519F → Wiper Stalk\n"
-                        "- 7H0843436 → Sliding Door Roller Guide - Upper\n"
-                        "- 1K2721503M → Throttle Pedal Assembly\n"
-                        "- 5Q0907275 → ABS Pump Module\n"
-                        "- 7E0843106C → Sliding Door - Passenger Side Complete\n"
-                        "- 5N0827505A → Tailgate Lock Mechanism\n\n"
-                        f"Part number: {part_number}"
-                    ),
+                    "content": build_identification_prompt(part_number),
                 }
             ],
         )
         text = message.content[0].text.strip()
         # Safe string cleaning: remove leading/trailing punctuation/whitespace
         text = re.sub(r'^[\s.\'"]+|[\s.\'"]+$', '', text)
-        # Limit to 6 words max
+        # Limit to 8 words max (allow slightly longer for side designation)
         words = text.split()
-        if len(words) > 6:
-            text = " ".join(words[:6])
+        if len(words) > 8:
+            text = " ".join(words[:8])
         return text if text else None
     except Exception as e:
         print(f"Claude API error: {type(e).__name__}: {e}")
@@ -301,6 +279,27 @@ async def health():
     )
 
 
+_NO_PRICING = {
+    "avg_price": None, "median_price": None, "low_price": None,
+    "high_price": None, "suggested_price": None, "confidence": "none",
+    "total_listings": 0,
+}
+
+
+async def _ebay_pricing(client: httpx.AsyncClient, part_number: str, description: str) -> tuple[dict, str]:
+    """Fetch eBay pricing for a part. Returns (pricing_dict, ebay_source_suffix)."""
+    try:
+        token = await get_ebay_token(client)
+        listings = await search_ebay(client, token, part_number)
+        if not listings and description:
+            listings = await search_ebay(client, token, f"{description} VAG")
+        if listings:
+            return calculate_pricing(listings), "+ebay"
+    except Exception as e:
+        print(f"eBay lookup failed for {part_number}: {e}")
+    return _NO_PRICING.copy(), ""
+
+
 @app.post("/lookup", response_model=LookupResponse)
 async def lookup_part(req: LookupRequest):
     part_number = req.part_number.strip()
@@ -312,74 +311,71 @@ async def lookup_part(req: LookupRequest):
 
     clean = part_number.upper().replace(" ", "")
 
-    if clean == "N/A" or clean == "":
+    if clean in ("N/A", ""):
         return LookupResponse(part_number=clean, description="—", source="none")
 
     async with httpx.AsyncClient() as client:
-        # Paint codes -> Claude only, skip eBay (they don't have market pricing)
+
+        # Paint codes -> Claude only (no eBay market for paint codes)
         if is_paint_code(clean):
             claude_desc = await identify_with_claude(clean)
             return LookupResponse(
-                part_number=clean, description=claude_desc or "Paint Code",
-                source="claude", total_listings=0, confidence="none",
+                part_number=clean,
+                description=claude_desc or "Paint Code",
+                source="claude",
             )
 
-        # Phase 1: Run Claude identification and eBay search IN PARALLEL for speed
+        # Engine/gearbox codes (only letters, no digits) -> Claude only
+        if re.match(r'^[A-Za-z]{2,5}$', clean):
+            claude_desc = await identify_with_claude(clean)
+            return LookupResponse(
+                part_number=clean,
+                description=claude_desc or "Engine/Gearbox Code",
+                source="claude",
+            )
+
+        # ── Database lookup (primary) ──────────────────────────────────────
+        db_result = db_lookup(clean)
+
+        if db_result:
+            description     = db_result["description"]
+            breakerpro_price = db_result.get("breakerpro_price")
+            db_source       = db_result["source"]  # "database" or "learned"
+
+            # Still fetch eBay pricing so user sees current market value
+            pricing, ebay_suffix = await _ebay_pricing(client, clean, description)
+            source = db_source + ebay_suffix  # e.g. "database+ebay" or "database"
+
+            return LookupResponse(
+                part_number=clean,
+                description=description,
+                source=source,
+                breakerpro_price=breakerpro_price,
+                **pricing,
+            )
+
+        # ── Claude fallback ────────────────────────────────────────────────
+        # Run Claude + eBay in parallel for minimum latency
         claude_task = identify_with_claude(clean)
-        
-        ebay_task = None
-        try:
-            token = await get_ebay_token(client)
-            # eBay search using the RAW PART NUMBER (no description needed)
-            ebay_task = search_ebay(client, token, clean)
-        except Exception as e:
-            print(f"eBay init failed for {clean}: {e}")
-        
-        # Wait for both to complete
-        claude_desc, listings = await asyncio.gather(
-            claude_task,
-            ebay_task if ebay_task else asyncio.sleep(0, result=[]),
-        )
-        
-        # Phase 2: Use Claude description (always), and eBay for pricing only
+        ebay_task   = _ebay_pricing(client, clean, "")
+
+        claude_desc, (pricing, ebay_suffix) = await asyncio.gather(claude_task, ebay_task)
+
+        # If eBay by part number found nothing but Claude succeeded, try description search
+        if not pricing["avg_price"] and claude_desc:
+            pricing, ebay_suffix = await _ebay_pricing(client, clean, claude_desc)
+
+        # Auto-save to learned section for future lookups
+        if claude_desc and claude_desc.lower() != "unknown part":
+            try:
+                save_learned(clean, claude_desc)
+                print(f"Learned: {clean} -> {claude_desc}")
+            except Exception as e:
+                print(f"Failed to save learned entry for {clean}: {e}")
+
         description = claude_desc or "Unknown Part"
-        
-        # If we got listings from part number search, calculate pricing
-        if listings:
-            pricing = calculate_pricing(listings)
-            source = "claude+ebay"
-        else:
-            # No eBay listings from part number search
-            # Try a broader search with description + VAG terms
-            if claude_desc:
-                try:
-                    broader_query = f"{claude_desc} VAG"
-                    listings = await search_ebay(client, token, broader_query)
-                    if listings:
-                        pricing = calculate_pricing(listings)
-                        source = "claude+ebay"
-                    else:
-                        pricing = {
-                            "avg_price": None, "median_price": None, "low_price": None,
-                            "high_price": None, "suggested_price": None, "confidence": "none",
-                            "total_listings": 0
-                        }
-                        source = "claude"
-                except Exception:
-                    pricing = {
-                        "avg_price": None, "median_price": None, "low_price": None,
-                        "high_price": None, "suggested_price": None, "confidence": "none",
-                        "total_listings": 0
-                    }
-                    source = "claude"
-            else:
-                pricing = {
-                    "avg_price": None, "median_price": None, "low_price": None,
-                    "high_price": None, "suggested_price": None, "confidence": "none",
-                    "total_listings": 0
-                }
-                source = "none"
-        
+        source      = ("claude" + ebay_suffix) if claude_desc else "none"
+
         return LookupResponse(
             part_number=clean,
             description=description,
@@ -402,6 +398,61 @@ async def lookup_batch(parts: list[LookupRequest]):
                 part_number=part.part_number, description="Lookup Failed", source="none"
             ))
     return results
+
+
+@app.get("/db-stats")
+async def db_stats():
+    """Return current database entry counts."""
+    db = get_db()
+    return {
+        "exact_entries":   len(db.get("exact", {})),
+        "group_entries":   len(db.get("groups", {})),
+        "learned_entries": len(db.get("learned", {})),
+        "last_updated":    db.get("_meta", {}).get("last_updated", "unknown"),
+    }
+
+
+@app.post("/db-reload")
+async def db_reload():
+    """Reload the database from disk (useful after manual edits to vag_parts_db.json)."""
+    reload_db()
+    return {"status": "reloaded"}
+
+
+@app.post("/db-correct")
+async def db_correct(req: CorrectionRequest):
+    """
+    User corrected a description in the frontend.
+    Saves as an exact match — user corrections are the highest authority.
+    Promotes the entry out of 'learned' if it was there.
+    """
+    clean = req.part_number.strip().upper().replace(" ", "")
+    if not clean:
+        raise HTTPException(status_code=400, detail="part_number is required")
+
+    db = get_db()
+
+    db.setdefault("exact", {})[clean] = {
+        "description":     req.corrected_description,
+        "breakerpro_price": req.price,
+        "vehicle":         None,
+        "corrected":       True,
+        "corrected_at":    datetime.now(timezone.utc).isoformat(),
+    }
+
+    # Remove from learned if present — it's now verified
+    if clean in db.get("learned", {}):
+        del db["learned"][clean]
+
+    db.setdefault("_meta", {})["total_exact_entries"] = len(db["exact"])
+    save_db(db)
+    reload_db()
+
+    return {
+        "status":      "saved",
+        "part_number": clean,
+        "description": req.corrected_description,
+    }
 
 
 if __name__ == "__main__":
