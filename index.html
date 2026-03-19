@@ -663,6 +663,24 @@ const cfg = Object.assign({ url: DEFAULT_URL, demo: false }, loadCfg());
 // ── State ────────────────────────────────────────────────────────────────────
 let parts = [];
 
+// ── Persistence ──────────────────────────────────────────────────────────────
+function saveParts() {
+  try {
+    localStorage.setItem('pulledapart_logged_parts', JSON.stringify(parts));
+  } catch(e) {
+    console.warn('localStorage write failed (storage full?):', e);
+  }
+}
+
+function loadParts() {
+  try {
+    const stored = localStorage.getItem('pulledapart_logged_parts');
+    if (stored) parts = JSON.parse(stored);
+  } catch(e) {
+    console.warn('localStorage read failed:', e);
+  }
+}
+
 // ── DOM ──────────────────────────────────────────────────────────────────────
 const $  = id => document.getElementById(id);
 const badge      = $('badge');
@@ -765,6 +783,7 @@ async function addPart() {
       your_price:      prefill,
     });
     pnInput.value = '';
+    saveParts();
     render();
     updateStats();
     pnInput.focus();
@@ -779,6 +798,10 @@ async function addPart() {
 
 pnInput.addEventListener('keydown',  e => e.key === 'Enter' && addPart());
 refInput.addEventListener('keydown', e => e.key === 'Enter' && addPart());
+refInput.addEventListener('input', () => {
+  try { localStorage.setItem('pulledapart_last_ref', refInput.value); }
+  catch(e) { console.warn('localStorage write failed:', e); }
+});
 addBtn.addEventListener('click', addPart);
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -852,6 +875,7 @@ function startEditDesc(partId) {
 
     if (changed) {
       p.description = newDesc;
+      saveParts();
       const flash = document.createElement('span');
       flash.className = 'save-flash';
       flash.textContent = 'Saved \u2713';
@@ -931,6 +955,7 @@ partsList.addEventListener('click', e => {
   const rm = e.target.closest('[data-rm]');
   if (!rm) return;
   parts = parts.filter(p => p.id !== +rm.dataset.rm);
+  saveParts();
   render();
   updateStats();
 });
@@ -942,12 +967,15 @@ partsList.addEventListener('input', e => {
   if (!p) return;
   const raw = inp.value.replace(/[^\d.]/g, '');
   p.your_price = raw ? parseFloat(raw) : null;
+  saveParts();
   updateStats();
 });
 
 clearBtn.addEventListener('click', () => {
   if (!confirm('Clear all ' + parts.length + ' part' + (parts.length !== 1 ? 's' : '') + '?')) return;
   parts = [];
+  localStorage.removeItem('pulledapart_logged_parts');
+  localStorage.removeItem('pulledapart_last_ref');
   render();
   updateStats();
 });
@@ -987,6 +1015,11 @@ exportBtn.addEventListener('click', () => {
   a.download = 'parts-' + new Date().toISOString().slice(0, 10) + '.csv';
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  parts = [];
+  localStorage.removeItem('pulledapart_logged_parts');
+  localStorage.removeItem('pulledapart_last_ref');
+  render();
+  updateStats();
 });
 
 // ── Settings panel ────────────────────────────────────────────────────────────
@@ -1017,6 +1050,11 @@ sSave.addEventListener('click', () => {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 checkStatus();
+loadParts();
+try {
+  const savedRef = localStorage.getItem('pulledapart_last_ref');
+  if (savedRef) refInput.value = savedRef;
+} catch(e) { /* ignore */ }
 render();
 updateStats();
 pnInput.focus();
