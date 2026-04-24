@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1A1A1A">
+<title>Pulled Apart — Lead Logger</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --charcoal: #1A1A1A;
+    --red: #E31E24;
+    --red-dark: #B8181D;
+    --grey-bg: #F0F0F0;
+    --grey-mid: #888;
+    --white: #FFFFFF;
+    --green: #22C55E;
+    --amber: #F59E0B;
+    --font-brand: 'Montserrat', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  html { font-size: 16px; }
+  body {
+    font-family: var(--font-brand);
+    background: var(--grey-bg);
+    color: var(--charcoal);
+    min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: calc(70px + var(--safe-bottom));
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--charcoal);
+    color: var(--white);
+    padding: 16px 20px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header h1 {
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .header h1 span { color: var(--red); }
+  .header-count {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--grey-mid);
+    font-weight: 600;
+  }
+
+  /* ── TABS ── */
+  .tab-bar {
+    display: flex;
+    background: var(--charcoal);
+    border-top: 1px solid #333;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    padding-bottom: var(--safe-bottom);
+  }
+  .tab-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--grey-mid);
+    font-family: var(--font-brand);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 4px 10px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    transition: color 0.15s;
+  }
+  .tab-btn.active { color: var(--red); }
+  .tab-btn svg { width: 22px; height: 22px; fill: currentColor; }
+
+  /* ── VIEWS ── */
+  .view { display: none; padding: 16px; }
+  .view.active { display: block; }
+
+  /* ── FORM ── */
+  .form-group { margin-bottom: 14px; }
+  .form-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--grey-mid);
+    margin-bottom: 6px;
+  }
+  .form-input {
+    width: 100%;
+    padding: 14px 16px;
+    font-family: var(--font-brand);
+    font-size: 1rem;
+    font-weight: 500;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    background: var(--white);
+    color: var(--charcoal);
+    outline: none;
+    transition: border-color 0.15s;
+    -webkit-appearance: none;
+  }
+  .form-input:focus { border-color: var(--red); }
+  .form-input::placeholder { color: #bbb; }
+
+  textarea.form-input {
+    min-height: 80px;
+    resize: vertical;
+    line-height: 1.4;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .btn-save {
+    width: 100%;
+    padding: 16px;
+    background: var(--red);
+    color: var(--white);
+    font-family: var(--font-brand);
+    font-size: 1rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-top: 6px;
+    transition: background 0.15s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-save:active { background: var(--red-dark); transform: scale(0.98); }
+
+  /* ── SUCCESS FLASH ── */
+  .flash {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    background: var(--green);
+    color: var(--white);
+    text-align: center;
+    padding: 14px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    transform: translateY(-100%);
+    transition: transform 0.3s ease;
+    z-index: 200;
+  }
+  .flash.show { transform: translateY(0); }
+
+  /* ── LEADS LIST ── */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+  .filter-btn {
+    padding: 8px 14px;
+    font-family: var(--font-brand);
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 2px solid #ddd;
+    border-radius: 20px;
+    background: var(--white);
+    color: var(--charcoal);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .filter-btn.active {
+    background: var(--charcoal);
+    color: var(--white);
+    border-color: var(--charcoal);
+  }
+
+  .lead-card {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 10px;
+    border-left: 4px solid var(--grey-mid);
+    position: relative;
+  }
+  .lead-card[data-status="new"] { border-left-color: var(--red); }
+  .lead-card[data-status="chased"] { border-left-color: var(--amber); }
+  .lead-card[data-status="sold"] { border-left-color: var(--green); }
+  .lead-card[data-status="lost"] { border-left-color: #999; }
+
+  .lead-name {
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 2px;
+  }
+  .lead-part {
+    font-size: 0.9rem;
+    color: #555;
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+  .lead-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--grey-mid);
+  }
+  .lead-price {
+    font-weight: 600;
+    color: var(--charcoal);
+  }
+  .lead-phone {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--red);
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-block;
+    margin-bottom: 6px;
+  }
+  .lead-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .lead-action-btn {
+    flex: 1;
+    padding: 10px 8px;
+    font-family: var(--font-brand);
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    border: 2px solid #eee;
+    border-radius: 8px;
+    background: var(--white);
+    color: var(--charcoal);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .lead-action-btn.call { border-color: var(--red); color: var(--red); }
+  .lead-action-btn.sold { border-color: var(--green); color: var(--green); }
+  .lead-action-btn.lost { border-color: #999; color: #999; }
+  .lead-action-btn.chased { border-color: var(--amber); color: var(--amber); }
+  .lead-action-btn.delete { border-color: #eee; color: #ccc; font-size: 0.65rem; }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--grey-mid);
+  }
+  .empty-state svg { width: 48px; height: 48px; fill: #ddd; margin-bottom: 12px; }
+  .empty-state p { font-size: 0.9rem; font-weight: 500; }
+
+  /* ── EXPORT VIEW ── */
+  .export-section {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 14px;
+  }
+  .export-section h3 {
+    font-size: 0.85rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+  .export-section p {
+    font-size: 0.85rem;
+    color: #666;
+    line-height: 1.4;
+    margin-bottom: 14px;
+  }
+  .btn-export {
+    width: 100%;
+    padding: 14px;
+    font-family: var(--font-brand);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: 2px solid var(--charcoal);
+    border-radius: 10px;
+    background: var(--white);
+    color: var(--charcoal);
+    cursor: pointer;
+    transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-export:active {
+    background: var(--charcoal);
+    color: var(--white);
+  }
+  .btn-danger {
+    border-color: var(--red);
+    color: var(--red);
+  }
+  .btn-danger:active {
+    background: var(--red);
+    color: var(--white);
+  }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .stat-box {
+    background: var(--white);
+    border-radius: 10px;
+    padding: 12px 8px;
+    text-align: center;
+  }
+  .stat-num {
+    font-family: var(--font-mono);
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--charcoal);
+  }
+  .stat-label {
+    font-size: 0.6rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--grey-mid);
+    margin-top: 2px;
+  }
+  .stat-box.red .stat-num { color: var(--red); }
+  .stat-box.amber .stat-num { color: var(--amber); }
+  .stat-box.green .stat-num { color: var(--green); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Pulled <span>Apart</span> — Leads</h1>
+  <div class="header-count" id="headerCount">0 leads</div>
+</div>
+
+<div class="flash" id="flash">Lead saved</div>
+
+<!-- ── ADD LEAD ── -->
+<div class="view active" id="viewAdd">
+  <div class="form-group">
+    <label class="form-label">Customer Name</label>
+    <input type="text" class="form-input" id="fName" placeholder="e.g. Dave" autocomplete="off" autocapitalize="words">
+  </div>
+  <div class="form-group">
+    <label class="form-label">Phone Number</label>
+    <input type="tel" class="form-input" id="fPhone" placeholder="e.g. 07700 900123" autocomplete="off">
+  </div>
+  <div class="form-group">
+    <label class="form-label">Part Required</label>
+    <textarea class="form-input" id="fPart" placeholder="e.g. 2.0 TDI engine, Golf Mk7 2015" autocapitalize="sentences"></textarea>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label class="form-label">Price Quoted (£)</label>
+      <input type="number" class="form-input" id="fPrice" placeholder="e.g. 450" inputmode="decimal">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Date</label>
+      <input type="date" class="form-input" id="fDate">
+    </div>
+  </div>
+  <button class="btn-save" id="btnSave" onclick="saveLead()">Save Lead</button>
+</div>
+
+<!-- ── LEADS LIST ── -->
+<div class="view" id="viewLeads">
+  <div class="filter-bar">
+    <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+    <button class="filter-btn" onclick="setFilter('new', this)">New</button>
+    <button class="filter-btn" onclick="setFilter('chased', this)">Chased</button>
+    <button class="filter-btn" onclick="setFilter('sold', this)">Sold</button>
+    <button class="filter-btn" onclick="setFilter('lost', this)">Lost</button>
+  </div>
+  <div id="leadsList"></div>
+</div>
+
+<!-- ── EXPORT ── -->
+<div class="view" id="viewExport">
+  <div class="stats-row">
+    <div class="stat-box red"><div class="stat-num" id="statNew">0</div><div class="stat-label">New</div></div>
+    <div class="stat-box amber"><div class="stat-num" id="statChased">0</div><div class="stat-label">Chased</div></div>
+    <div class="stat-box green"><div class="stat-num" id="statSold">0</div><div class="stat-label">Sold</div></div>
+    <div class="stat-box"><div class="stat-num" id="statLost">0</div><div class="stat-label">Lost</div></div>
+  </div>
+  <div class="export-section">
+    <h3>Export to CSV</h3>
+    <p>Download all leads as a spreadsheet you can open in Google Sheets or Excel.</p>
+    <button class="btn-export" onclick="exportCSV()">Download CSV</button>
+  </div>
+  <div class="export-section">
+    <h3>Share via WhatsApp</h3>
+    <p>Send today's new leads summary to yourself or your dismantler.</p>
+    <button class="btn-export" onclick="shareWhatsApp()">Share Summary</button>
+  </div>
+  <div class="export-section">
+    <h3>Clear All Data</h3>
+    <p>Permanently delete all saved leads. This cannot be undone.</p>
+    <button class="btn-export btn-danger" onclick="clearAll()">Delete All Leads</button>
+  </div>
+</div>
+
+<!-- ── TAB BAR ── -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('viewAdd', this)">
+    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+    Add
+  </button>
+  <button class="tab-btn" onclick="switchTab('viewLeads', this)">
+    <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+    Leads
+  </button>
+  <button class="tab-btn" onclick="switchTab('viewExport', this)">
+    <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+    Export
+  </button>
+</div>
+
+<script>
+  // ── DATA LAYER ──
+  const STORAGE_KEY = 'pulledApart_leads';
+
+  function getLeads() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    } catch { return []; }
+  }
+
+  function saveLeads(leads) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(leads));
+    updateHeaderCount();
+    updateStats();
+  }
+
+  // ── INIT ──
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('fDate').value = todayStr();
+    updateHeaderCount();
+    updateStats();
+  });
+
+  function todayStr() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '';
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y}`;
+  }
+
+  function daysSince(iso) {
+    if (!iso) return 0;
+    const then = new Date(iso + 'T00:00:00');
+    const now = new Date();
+    now.setHours(0,0,0,0);
+    return Math.floor((now - then) / 86400000);
+  }
+
+  // ── SAVE ──
+  function saveLead() {
+    const name = document.getElementById('fName').value.trim();
+    const phone = document.getElementById('fPhone').value.trim();
+    const part = document.getElementById('fPart').value.trim();
+    const price = document.getElementById('fPrice').value.trim();
+    const date = document.getElementById('fDate').value;
+
+    if (!phone && !name) {
+      showFlash('Need at least a name or number', '#E31E24');
+      return;
+    }
+    if (!part) {
+      showFlash('What part do they need?', '#E31E24');
+      return;
+    }
+
+    const lead = {
+      id: Date.now(),
+      name: name || 'Unknown',
+      phone,
+      part,
+      price: price ? '£' + parseFloat(price).toFixed(0) : '',
+      date: date || todayStr(),
+      status: 'new',
+      created: new Date().toISOString()
+    };
+
+    const leads = getLeads();
+    leads.unshift(lead);
+    saveLeads(leads);
+
+    // Clear form
+    document.getElementById('fName').value = '';
+    document.getElementById('fPhone').value = '';
+    document.getElementById('fPart').value = '';
+    document.getElementById('fPrice').value = '';
+    document.getElementById('fDate').value = todayStr();
+
+    showFlash('Lead saved ✓');
+    document.getElementById('fName').focus();
+  }
+
+  // ── FLASH ──
+  function showFlash(msg, color) {
+    const el = document.getElementById('flash');
+    el.textContent = msg;
+    el.style.background = color || '#22C55E';
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 1800);
+  }
+
+  // ── TABS ──
+  function switchTab(viewId, btn) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(viewId).classList.add('active');
+    btn.classList.add('active');
+
+    if (viewId === 'viewLeads') renderLeads();
+    if (viewId === 'viewExport') updateStats();
+  }
+
+  // ── FILTER ──
+  let currentFilter = 'all';
+  function setFilter(f, btn) {
+    currentFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderLeads();
+  }
+
+  // ── RENDER LEADS ──
+  function renderLeads() {
+    const leads = getLeads();
+    const filtered = currentFilter === 'all' ? leads : leads.filter(l => l.status === currentFilter);
+    const container = document.getElementById('leadsList');
+
+    if (filtered.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.17L4 17.17V4h16v12z"/></svg>
+          <p>${currentFilter === 'all' ? 'No leads yet — add one!' : 'No ' + currentFilter + ' leads'}</p>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = filtered.map(l => {
+      const days = daysSince(l.date);
+      const ageLabel = days === 0 ? 'Today' : days === 1 ? 'Yesterday' : days + 'd ago';
+      const phoneLink = l.phone ? `<a href="tel:${l.phone}" class="lead-phone">📞 ${l.phone}</a>` : '';
+
+      return `
+        <div class="lead-card" data-status="${l.status}">
+          <div class="lead-name">${esc(l.name)}</div>
+          ${phoneLink}
+          <div class="lead-part">${esc(l.part)}</div>
+          <div class="lead-meta">
+            <span>${formatDate(l.date)} · ${ageLabel}</span>
+            <span class="lead-price">${esc(l.price)}</span>
+          </div>
+          <div class="lead-actions">
+            ${l.phone ? `<button class="lead-action-btn call" onclick="callLead('${esc(l.phone)}')">📞 Call</button>` : ''}
+            ${l.status !== 'chased' ? `<button class="lead-action-btn chased" onclick="setStatus(${l.id}, 'chased')">Chased</button>` : ''}
+            ${l.status !== 'sold' ? `<button class="lead-action-btn sold" onclick="setStatus(${l.id}, 'sold')">Sold ✓</button>` : ''}
+            ${l.status !== 'lost' ? `<button class="lead-action-btn lost" onclick="setStatus(${l.id}, 'lost')">Lost</button>` : ''}
+            <button class="lead-action-btn delete" onclick="deleteLead(${l.id})">✕</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function esc(str) {
+    if (!str) return '';
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  // ── ACTIONS ──
+  function callLead(phone) {
+    window.location.href = 'tel:' + phone;
+  }
+
+  function setStatus(id, status) {
+    const leads = getLeads();
+    const lead = leads.find(l => l.id === id);
+    if (lead) {
+      lead.status = status;
+      saveLeads(leads);
+      renderLeads();
+    }
+  }
+
+  function deleteLead(id) {
+    if (!confirm('Delete this lead?')) return;
+    const leads = getLeads().filter(l => l.id !== id);
+    saveLeads(leads);
+    renderLeads();
+  }
+
+  // ── HEADER COUNT ──
+  function updateHeaderCount() {
+    const leads = getLeads();
+    const newCount = leads.filter(l => l.status === 'new').length;
+    const el = document.getElementById('headerCount');
+    el.textContent = leads.length + ' lead' + (leads.length !== 1 ? 's' : '') + (newCount > 0 ? ' · ' + newCount + ' new' : '');
+  }
+
+  // ── STATS ──
+  function updateStats() {
+    const leads = getLeads();
+    document.getElementById('statNew').textContent = leads.filter(l => l.status === 'new').length;
+    document.getElementById('statChased').textContent = leads.filter(l => l.status === 'chased').length;
+    document.getElementById('statSold').textContent = leads.filter(l => l.status === 'sold').length;
+    document.getElementById('statLost').textContent = leads.filter(l => l.status === 'lost').length;
+  }
+
+  // ── EXPORT CSV ──
+  function exportCSV() {
+    const leads = getLeads();
+    if (leads.length === 0) { showFlash('No leads to export', '#E31E24'); return; }
+
+    const header = 'Name,Phone,Part Required,Price Quoted,Date,Status\n';
+    const rows = leads.map(l =>
+      [l.name, l.phone, '"' + l.part.replace(/"/g, '""') + '"', l.price, formatDate(l.date), l.status].join(',')
+    ).join('\n');
+
+    const blob = new Blob([header + rows], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'pulled-apart-leads-' + todayStr() + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    showFlash('CSV downloaded ✓');
+  }
+
+  // ── WHATSAPP SHARE ──
+  function shareWhatsApp() {
+    const leads = getLeads().filter(l => l.status === 'new');
+    if (leads.length === 0) { showFlash('No new leads to share', '#E31E24'); return; }
+
+    let msg = '📋 *Pulled Apart — New Leads*\n\n';
+    leads.forEach((l, i) => {
+      msg += `${i+1}. *${l.name}* ${l.phone ? '(' + l.phone + ')' : ''}\n`;
+      msg += `   ${l.part}`;
+      if (l.price) msg += ` — ${l.price}`;
+      msg += `\n   ${formatDate(l.date)}\n\n`;
+    });
+
+    window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+  }
+
+  // ── CLEAR ALL ──
+  function clearAll() {
+    if (!confirm('Delete ALL leads? This cannot be undone.')) return;
+    if (!confirm('Are you sure? Last chance.')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    updateHeaderCount();
+    updateStats();
+    renderLeads();
+    showFlash('All leads deleted');
+  }
+</script>
+</body>
+</html>
