@@ -25,10 +25,8 @@ def _err(status_code: int, message: str) -> JSONResponse:
 @router.post("/vehicles", response_model=VehicleOut, status_code=201)
 def create_vehicle(payload: VehicleIn):
     data = payload.model_dump()
-    data["ref"] = db.normalise_ref(data.get("ref"))
-    if not data["ref"]:
-        return _err(400, "ref is required")
     try:
+        data["ref"] = db.normalise_ref(data.get("ref"))
         saved = db.create_vehicle(data)
     except ValueError as e:
         return _err(400, str(e))
@@ -51,9 +49,10 @@ def get_vehicle(ref: str):
 @router.put("/vehicles/{ref}", response_model=VehicleOut)
 def update_vehicle(ref: str, payload: VehicleIn):
     data = payload.model_dump()
-    norm = db.normalise_ref(ref)
-    if not norm:
-        return _err(400, "ref is required")
+    try:
+        norm = db.normalise_ref(ref)
+    except ValueError as e:
+        return _err(400, str(e))
     updated = db.update_vehicle(norm, data)
     if updated is None:
         return _err(404, "vehicle not found")
@@ -62,9 +61,10 @@ def update_vehicle(ref: str, payload: VehicleIn):
 
 @router.delete("/vehicles/{ref}")
 def delete_vehicle(ref: str):
-    norm = db.normalise_ref(ref)
-    if not norm:
-        return _err(400, "ref is required")
+    try:
+        norm = db.normalise_ref(ref)
+    except ValueError as e:
+        return _err(400, str(e))
     deleted = db.delete_vehicle(norm)
     if not deleted:
         return _err(404, "vehicle not found")

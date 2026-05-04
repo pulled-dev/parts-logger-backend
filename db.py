@@ -89,16 +89,42 @@ def init_db() -> None:
 
 def normalise_ref(value: Optional[str]) -> str:
     """Strip whitespace, uppercase, prefix 'VEH' unless the ref already starts
-    with VEH. Covers digits-only inputs ('47' -> 'VEH47') as well as plain
-    alphanumeric refs ('test99' -> 'VEHTEST99'). Empty input returns ''."""
-    if value is None:
-        return ""
+    with VEH.  Raises ValueError on empty / invalid input.
+
+    Examples:
+        "1234"      → "VEH1234"
+        "VEH1234"   → "VEH1234"
+        "veh1234"   → "VEH1234"
+        " VEH1234 " → "VEH1234"
+        "VEH 1234"  → "VEH1234"
+        "VEH-1234"  → "VEH1234"
+        "VEG1234"   → "VEHVEG1234"  (intentional — user typo)
+        ""          → raises ValueError
+        "VEH"       → raises ValueError
+        "   "       → raises ValueError
+    """
+    import re as _re
+
+    if value is None or str(value).strip() == "":
+        raise ValueError("ref cannot be empty")
+
     s = str(value).strip().upper()
-    if not s:
-        return ""
+
     if s.startswith("VEH"):
-        return s
-    return f"VEH{s}"
+        remainder = s[3:]
+        if not remainder:
+            raise ValueError("ref cannot be just 'VEH'")
+        # Strip non-alphanumeric from remainder
+        cleaned = _re.sub(r"[^A-Z0-9]", "", remainder)
+        if not cleaned:
+            raise ValueError("ref must contain alphanumeric characters")
+        return f"VEH{cleaned}"
+
+    # Does NOT start with VEH — strip non-alphanumeric, prefix VEH
+    cleaned = _re.sub(r"[^A-Z0-9]", "", s)
+    if not cleaned:
+        raise ValueError("ref must contain alphanumeric characters")
+    return f"VEH{cleaned}"
 
 
 # ── CRUD helpers ────────────────────────────────────────────────────────
@@ -143,8 +169,6 @@ def create_vehicle(data: dict) -> dict:
     not user-supplied. Returns the saved record."""
     payload = dict(data)
     payload["ref"] = normalise_ref(payload.get("ref"))
-    if not payload["ref"]:
-        raise ValueError("ref is required")
     if not payload.get("make"):
         raise ValueError("make is required")
     if not payload.get("model"):
