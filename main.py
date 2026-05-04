@@ -19,6 +19,7 @@ import anthropic
 from vag_lookup import lookup_part as db_lookup, save_learned, reload_db, get_db, save_db
 from claude_prompt import build_identification_prompt
 from db import init_db
+from vehicles_router import router as vehicles_router
 
 # ── CONFIG ───────────────────────────────────────────────────────
 EBAY_APP_ID = os.environ.get("EBAY_APP_ID", "")
@@ -44,6 +45,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(vehicles_router)
 
 # ── MODELS ───────────────────────────────────────────────────────
 
