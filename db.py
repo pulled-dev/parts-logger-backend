@@ -88,15 +88,17 @@ def init_db() -> None:
 # ── Ref normalisation ───────────────────────────────────────────────────
 
 def normalise_ref(value: Optional[str]) -> str:
-    """Strip whitespace, uppercase, prefix 'VEH' if input is digits-only."""
+    """Strip whitespace, uppercase, prefix 'VEH' unless the ref already starts
+    with VEH. Covers digits-only inputs ('47' -> 'VEH47') as well as plain
+    alphanumeric refs ('test99' -> 'VEHTEST99'). Empty input returns ''."""
     if value is None:
         return ""
     s = str(value).strip().upper()
     if not s:
         return ""
-    if s.isdigit():
-        return f"VEH{s}"
-    return s
+    if s.startswith("VEH"):
+        return s
+    return f"VEH{s}"
 
 
 # ── CRUD helpers ────────────────────────────────────────────────────────
