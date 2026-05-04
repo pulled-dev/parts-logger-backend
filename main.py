@@ -7,6 +7,7 @@ Keeps API keys secure on the server side.
 import os
 import re
 import asyncio
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 import httpx
 from fastapi import FastAPI, HTTPException
@@ -17,6 +18,7 @@ import anthropic
 
 from vag_lookup import lookup_part as db_lookup, save_learned, reload_db, get_db, save_db
 from claude_prompt import build_identification_prompt
+from db import init_db
 
 # ── CONFIG ───────────────────────────────────────────────────────
 EBAY_APP_ID = os.environ.get("EBAY_APP_ID", "")
@@ -26,7 +28,13 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 # Toggle mock mode when no keys are set
 USE_MOCK = not (EBAY_APP_ID and EBAY_CERT_ID)
 
-app = FastAPI(title="Pulled Apart Parts Logger API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+
+app = FastAPI(title="Pulled Apart Parts Logger API", lifespan=lifespan)
 
 # Allow frontend to call this backend
 app.add_middleware(
