@@ -20,6 +20,7 @@ from vag_lookup import lookup_part as db_lookup, save_learned, reload_db, get_db
 from claude_prompt import build_identification_prompt
 from db import init_db
 from vehicles_router import router as vehicles_router
+from lookup_router import router as lookup_router
 
 # ── CONFIG ───────────────────────────────────────────────────────
 EBAY_APP_ID = os.environ.get("EBAY_APP_ID", "")
@@ -47,6 +48,7 @@ app.add_middleware(
 )
 
 app.include_router(vehicles_router)
+app.include_router(lookup_router)
 
 # ── MODELS ───────────────────────────────────────────────────────
 
