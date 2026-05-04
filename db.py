@@ -15,6 +15,8 @@ import logging
 from datetime import datetime
 from typing import Optional
 
+from paint_codes import lookup_paint_name
+
 log = logging.getLogger(__name__)
 
 DEFAULT_DB_PATH = "./vehicles.db"
@@ -106,8 +108,16 @@ _FIELDS = [
 
 
 def _auto_paint_name(data: dict) -> dict:
-    """Hook for paint_name auto-resolution. Filled in Task 2 when the paint
-    code dictionary lands. For now this is a no-op."""
+    """If paint_code is present and paint_name is empty/None, fill paint_name
+    from the paint code dictionary. Mutates and returns data. A user-supplied
+    paint_name is never overwritten."""
+    code = data.get("paint_code")
+    if code:
+        existing = data.get("paint_name")
+        if existing is None or str(existing).strip() == "":
+            resolved = lookup_paint_name(code)
+            if resolved:
+                data["paint_name"] = resolved
     return data
 
 
