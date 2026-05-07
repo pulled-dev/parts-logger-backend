@@ -624,6 +624,77 @@
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+    /* ── Mode toggle ──────────────────────────────────────────────── */
+    .mode-toggle {
+      position: sticky;
+      top: 64px;
+      z-index: 99;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      width: 100%;
+    }
+    .mode-btn {
+      flex: 1;
+      min-height: 56px;
+      padding: 8px 12px;
+      background: transparent;
+      border: none;
+      border-bottom: 4px solid transparent;
+      color: var(--text-muted);
+      font-family: var(--display);
+      font-size: 16px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .mode-btn + .mode-btn { border-left: 1px solid var(--border); }
+    .mode-btn:hover:not(.active) { background: var(--bg-elevated); color: var(--text-secondary); }
+    .mode-btn.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--accent-red);
+      background: var(--bg-elevated);
+    }
+    .mode-btn:focus-visible { outline: 2px solid var(--accent-red); outline-offset: -2px; }
+
+    /* ── Body Panel placeholder ───────────────────────────────────── */
+    .placeholder-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 32px 24px;
+      text-align: center;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    .placeholder-card h2 {
+      font-family: var(--display);
+      font-size: 28px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+    .placeholder-card .subtitle {
+      font-family: var(--display);
+      font-size: 14px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--data-yellow);
+      margin-bottom: 16px;
+    }
+    .placeholder-card .body-text {
+      font-family: var(--sans);
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text-secondary);
+    }
+
     /* ── Responsive ───────────────────────────────────────────────── */
     @media (max-width: 480px) {
       .form-row { flex-direction: column; }
@@ -655,8 +726,14 @@
   </div>
 </header>
 
+<div class="mode-toggle" role="tablist" aria-label="Logging mode">
+  <button type="button" class="mode-btn active" data-mode="part-number" role="tab" aria-selected="true">Part Number</button>
+  <button type="button" class="mode-btn" data-mode="body-panel" role="tab" aria-selected="false">Body Panel</button>
+</div>
+
 <!-- Main -->
 <main class="main">
+<div id="mode-part-number">
 
   <!-- Add Form -->
   <div class="add-form">
@@ -697,6 +774,16 @@
   </div>
 
   <div class="parts-list" id="parts-list"></div>
+
+</div>
+
+<div id="mode-body-panel" style="display:none">
+  <div class="placeholder-card">
+    <h2>Body Panel Mode</h2>
+    <p class="subtitle">Coming in Phase 3b</p>
+    <p class="body-text">Body panel logging — including vehicle reference recognition, panel category selection, and paint code lookup — will be enabled in the next release. For now, use Part Number mode for all part lookups.</p>
+  </div>
+</div>
 
 </main>
 
@@ -1164,6 +1251,24 @@ try {
 render();
 updateStats();
 pnInput.focus();
+
+(function initModeToggle(){
+  var btns = document.querySelectorAll('.mode-btn');
+  var pn = document.getElementById('mode-part-number');
+  var bp = document.getElementById('mode-body-panel');
+  if(!btns.length || !pn || !bp) return;
+  btns.forEach(function(b){
+    b.addEventListener('click', function(){
+      var mode = b.getAttribute('data-mode');
+      btns.forEach(function(x){
+        x.classList.toggle('active', x === b);
+        x.setAttribute('aria-selected', x === b ? 'true' : 'false');
+      });
+      pn.style.display = (mode === 'part-number') ? '' : 'none';
+      bp.style.display = (mode === 'body-panel') ? '' : 'none';
+    });
+  });
+})();
 </script>
 </body>
 </html>
