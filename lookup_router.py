@@ -15,11 +15,23 @@ from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 
 from db import normalise_ref, get_vehicle
-from categories import CATEGORIES, VALID_CATEGORY_KEYS, get_category, list_category_keys
+from categories import (
+    CATEGORIES,
+    VALID_CATEGORY_KEYS,
+    get_category,
+    list_category_keys,
+    BODY_PANEL_CATEGORIES,
+)
 from paint_codes import lookup_paint_name
 
 
 router = APIRouter()
+
+
+@router.get("/body-panel-categories")
+def body_panel_categories():
+    """Return body panel category list for Body Panel mode tap-grid."""
+    return BODY_PANEL_CATEGORIES
 
 
 def _err(status_code: int, content: dict) -> JSONResponse:

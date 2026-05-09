@@ -112,6 +112,31 @@ CATEGORIES: dict[str, dict] = {
 VALID_CATEGORY_KEYS: set[str] = set(CATEGORIES.keys())
 
 
+# ── Body panel categories (Phase 3b) ────────────────────────────────
+# Separate, finer-grained list exposed via GET /body-panel-categories
+# for the Body Panel mode tap-grid. Distinct from CATEGORIES above
+# (which drives /lookup-panel eBay search construction).
+BODY_PANEL_CATEGORIES: list[dict] = [
+    {"id": "door_front_left", "label": "Door — Front Left"},
+    {"id": "door_front_right", "label": "Door — Front Right"},
+    {"id": "door_rear_left", "label": "Door — Rear Left"},
+    {"id": "door_rear_right", "label": "Door — Rear Right"},
+    {"id": "wing_front_left", "label": "Wing — Front Left"},
+    {"id": "wing_front_right", "label": "Wing — Front Right"},
+    {"id": "bonnet", "label": "Bonnet"},
+    {"id": "bumper_front", "label": "Bumper — Front"},
+    {"id": "bumper_rear", "label": "Bumper — Rear"},
+    {"id": "tailgate", "label": "Tailgate / Boot Lid"},
+    {"id": "roof", "label": "Roof"},
+    {"id": "quarter_panel_left", "label": "Quarter Panel — Left"},
+    {"id": "quarter_panel_right", "label": "Quarter Panel — Right"},
+    {"id": "sill_left", "label": "Sill — Left"},
+    {"id": "sill_right", "label": "Sill — Right"},
+    {"id": "mirror_left", "label": "Mirror — Left"},
+    {"id": "mirror_right", "label": "Mirror — Right"},
+]
+
+
 def get_category(key: str) -> dict | None:
     """Return category dict or None if key not found."""
     return CATEGORIES.get(key)
