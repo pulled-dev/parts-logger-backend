@@ -151,6 +151,7 @@ def main():
                 "year_to": year,
                 "paint_code": paint_code or "",
                 "engine_code": engine_code or "",
+                "is_active": True,
             }
 
             success, msg = post_vehicle(payload)

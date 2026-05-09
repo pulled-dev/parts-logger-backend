@@ -4,6 +4,13 @@ Routes are registered via FastAPI APIRouter so main.py can mount them with a
 single line, leaving the existing /lookup and /health logic untouched.
 
 All endpoints return JSON. Errors return {"error": "message"}.
+
+Phase 3b Task 0:
+- POST /vehicles returns 409 on duplicate ref (was: silent overwrite).
+- PATCH replaces PUT (semantics identical: ref is locked from URL path).
+- DELETE is now a soft delete (sets is_active = 0) — no rows ever removed.
+- GET /vehicles filters out is_active = 0 by default; pass include_inactive=true
+  to include soft-deleted rows.
 """
 
 from __future__ import annotations
@@ -12,7 +19,7 @@ from fastapi import APIRouter, Response
 from fastapi.responses import JSONResponse
 
 import db
-from models import VehicleIn, VehicleOut
+from models import VehicleIn, VehicleUpdate, VehicleOut
 
 
 router = APIRouter()
@@ -28,14 +35,16 @@ def create_vehicle(payload: VehicleIn):
     try:
         data["ref"] = db.normalise_ref(data.get("ref"))
         saved = db.create_vehicle(data)
+    except db.RefAlreadyExists:
+        return _err(409, "ref already exists")
     except ValueError as e:
         return _err(400, str(e))
     return JSONResponse(status_code=201, content=saved)
 
 
 @router.get("/vehicles")
-def list_vehicles():
-    return db.list_vehicles()
+def list_vehicles(include_inactive: bool = False):
+    return db.list_vehicles(include_inactive=include_inactive)
 
 
 @router.get("/vehicles/{ref}", response_model=VehicleOut)
@@ -46,9 +55,12 @@ def get_vehicle(ref: str):
     return record
 
 
-@router.put("/vehicles/{ref}", response_model=VehicleOut)
-def update_vehicle(ref: str, payload: VehicleIn):
-    data = payload.model_dump()
+@router.patch("/vehicles/{ref}", response_model=VehicleOut)
+def update_vehicle(ref: str, payload: VehicleUpdate):
+    # exclude_unset=True means only fields the client actually sent are merged.
+    # Per spec: any 'ref' in body is ignored; URL path ref wins.
+    data = payload.model_dump(exclude_unset=True)
+    data.pop("ref", None)
     try:
         norm = db.normalise_ref(ref)
     except ValueError as e:
@@ -61,6 +73,9 @@ def update_vehicle(ref: str, payload: VehicleIn):
 
 @router.delete("/vehicles/{ref}")
 def delete_vehicle(ref: str):
+    """Soft delete: marks vehicle is_active = 0 (Phase 3b hard rule #10).
+    The row is never removed from the database. Returns 204 on success,
+    404 if the ref does not exist."""
     try:
         norm = db.normalise_ref(ref)
     except ValueError as e:

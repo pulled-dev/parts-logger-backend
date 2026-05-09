@@ -48,7 +48,11 @@ def _connect() -> sqlite3.Connection:
 def _row_to_dict(row: Optional[sqlite3.Row]) -> Optional[dict]:
     if row is None:
         return None
-    return {k: row[k] for k in row.keys()}
+    d = {k: row[k] for k in row.keys()}
+    # Surface is_active as a real bool to clients (stored as INTEGER 0/1).
+    if "is_active" in d and d["is_active"] is not None:
+        d["is_active"] = bool(d["is_active"])
+    return d
 
 
 def _now() -> str:
@@ -69,19 +73,34 @@ CREATE TABLE IF NOT EXISTS vehicles (
     transmission TEXT,
     vin TEXT,
     notes TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 )
 """
 
 
+class RefAlreadyExists(Exception):
+    """Raised when create_vehicle is called with a ref that already exists."""
+
+
 def init_db() -> None:
-    """Create the vehicles table if it doesn't already exist."""
+    """Create the vehicles table if it doesn't already exist, and run any
+    idempotent column migrations."""
     # Re-resolve in case DB_PATH was changed after module import (tests).
     global DB_PATH
     DB_PATH = _resolve_db_path()
     with _connect() as conn:
         conn.execute(_CREATE_TABLE_SQL)
+        # Phase 3b Task 0: add is_active column to existing databases.
+        # SQLite ignores ADD COLUMN if the column is already present, so we
+        # swallow the OperationalError that would otherwise be raised.
+        try:
+            conn.execute(
+                "ALTER TABLE vehicles ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1"
+            )
+        except sqlite3.OperationalError:
+            pass  # column already exists
         conn.commit()
 
 
@@ -131,7 +150,7 @@ def normalise_ref(value: Optional[str]) -> str:
 
 _FIELDS = [
     "ref", "make", "model", "year_range", "paint_code", "paint_name",
-    "engine_code", "transmission", "vin", "notes",
+    "engine_code", "transmission", "vin", "notes", "is_active",
 ]
 
 
@@ -156,17 +175,24 @@ def get_vehicle(ref: str) -> Optional[dict]:
     return _row_to_dict(row)
 
 
-def list_vehicles() -> list[dict]:
+def list_vehicles(include_inactive: bool = False) -> list[dict]:
+    """Return vehicles ordered by most-recently-created first.
+
+    By default only active vehicles are returned. Pass include_inactive=True
+    to include soft-deleted rows (is_active = 0)."""
+    sql = "SELECT * FROM vehicles"
+    if not include_inactive:
+        sql += " WHERE is_active = 1"
+    sql += " ORDER BY created_at DESC"
     with _connect() as conn:
-        rows = conn.execute(
-            "SELECT * FROM vehicles ORDER BY created_at DESC"
-        ).fetchall()
+        rows = conn.execute(sql).fetchall()
     return [_row_to_dict(r) for r in rows]
 
 
 def create_vehicle(data: dict) -> dict:
-    """Insert or replace a vehicle. Auto-fills paint_name from paint_code if
-    not user-supplied. Returns the saved record."""
+    """Insert a new vehicle. Auto-fills paint_name from paint_code if not
+    user-supplied. Raises RefAlreadyExists if the ref is already present
+    (whether active or soft-deleted). Returns the saved record."""
     payload = dict(data)
     payload["ref"] = normalise_ref(payload.get("ref"))
     if not payload.get("make"):
@@ -176,25 +202,28 @@ def create_vehicle(data: dict) -> dict:
 
     _auto_paint_name(payload)
 
-    now = _now()
-    # Preserve existing created_at on upsert
-    existing = get_vehicle(payload["ref"])
-    created_at = existing["created_at"] if existing else now
-    updated_at = now
+    payload["is_active"] = 0 if payload.get("is_active") is False else 1
 
+    if get_vehicle(payload["ref"]) is not None:
+        raise RefAlreadyExists(payload["ref"])
+
+    now = _now()
     values = {f: payload.get(f) for f in _FIELDS}
-    values["created_at"] = created_at
-    values["updated_at"] = updated_at
+    values["created_at"] = now
+    values["updated_at"] = now
 
     cols = list(values.keys())
     placeholders = ", ".join("?" for _ in cols)
     col_list = ", ".join(cols)
     with _connect() as conn:
-        conn.execute(
-            f"INSERT OR REPLACE INTO vehicles ({col_list}) VALUES ({placeholders})",
-            tuple(values[c] for c in cols),
-        )
-        conn.commit()
+        try:
+            conn.execute(
+                f"INSERT INTO vehicles ({col_list}) VALUES ({placeholders})",
+                tuple(values[c] for c in cols),
+            )
+            conn.commit()
+        except sqlite3.IntegrityError:
+            raise RefAlreadyExists(payload["ref"])
     return get_vehicle(payload["ref"])
 
 
@@ -233,8 +262,13 @@ def update_vehicle(ref: str, data: dict) -> Optional[dict]:
 
 
 def delete_vehicle(ref: str) -> bool:
+    """Soft delete: sets is_active = 0. Returns True if a row was updated."""
     norm = normalise_ref(ref)
+    now = _now()
     with _connect() as conn:
-        cur = conn.execute("DELETE FROM vehicles WHERE ref = ?", (norm,))
+        cur = conn.execute(
+            "UPDATE vehicles SET is_active = 0, updated_at = ? WHERE ref = ?",
+            (now, norm),
+        )
         conn.commit()
         return cur.rowcount > 0
