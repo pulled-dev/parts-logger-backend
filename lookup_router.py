@@ -22,7 +22,7 @@ from categories import (
     list_category_keys,
     BODY_PANEL_CATEGORIES,
 )
-from paint_codes import lookup_paint_name
+from paint_codes import PAINT_CODES, lookup_paint_name
 
 
 router = APIRouter()
@@ -32,6 +32,15 @@ router = APIRouter()
 def body_panel_categories():
     """Return body panel category list for Body Panel mode tap-grid."""
     return BODY_PANEL_CATEGORIES
+
+
+@router.get("/paint-codes")
+def paint_codes():
+    """Return VAG paint code dictionary as a list of {code, name} objects.
+
+    Frontend caches this in window.PA_PAINT_CODES on init and uses it for
+    paint-code dropdowns / labels (Phase 3b Task 2)."""
+    return [{"code": code, "name": name} for code, name in PAINT_CODES.items()]
 
 
 def _err(status_code: int, content: dict) -> JSONResponse:

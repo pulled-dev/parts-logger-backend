@@ -925,6 +925,21 @@ function setMode(mode) {
   badgeText.textContent = mode === 'live' ? 'LIVE' : mode === 'demo' ? 'DEMO' : 'ERROR';
 }
 
+// ── Paint codes (cached on init for body-panel mode) ─────────────────────────
+window.PA_PAINT_CODES = [];
+async function loadPaintCodes() {
+  try {
+    const r = await fetch(cfg.url + '/paint-codes', { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    window.PA_PAINT_CODES = Array.isArray(data) ? data : [];
+  } catch (e) {
+    console.warn('Paint codes fetch failed:', e);
+    window.PA_PAINT_CODES = [];
+    toast('Paint codes unavailable — check connection');
+  }
+}
+
 // ── Lookup ───────────────────────────────────────────────────────────────────
 async function lookup(pn) {
   const r = await fetch(cfg.url + '/lookup', {
@@ -1243,6 +1258,7 @@ sSave.addEventListener('click', () => {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 checkStatus();
+loadPaintCodes();
 loadParts();
 try {
   const savedRef = localStorage.getItem('pulledapart_last_ref');
