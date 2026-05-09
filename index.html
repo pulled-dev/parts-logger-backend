@@ -695,6 +695,306 @@
       color: var(--text-secondary);
     }
 
+    /* ── Body Panel mode flow ─────────────────────────────────────── */
+    .bp-step {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 16px;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .bp-step-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .bp-step-num {
+      width: 28px; height: 28px;
+      border-radius: 14px;
+      background: var(--accent-red);
+      color: #fff;
+      font-family: var(--display);
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .bp-step-title {
+      font-family: var(--display);
+      font-size: 14px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-primary);
+      flex: 1;
+    }
+    .bp-back-btn {
+      width: 44px; height: 44px;
+      border-radius: 4px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .bp-back-btn:hover { border-color: var(--accent-red); color: var(--accent-red); }
+
+    .bp-change-veh-btn {
+      min-height: 44px;
+      padding: 0 14px;
+      border-radius: 4px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-family: var(--display);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+    .bp-change-veh-btn:hover {
+      border-color: var(--accent-red);
+      color: var(--accent-red);
+    }
+    #bp-step2 > .bp-change-veh-btn { margin-bottom: 12px; }
+
+    .bp-search input {
+      height: 48px;
+      width: 100%;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-family: var(--sans);
+      font-size: 14px;
+      padding: 0 12px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .bp-search input:focus {
+      border-color: var(--accent-red);
+      box-shadow: 0 0 0 2px rgba(227,30,36,0.35);
+    }
+
+    .bp-status {
+      padding: 14px 8px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+      display: none;
+    }
+    .bp-status.show { display: block; }
+    .bp-status .veh-spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.18);
+      border-top-color: var(--accent-red);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    .bp-veh-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+      max-height: 360px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .bp-veh-row {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 10px 12px;
+      min-height: 56px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex-shrink: 0;          /* don't compress when list is flex-column with max-height */
+      transition: border-color 0.12s, background 0.12s;
+    }
+    .bp-veh-row:hover, .bp-veh-row:active {
+      border-color: var(--accent-red);
+      background: var(--bg-card);
+    }
+    .bp-r-headline {
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--data-yellow);
+      letter-spacing: 0.04em;
+      word-break: break-all;
+    }
+    .bp-r-meta { font-size: 12px; color: var(--text-secondary); line-height: 1.4; }
+    .bp-r-ref  { font-family: var(--mono); font-size: 11px; color: var(--text-muted); }
+
+    .bp-summary {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--data-yellow);
+      border-radius: 4px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .bp-s-vrm {
+      display: block;
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--data-yellow);
+      letter-spacing: 0.04em;
+      margin-bottom: 2px;
+      word-break: break-all;
+    }
+    .bp-s-cat {
+      display: block;
+      font-family: var(--display);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent-red);
+      margin-top: 4px;
+    }
+
+    .bp-cat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .bp-cat-btn {
+      min-height: 64px;
+      padding: 10px 8px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-family: var(--sans);
+      font-size: 12px;
+      line-height: 1.3;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.12s;
+    }
+    .bp-cat-btn:hover, .bp-cat-btn:active {
+      border-color: var(--accent-red);
+      background: var(--bg-card);
+      color: var(--accent-red);
+    }
+
+    .bp-paint-row {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 12px;
+      align-items: baseline;
+    }
+    .bp-p-label {
+      font-family: var(--display);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .bp-p-code {
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--data-yellow);
+      letter-spacing: 0.04em;
+    }
+    .bp-p-name { font-size: 13px; color: var(--text-secondary); }
+    .bp-paint-row.bp-warn {
+      border-color: var(--data-yellow);
+      background: rgba(255,193,7,0.06);
+    }
+    .bp-paint-row.bp-warn .bp-p-name { color: var(--data-yellow); }
+
+    .bp-form-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+    .bp-form-field label {
+      font-family: var(--display);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+    .bp-form-field input,
+    .bp-form-field textarea {
+      width: 100%;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-family: var(--sans);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .bp-form-field input { height: 48px; padding: 0 12px; }
+    .bp-form-field textarea {
+      min-height: 80px;
+      padding: 10px 12px;
+      line-height: 1.5;
+      resize: vertical;
+    }
+    .bp-form-field input:focus,
+    .bp-form-field textarea:focus {
+      border-color: var(--accent-red);
+      box-shadow: 0 0 0 2px rgba(227,30,36,0.35);
+    }
+
+    .bp-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+    .bp-log-btn,
+    .bp-reset-btn {
+      min-height: 48px;
+      padding: 0 16px;
+      border-radius: 4px;
+      font-family: var(--display);
+      font-size: 15px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.15s;
+    }
+    .bp-log-btn { background: var(--accent-red); border: none; color: #fff; }
+    .bp-log-btn:hover:not(:disabled) { background: var(--accent-red-hover); }
+    .bp-log-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .bp-log-btn .spinner { display: none; }
+    .bp-log-btn.loading .spinner { display: block; }
+    .bp-reset-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+    .bp-reset-btn:hover { border-color: var(--text-secondary); color: var(--text-primary); }
+
     /* ── Vehicles overlay (full-screen) ───────────────────────────── */
     .fs-overlay {
       position: fixed;
@@ -1094,10 +1394,57 @@
 </div>
 
 <div id="mode-body-panel" style="display:none">
-  <div class="placeholder-card">
-    <h2>Body Panel Mode</h2>
-    <p class="subtitle">Coming in Phase 3b</p>
-    <p class="body-text">Body panel logging — including vehicle reference recognition, panel category selection, and paint code lookup — will be enabled in the next release. For now, use Part Number mode for all part lookups.</p>
+  <!-- Step 1: Select Vehicle -->
+  <div class="bp-step" id="bp-step1">
+    <div class="bp-step-head">
+      <span class="bp-step-num">1</span>
+      <span class="bp-step-title">Select Vehicle</span>
+    </div>
+    <div class="bp-search">
+      <input type="text" id="bp-veh-search" placeholder="Search ref, VIN, make..."
+             autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    </div>
+    <div id="bp-veh-status" class="bp-status"></div>
+    <div class="bp-veh-list" id="bp-veh-list"></div>
+  </div>
+
+  <!-- Step 2: Select Panel -->
+  <div class="bp-step" id="bp-step2" style="display:none">
+    <div class="bp-step-head">
+      <span class="bp-step-num">2</span>
+      <span class="bp-step-title">Select Panel</span>
+    </div>
+    <button type="button" class="bp-change-veh-btn" id="bp-step2-back">&#x2190; Change Vehicle</button>
+    <div class="bp-summary" id="bp-summary-step2"></div>
+    <div id="bp-cat-status" class="bp-status"></div>
+    <div class="bp-cat-grid" id="bp-cat-grid"></div>
+  </div>
+
+  <!-- Step 3: Confirm + Log -->
+  <div class="bp-step" id="bp-step3" style="display:none">
+    <div class="bp-step-head">
+      <button type="button" class="bp-back-btn" id="bp-step3-back" aria-label="Back">&#x2190;</button>
+      <span class="bp-step-num">3</span>
+      <span class="bp-step-title">Confirm &amp; Log</span>
+    </div>
+    <div class="bp-summary" id="bp-summary-step3"></div>
+    <div class="bp-paint-row" id="bp-paint-row"></div>
+    <div class="bp-form-field">
+      <label for="bp-desc-input">Description</label>
+      <textarea id="bp-desc-input" rows="3"></textarea>
+    </div>
+    <div class="bp-form-field">
+      <label for="bp-price-input">Your Price</label>
+      <input type="text" id="bp-price-input" inputmode="decimal" placeholder="£0.00"
+             autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+    <div class="bp-actions">
+      <button type="button" class="bp-log-btn" id="bp-log-btn">
+        <div class="spinner"></div>
+        <span id="bp-log-label">Log Part</span>
+      </button>
+      <button type="button" class="bp-reset-btn" id="bp-reset-btn">Reset</button>
+    </div>
   </div>
 </div>
 
@@ -2034,20 +2381,341 @@ window.PA_VEHICLES = [];
   setTimeout(() => { if (!listLoaded) loadVehicles(); }, 300);
 })();
 
+// ── Body Panel mode flow ─────────────────────────────────────────────────────
+window.PA_BODY_PANEL_CATS = window.PA_BODY_PANEL_CATS || [];
+
+(function initBodyPanel(){
+  const step1 = document.getElementById('bp-step1');
+  const step2 = document.getElementById('bp-step2');
+  const step3 = document.getElementById('bp-step3');
+  if (!step1 || !step2 || !step3) return;
+
+  const vehSearch    = document.getElementById('bp-veh-search');
+  const vehStatus    = document.getElementById('bp-veh-status');
+  const vehList      = document.getElementById('bp-veh-list');
+  const catStatus    = document.getElementById('bp-cat-status');
+  const catGrid      = document.getElementById('bp-cat-grid');
+  const summaryStep2 = document.getElementById('bp-summary-step2');
+  const summaryStep3 = document.getElementById('bp-summary-step3');
+  const paintRow     = document.getElementById('bp-paint-row');
+  const descInput    = document.getElementById('bp-desc-input');
+  const priceInput   = document.getElementById('bp-price-input');
+  const logBtn       = document.getElementById('bp-log-btn');
+  const logLabel     = document.getElementById('bp-log-label');
+  const resetBtn     = document.getElementById('bp-reset-btn');
+  const step2Back    = document.getElementById('bp-step2-back');
+  const step3Back    = document.getElementById('bp-step3-back');
+
+  let selectedVehicle  = null;
+  let selectedCategory = null;
+  let categoriesLoaded = false;
+  let filterTerm       = '';
+
+  function escHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function showStep(n) {
+    step1.style.display = n === 1 ? '' : 'none';
+    step2.style.display = n === 2 ? '' : 'none';
+    step3.style.display = n === 3 ? '' : 'none';
+  }
+
+  function vehicleHeadline(v) { return v.vin || v.ref || '—'; }
+  function vehicleMeta(v) {
+    const mm = [v.make, v.model].filter(Boolean).join(' ');
+    const yr = v.year_range ? ' (' + v.year_range + ')' : '';
+    return (mm + yr).trim();
+  }
+
+  function renderVehicleList() {
+    // "Most recently added first": cache is populated in backend insertion
+    // order; reverse so the most recent records appear at the top.
+    const all = (window.PA_VEHICLES || []).slice().reverse();
+    const term = filterTerm.trim().toLowerCase();
+    const filtered = !term ? all : all.filter(v => {
+      const haystack = [v.ref, v.vin, v.make, v.model, v.paint_name, v.paint_code]
+        .map(x => (x || '').toString().toLowerCase()).join(' ');
+      return haystack.includes(term);
+    });
+
+    vehList.innerHTML = '';
+    if (!all.length) {
+      vehStatus.classList.add('show');
+      vehStatus.textContent = 'No vehicles available — add one in the Vehicles overlay first.';
+      return;
+    }
+    if (!filtered.length) {
+      vehStatus.classList.add('show');
+      vehStatus.textContent = 'No matches for "' + term + '"';
+      return;
+    }
+    vehStatus.classList.remove('show');
+
+    const frag = document.createDocumentFragment();
+    filtered.forEach(v => {
+      const row = document.createElement('div');
+      row.className = 'bp-veh-row';
+      row.dataset.ref = v.ref;
+      const meta = vehicleMeta(v);
+      row.innerHTML =
+        '<div class="bp-r-headline">' + escHtml(vehicleHeadline(v)) + '</div>' +
+        (meta ? '<div class="bp-r-meta">' + escHtml(meta) + '</div>' : '') +
+        '<div class="bp-r-ref">' + escHtml(v.ref) + '</div>';
+      frag.appendChild(row);
+    });
+    vehList.appendChild(frag);
+  }
+
+  function renderSummary(target) {
+    if (!selectedVehicle) { target.innerHTML = ''; return; }
+    const v = selectedVehicle;
+    const headline = v.vin || v.ref;
+    const meta = vehicleMeta(v);
+    const cat = selectedCategory
+      ? '<span class="bp-s-cat">' + escHtml(selectedCategory.label) + '</span>'
+      : '';
+    target.innerHTML =
+      '<span class="bp-s-vrm">' + escHtml(headline) + '</span>' +
+      (meta ? escHtml(meta) + ' · ' : '') +
+      'Ref ' + escHtml(v.ref) +
+      cat;
+  }
+
+  async function loadCategories() {
+    if (categoriesLoaded) return;
+    catStatus.classList.add('show');
+    catStatus.innerHTML = '<span class="veh-spinner"></span>Loading categories...';
+    catGrid.innerHTML = '';
+    try {
+      const r = await fetch(cfg.url + '/body-panel-categories', { signal: AbortSignal.timeout(10000) });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const data = await r.json();
+      window.PA_BODY_PANEL_CATS = Array.isArray(data) ? data : [];
+      categoriesLoaded = true;
+      renderCategories();
+    } catch (e) {
+      console.warn('loadCategories failed:', e);
+      catStatus.classList.add('show');
+      catStatus.textContent = 'Could not load categories. Check connection.';
+    }
+  }
+
+  function renderCategories() {
+    catStatus.classList.remove('show');
+    catGrid.innerHTML = '';
+    const cats = window.PA_BODY_PANEL_CATS || [];
+    const frag = document.createDocumentFragment();
+    cats.forEach(c => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'bp-cat-btn';
+      btn.dataset.id = c.id;
+      btn.textContent = c.label;
+      frag.appendChild(btn);
+    });
+    catGrid.appendChild(frag);
+  }
+
+  function buildDefaultDescription() {
+    const v = selectedVehicle, c = selectedCategory;
+    if (!v || !c) return '';
+    const head = [v.year_range, v.make, v.model].filter(Boolean).join(' ').trim();
+    const lhs = [head, c.label].filter(Boolean).join(' ').trim();
+    const paintCode = v.paint_code ? ' — Paint Code ' + v.paint_code : '';
+    const paintName = v.paint_name ? ' ' + v.paint_name : '';
+    return lhs + paintCode + paintName;
+  }
+
+  function enterStep3() {
+    renderSummary(summaryStep3);
+    const v = selectedVehicle;
+    if (v.paint_code || v.paint_name) {
+      paintRow.classList.remove('bp-warn');
+      paintRow.innerHTML =
+        '<span class="bp-p-label">Paint</span>' +
+        (v.paint_code ? '<span class="bp-p-code">' + escHtml(v.paint_code) + '</span>' : '') +
+        (v.paint_name ? '<span class="bp-p-name">' + escHtml(v.paint_name) + '</span>' : '');
+    } else {
+      paintRow.classList.add('bp-warn');
+      paintRow.innerHTML =
+        '<span class="bp-p-label">Paint</span>' +
+        '<span class="bp-p-name">No paint code on file — edit vehicle to add.</span>';
+    }
+    descInput.value = buildDefaultDescription();
+    priceInput.value = '';
+    showStep(3);
+  }
+
+  async function logPart() {
+    const v = selectedVehicle, c = selectedCategory;
+    if (!v || !c) return;
+    const desc = descInput.value.trim() || buildDefaultDescription();
+    const rawPrice = priceInput.value.replace(/[^\d.]/g, '');
+    const yourPrice = rawPrice ? parseFloat(rawPrice) : null;
+
+    logBtn.disabled = true;
+    logBtn.classList.add('loading');
+    logLabel.textContent = 'Logging...';
+
+    try {
+      // Body panels don't have meaningful eBay market data via the current
+      // /lookup endpoint (it strips spaces + uppercases the description into a
+      // single token that always returns 0 listings). Use a lightweight /health
+      // ping so the ERROR badge still surfaces on offline, then write the
+      // record locally with no_pricing fields. Demo mode skips the ping.
+      if (!cfg.demo) {
+        try {
+          const r = await fetch(cfg.url + '/health', { signal: AbortSignal.timeout(6000) });
+          if (!r.ok) throw new Error('Backend unreachable (' + r.status + ')');
+        } catch (err) {
+          toast('⚠ ' + (err.message || 'Network error'));
+          setMode('error');
+          return;
+        }
+      }
+
+      parts.unshift({
+        id:               Date.now(),
+        part_number:      c.label,
+        description:      desc,
+        avg_price:        null,
+        median_price:     null,
+        low_price:        null,
+        high_price:       null,
+        suggested_price:  null,
+        total_listings:   0,
+        confidence:       null,
+        source:           'body_panel',
+        breakerpro_price: null,
+        vehicle_ref:      v.ref,
+        your_price:       yourPrice,
+      });
+      saveParts();
+      render();
+      updateStats();
+      setMode(cfg.demo ? 'demo' : 'live');
+      toast('Part logged', 'success');
+      // Same vehicle, fresh slate for next part: clear category + form, return to step 2.
+      clearCategoryAndForm();
+      showStep(2);
+    } finally {
+      logBtn.disabled = false;
+      logBtn.classList.remove('loading');
+      logLabel.textContent = 'Log Part';
+    }
+  }
+
+  // Clear category + form fields, keep selected vehicle. Used after a successful
+  // log (so user can immediately log the next part on the same car) and by the
+  // step-3 "Reset" button.
+  function clearCategoryAndForm() {
+    selectedCategory = null;
+    descInput.value = '';
+    priceInput.value = '';
+    paintRow.innerHTML = '';
+    paintRow.classList.remove('bp-warn');
+    summaryStep3.innerHTML = '';
+    renderSummary(summaryStep2);
+  }
+
+  // Full reset back to step 1: drop vehicle too. Used when entering body-panel
+  // mode and when the user taps the step-2 "Change Vehicle" button.
+  function reset() {
+    selectedVehicle = null;
+    selectedCategory = null;
+    filterTerm = '';
+    if (vehSearch)  vehSearch.value = '';
+    descInput.value = '';
+    priceInput.value = '';
+    paintRow.innerHTML = '';
+    paintRow.classList.remove('bp-warn');
+    summaryStep2.innerHTML = '';
+    summaryStep3.innerHTML = '';
+    renderVehicleList();
+    showStep(1);
+  }
+
+  // Wiring
+  if (vehSearch) {
+    let tmr;
+    vehSearch.addEventListener('input', () => {
+      filterTerm = vehSearch.value;
+      clearTimeout(tmr);
+      tmr = setTimeout(renderVehicleList, 80);
+    });
+  }
+
+  vehList.addEventListener('click', e => {
+    const row = e.target.closest('.bp-veh-row');
+    if (!row) return;
+    const ref = row.dataset.ref;
+    const v = (window.PA_VEHICLES || []).find(x => x.ref === ref);
+    if (!v) return;
+    selectedVehicle = v;
+    renderSummary(summaryStep2);
+    showStep(2);
+    if (!categoriesLoaded) loadCategories(); else renderCategories();
+  });
+
+  catGrid.addEventListener('click', e => {
+    const btn = e.target.closest('.bp-cat-btn');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    const c = (window.PA_BODY_PANEL_CATS || []).find(x => x.id === id);
+    if (!c) return;
+    selectedCategory = c;
+    enterStep3();
+  });
+
+  // Step-2 "Change Vehicle" button: drop vehicle, go back to step 1.
+  step2Back.addEventListener('click', reset);
+  // Step-3 back arrow: return to step 2 with everything intact.
+  step3Back.addEventListener('click', () => { showStep(2); });
+  // Step-3 "Reset" button: keep the vehicle, clear category + form, back to step 2.
+  resetBtn.addEventListener('click', () => { clearCategoryAndForm(); showStep(2); });
+  logBtn.addEventListener('click', logPart);
+
+  // Hooks invoked by mode toggle
+  window.PA_bodyPanelOnEnter = function() {
+    reset();
+    if ((!window.PA_VEHICLES || !window.PA_VEHICLES.length)
+        && typeof window.PA_loadVehicles === 'function') {
+      vehStatus.classList.add('show');
+      vehStatus.innerHTML = '<span class="veh-spinner"></span>Loading vehicles...';
+      Promise.resolve(window.PA_loadVehicles()).then(renderVehicleList).catch(()=>{});
+    }
+  };
+  window.PA_bodyPanelOnLeave = function() { reset(); };
+
+  // Initial render against whatever is already cached
+  renderVehicleList();
+})();
+
 (function initModeToggle(){
   var btns = document.querySelectorAll('.mode-btn');
   var pn = document.getElementById('mode-part-number');
   var bp = document.getElementById('mode-body-panel');
   if(!btns.length || !pn || !bp) return;
+  var currentMode = 'part-number';
   btns.forEach(function(b){
     b.addEventListener('click', function(){
       var mode = b.getAttribute('data-mode');
+      if (mode === currentMode) return;
       btns.forEach(function(x){
         x.classList.toggle('active', x === b);
         x.setAttribute('aria-selected', x === b ? 'true' : 'false');
       });
       pn.style.display = (mode === 'part-number') ? '' : 'none';
       bp.style.display = (mode === 'body-panel') ? '' : 'none';
+      if (mode === 'body-panel' && typeof window.PA_bodyPanelOnEnter === 'function') {
+        window.PA_bodyPanelOnEnter();
+      } else if (currentMode === 'body-panel' && typeof window.PA_bodyPanelOnLeave === 'function') {
+        window.PA_bodyPanelOnLeave();
+      }
+      currentMode = mode;
     });
   });
 })();
