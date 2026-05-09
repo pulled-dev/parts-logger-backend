@@ -695,12 +695,321 @@
       color: var(--text-secondary);
     }
 
+    /* ── Vehicles overlay (full-screen) ───────────────────────────── */
+    .fs-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg-primary);
+      z-index: 300;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .fs-overlay.open { display: flex; }
+
+    .fs-header {
+      flex-shrink: 0;
+      height: 64px;
+      padding: 0 12px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .fs-title {
+      flex: 1;
+      font-family: var(--display);
+      font-size: 18px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-primary);
+      padding-left: 4px;
+    }
+    .fs-icon-btn {
+      width: 48px; height: 48px;
+      border-radius: 4px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 18px;
+      transition: all 0.15s;
+    }
+    .fs-icon-btn:hover {
+      border-color: var(--accent-red);
+      color: var(--accent-red);
+      background: var(--accent-dim);
+    }
+    .fs-add-btn {
+      min-height: 48px;
+      padding: 0 16px;
+      background: var(--accent-red);
+      border: none;
+      border-radius: 4px;
+      color: #fff;
+      font-family: var(--display);
+      font-size: 14px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s;
+    }
+    .fs-add-btn:hover { background: var(--accent-red-hover); }
+
+    .fs-body {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 16px;
+    }
+
+    .veh-search {
+      width: 100%;
+      margin-bottom: 12px;
+    }
+    .veh-search input {
+      height: 48px;
+      width: 100%;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-family: var(--sans);
+      font-size: 14px;
+      padding: 0 12px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .veh-search input:focus {
+      border-color: var(--accent-red);
+      box-shadow: 0 0 0 2px rgba(227,30,36,0.35);
+    }
+
+    .veh-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .veh-row {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 12px 14px;
+      min-height: 56px;
+      cursor: pointer;
+      transition: border-color 0.12s, background 0.12s;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .veh-row:hover, .veh-row:active {
+      border-color: var(--accent-red);
+      background: var(--bg-elevated);
+    }
+    .veh-row-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+    }
+    .veh-row-vrm {
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--data-yellow);
+      letter-spacing: 0.04em;
+      word-break: break-all;
+    }
+    .veh-row-ref {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+    .veh-row-meta {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+    .veh-row-paint {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .veh-status {
+      padding: 32px 20px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    .veh-status .veh-spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.18);
+      border-top-color: var(--accent-red);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    /* Vehicle form */
+    .veh-form { display: flex; flex-direction: column; gap: 14px; }
+    .veh-form-field { display: flex; flex-direction: column; gap: 6px; }
+    .veh-form-field label {
+      font-family: var(--display);
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+    .veh-form-field label .req { color: var(--accent-red); margin-left: 2px; }
+    .veh-form-field input,
+    .veh-form-field select,
+    .veh-form-field textarea {
+      height: 48px;
+      width: 100%;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-family: var(--sans);
+      font-size: 14px;
+      padding: 0 12px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .veh-form-field textarea {
+      height: auto;
+      min-height: 88px;
+      padding: 10px 12px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+    .veh-form-field input:focus,
+    .veh-form-field select:focus,
+    .veh-form-field textarea:focus {
+      border-color: var(--accent-red);
+      box-shadow: 0 0 0 2px rgba(227,30,36,0.35);
+    }
+    .veh-form-field.mono input { font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.04em; }
+    .veh-form-field select {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23B8B8B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 36px;
+    }
+
+    .veh-ref-locked {
+      height: 48px;
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px dashed var(--border);
+      border-radius: 4px;
+      color: var(--data-yellow);
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .veh-ref-locked .lock-hint {
+      font-family: var(--display);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    .veh-form-error {
+      background: rgba(255,23,68,0.08);
+      border: 1px solid var(--error);
+      border-radius: 4px;
+      padding: 10px 12px;
+      color: var(--error);
+      font-size: 13px;
+      display: none;
+    }
+    .veh-form-error.show { display: block; }
+
+    .veh-form-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .veh-save-btn,
+    .veh-cancel-btn,
+    .veh-delete-btn {
+      min-height: 48px;
+      padding: 0 16px;
+      border-radius: 4px;
+      font-family: var(--display);
+      font-size: 15px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .veh-save-btn {
+      background: var(--accent-red);
+      border: none;
+      color: #fff;
+    }
+    .veh-save-btn:hover:not(:disabled) { background: var(--accent-red-hover); }
+    .veh-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .veh-cancel-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+    .veh-cancel-btn:hover {
+      border-color: var(--text-secondary);
+      color: var(--text-primary);
+    }
+    .veh-delete-btn {
+      background: transparent;
+      border: 1px solid var(--error);
+      color: var(--error);
+      margin-top: 18px;
+    }
+    .veh-delete-btn:hover {
+      background: rgba(255,23,68,0.1);
+    }
+
+    /* Toast variants for success */
+    .toast.success {
+      border-color: var(--success);
+      color: var(--success);
+    }
+
     /* ── Responsive ───────────────────────────────────────────────── */
     @media (max-width: 480px) {
       .form-row { flex-direction: column; }
       .add-btn { width: 100%; justify-content: center; height: 40px; }
       .price-grid { gap: 10px; }
       .stats { gap: 14px; }
+      .header { gap: 6px; padding: 0 12px; }
+      .header-right { gap: 6px; }
+      .brand-text { display: none; }
+      .header-logo img { height: 32px; }
+    }
+    @media (min-width: 481px) and (max-width: 600px) {
+      .brand-text { font-size: 14px; }
     }
   </style>
 </head>
@@ -717,6 +1026,13 @@
       <div class="status-dot"></div>
       <span id="badge-text">...</span>
     </div>
+    <button class="icon-btn" id="vehicles-btn" title="Vehicles" aria-label="Vehicles">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 17h-2v-6l2-5h13l4 5v6h-2"/>
+        <circle cx="7.5" cy="17.5" r="2.5"/>
+        <circle cx="16.5" cy="17.5" r="2.5"/>
+      </svg>
+    </button>
     <button class="icon-btn" id="settings-btn" title="Settings">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="3"/>
@@ -834,6 +1150,102 @@
   </div>
 </div>
 
+<!-- Vehicles overlay (full-screen) -->
+<div class="fs-overlay" id="vehicles-overlay" role="dialog" aria-label="Vehicles" aria-modal="true">
+  <!-- List view -->
+  <div id="veh-list-view" style="display:flex; flex-direction:column; flex:1; overflow:hidden;">
+    <div class="fs-header">
+      <button class="fs-icon-btn" id="veh-close-btn" aria-label="Close">&#x2715;</button>
+      <span class="fs-title">Vehicles</span>
+      <button class="fs-add-btn" id="veh-add-btn">+ Add</button>
+    </div>
+    <div class="fs-body">
+      <div class="veh-search">
+        <input type="text" id="veh-search-input" placeholder="Search VIN, ref, make..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      </div>
+      <div id="veh-list-status" class="veh-status"><span class="veh-spinner"></span>Loading vehicles...</div>
+      <div class="veh-list" id="veh-list"></div>
+    </div>
+  </div>
+
+  <!-- Form view -->
+  <div id="veh-form-view" style="display:none; flex-direction:column; flex:1; overflow:hidden;">
+    <div class="fs-header">
+      <button class="fs-icon-btn" id="veh-form-back-btn" aria-label="Back">&#x2190;</button>
+      <span class="fs-title" id="veh-form-title">Add Vehicle</span>
+    </div>
+    <div class="fs-body">
+      <form class="veh-form" id="veh-form" onsubmit="return false;">
+        <div class="veh-form-error" id="veh-form-error"></div>
+
+        <div class="veh-form-field mono" id="veh-ref-field">
+          <!-- Rendered dynamically: <input> in add mode, read-only <div> in edit mode -->
+        </div>
+
+        <div class="veh-form-field mono">
+          <label for="veh-vin">VIN</label>
+          <input type="text" id="veh-vin" name="vin" placeholder="17-char VIN"
+                 autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+        </div>
+
+        <div class="veh-form-field">
+          <label for="veh-make">Make<span class="req">*</span></label>
+          <input type="text" id="veh-make" name="make" placeholder="e.g. Volkswagen" required
+                 autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false">
+        </div>
+
+        <div class="veh-form-field">
+          <label for="veh-model">Model<span class="req">*</span></label>
+          <input type="text" id="veh-model" name="model" placeholder="e.g. Golf GT TDI" required
+                 autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false">
+        </div>
+
+        <div class="veh-form-field">
+          <label for="veh-year">Year / Range</label>
+          <input type="text" id="veh-year" name="year_range" placeholder="e.g. 2018 or 2015-2018"
+                 inputmode="numeric" autocomplete="off" autocorrect="off" spellcheck="false">
+        </div>
+
+        <div class="veh-form-field mono">
+          <label for="veh-paint-code">Paint Code</label>
+          <select id="veh-paint-code" name="paint_code">
+            <option value="">— None —</option>
+          </select>
+        </div>
+
+        <div class="veh-form-field">
+          <label for="veh-paint-name">Paint Name</label>
+          <input type="text" id="veh-paint-name" name="paint_name" placeholder="e.g. Reflex Silver"
+                 autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false">
+        </div>
+
+        <div class="veh-form-field mono">
+          <label for="veh-engine-code">Engine Code</label>
+          <input type="text" id="veh-engine-code" name="engine_code" placeholder="e.g. CAY"
+                 autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+        </div>
+
+        <div class="veh-form-field">
+          <label for="veh-transmission">Transmission</label>
+          <input type="text" id="veh-transmission" name="transmission" placeholder="e.g. Manual / DSG"
+                 autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false">
+        </div>
+
+        <div class="veh-form-field">
+          <label for="veh-notes">Notes</label>
+          <textarea id="veh-notes" name="notes" rows="3" placeholder="Anything worth remembering..."></textarea>
+        </div>
+
+        <div class="veh-form-actions">
+          <button type="submit" class="veh-save-btn" id="veh-save-btn">Save</button>
+          <button type="button" class="veh-cancel-btn" id="veh-cancel-btn">Cancel</button>
+          <button type="button" class="veh-delete-btn" id="veh-delete-btn" style="display:none;">Delete Vehicle</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -900,11 +1312,16 @@ const countLabel = $('parts-count-label');
 
 // ── Toast ────────────────────────────────────────────────────────────────────
 let toastTmr;
-function toast(msg) {
+function toast(msg, kind) {
   toastEl.textContent = msg;
+  toastEl.classList.remove('success');
+  if (kind === 'success') toastEl.classList.add('success');
   toastEl.classList.add('show');
   clearTimeout(toastTmr);
-  toastTmr = setTimeout(() => toastEl.classList.remove('show'), 3500);
+  toastTmr = setTimeout(() => {
+    toastEl.classList.remove('show');
+    toastEl.classList.remove('success');
+  }, 3500);
 }
 
 // ── Status check ─────────────────────────────────────────────────────────────
@@ -1267,6 +1684,355 @@ try {
 render();
 updateStats();
 pnInput.focus();
+
+// ── Vehicles overlay ─────────────────────────────────────────────────────────
+window.PA_VEHICLES = [];
+
+(function initVehicles(){
+  const overlay     = document.getElementById('vehicles-overlay');
+  const listView    = document.getElementById('veh-list-view');
+  const formView    = document.getElementById('veh-form-view');
+  const listStatus  = document.getElementById('veh-list-status');
+  const listEl      = document.getElementById('veh-list');
+  const searchInput = document.getElementById('veh-search-input');
+  const openBtn     = document.getElementById('vehicles-btn');
+  const closeBtn    = document.getElementById('veh-close-btn');
+  const addBtn      = document.getElementById('veh-add-btn');
+  const backBtn     = document.getElementById('veh-form-back-btn');
+  const cancelBtn   = document.getElementById('veh-cancel-btn');
+  const deleteBtn   = document.getElementById('veh-delete-btn');
+  const saveBtn     = document.getElementById('veh-save-btn');
+  const form        = document.getElementById('veh-form');
+  const formTitle   = document.getElementById('veh-form-title');
+  const formError   = document.getElementById('veh-form-error');
+  const refField    = document.getElementById('veh-ref-field');
+  const fields = {
+    vin:           document.getElementById('veh-vin'),
+    make:          document.getElementById('veh-make'),
+    model:         document.getElementById('veh-model'),
+    year_range:    document.getElementById('veh-year'),
+    paint_code:    document.getElementById('veh-paint-code'),
+    paint_name:    document.getElementById('veh-paint-name'),
+    engine_code:   document.getElementById('veh-engine-code'),
+    transmission:  document.getElementById('veh-transmission'),
+    notes:         document.getElementById('veh-notes'),
+  };
+
+  let editingRef = null;       // null = add mode, otherwise the ref being edited
+  let listLoaded = false;
+  let filterTerm = '';
+
+  function escHtml(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Populate paint code dropdown from window.PA_PAINT_CODES
+  function populatePaintDropdown() {
+    const sel = fields.paint_code;
+    if (!sel) return;
+    const current = sel.value;
+    sel.innerHTML = '<option value="">— None —</option>';
+    const codes = Array.isArray(window.PA_PAINT_CODES) ? window.PA_PAINT_CODES : [];
+    // Sort by code for stable order
+    const sorted = codes.slice().sort((a,b) => (a.code || '').localeCompare(b.code || ''));
+    sorted.forEach(pc => {
+      const opt = document.createElement('option');
+      opt.value = pc.code;
+      opt.textContent = pc.code + (pc.name ? ' — ' + pc.name : '');
+      sel.appendChild(opt);
+    });
+    if (current) sel.value = current;
+  }
+
+  async function loadVehicles() {
+    listStatus.style.display = 'block';
+    listStatus.innerHTML = '<span class="veh-spinner"></span>Loading vehicles...';
+    listEl.innerHTML = '';
+    try {
+      const r = await fetch(cfg.url + '/vehicles', { signal: AbortSignal.timeout(15000) });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const data = await r.json();
+      window.PA_VEHICLES = Array.isArray(data) ? data : [];
+      listLoaded = true;
+      renderList();
+    } catch (e) {
+      console.warn('loadVehicles failed:', e);
+      listStatus.style.display = 'block';
+      listStatus.textContent = 'Could not load vehicles. Check connection.';
+    }
+  }
+  // Expose for other features (Body Panel mode in Task 4) to refresh cache.
+  window.PA_loadVehicles = loadVehicles;
+
+  function renderList() {
+    if (!listLoaded) return;
+    const term = filterTerm.trim().toLowerCase();
+    const all = window.PA_VEHICLES || [];
+    const filtered = !term ? all : all.filter(v => {
+      const haystack = [v.ref, v.vin, v.make, v.model, v.paint_name, v.paint_code]
+        .map(x => (x || '').toString().toLowerCase()).join(' ');
+      return haystack.includes(term);
+    });
+
+    listEl.innerHTML = '';
+    if (!all.length) {
+      listStatus.style.display = 'block';
+      listStatus.textContent = 'No vehicles yet — tap + Add';
+      return;
+    }
+    if (!filtered.length) {
+      listStatus.style.display = 'block';
+      listStatus.textContent = 'No matches for "' + term + '"';
+      return;
+    }
+    listStatus.style.display = 'none';
+
+    const frag = document.createDocumentFragment();
+    filtered.forEach(v => {
+      const row = document.createElement('div');
+      row.className = 'veh-row';
+      row.dataset.ref = v.ref;
+      const parts = [v.make, v.model].filter(Boolean).join(' ');
+      const yr = v.year_range ? ' (' + escHtml(v.year_range) + ')' : '';
+      const paint = v.paint_code
+        ? '<div class="veh-row-paint">' + escHtml(v.paint_code) + (v.paint_name ? ' · ' + escHtml(v.paint_name) : '') + '</div>'
+        : '';
+      const headline = v.vin ? escHtml(v.vin) : escHtml(v.ref);
+      row.innerHTML =
+        '<div class="veh-row-top">' +
+          '<div class="veh-row-vrm">' + headline + '</div>' +
+          (v.vin ? '<div class="veh-row-ref">' + escHtml(v.ref) + '</div>' : '') +
+        '</div>' +
+        (parts || yr ? '<div class="veh-row-meta">' + escHtml(parts) + yr + '</div>' : '') +
+        paint;
+      frag.appendChild(row);
+    });
+    listEl.appendChild(frag);
+  }
+
+  // Switch overlay between list and form views
+  function showList() {
+    listView.style.display = 'flex';
+    formView.style.display = 'none';
+    formError.classList.remove('show');
+  }
+  function renderRefAsInput() {
+    refField.innerHTML =
+      '<label for="veh-ref-input">Vehicle Ref<span class="req">*</span></label>' +
+      '<input type="text" id="veh-ref-input" name="ref" placeholder="e.g. VEH47" required ' +
+      'inputmode="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">';
+    const inp = refField.querySelector('input');
+    if (inp) {
+      inp.addEventListener('blur', () => { inp.value = inp.value.trim().toUpperCase(); });
+    }
+  }
+  function renderRefAsLocked(value) {
+    refField.innerHTML =
+      '<label>Vehicle Ref</label>' +
+      '<div class="veh-ref-locked">' +
+        '<span>' + escHtml(value || '—') + '</span>' +
+        '<span class="lock-hint">Read-only</span>' +
+      '</div>';
+  }
+
+  function showForm(vehicle) {
+    populatePaintDropdown();
+    formError.classList.remove('show');
+    formError.textContent = '';
+    if (vehicle) {
+      editingRef = vehicle.ref;
+      formTitle.textContent = 'Edit Vehicle';
+      renderRefAsLocked(vehicle.ref);
+      deleteBtn.style.display = 'block';
+      // Populate non-ref fields
+      Object.keys(fields).forEach(k => {
+        const el = fields[k];
+        if (!el) return;
+        el.value = vehicle[k] == null ? '' : vehicle[k];
+      });
+    } else {
+      editingRef = null;
+      formTitle.textContent = 'Add Vehicle';
+      renderRefAsInput();
+      deleteBtn.style.display = 'none';
+      // Reset non-ref fields
+      Object.keys(fields).forEach(k => {
+        const el = fields[k];
+        if (!el) return;
+        el.value = '';
+      });
+    }
+    listView.style.display = 'none';
+    formView.style.display = 'flex';
+    // Scroll form to top
+    const fsBody = formView.querySelector('.fs-body');
+    if (fsBody) fsBody.scrollTop = 0;
+  }
+
+  function openOverlay() {
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    showList();
+    if (!listLoaded) {
+      loadVehicles();
+    } else {
+      renderList();
+    }
+  }
+  function closeOverlay() {
+    overlay.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  // Build payload from form (exclude empty strings → null/omit)
+  function gatherPayload(includeRef) {
+    const out = {};
+    Object.keys(fields).forEach(k => {
+      const el = fields[k];
+      if (!el) return;
+      let v = el.value;
+      if (typeof v === 'string') v = v.trim();
+      if (v === '') return; // skip empty (server defaults to null)
+      if (k === 'vin' || k === 'paint_code' || k === 'engine_code') {
+        v = v.toUpperCase();
+      }
+      out[k] = v;
+    });
+    if (includeRef) {
+      // Add mode only: read ref from the dynamically-rendered input
+      const refInp = refField.querySelector('input');
+      const refVal = refInp ? refInp.value.trim().toUpperCase() : '';
+      if (refVal) out.ref = refVal;
+    }
+    return out;
+  }
+
+  function showFormError(msg) {
+    formError.textContent = msg;
+    formError.classList.add('show');
+    const fsBody = formView.querySelector('.fs-body');
+    if (fsBody) fsBody.scrollTop = 0;
+  }
+
+  async function submitForm() {
+    formError.classList.remove('show');
+    saveBtn.disabled = true;
+    const isEdit = editingRef != null;
+    const originalLabel = saveBtn.textContent;
+    saveBtn.textContent = isEdit ? 'Saving...' : 'Adding...';
+    try {
+      let url, method, payload;
+      if (isEdit) {
+        url = cfg.url + '/vehicles/' + encodeURIComponent(editingRef);
+        method = 'PATCH';
+        payload = gatherPayload(false);
+      } else {
+        url = cfg.url + '/vehicles';
+        method = 'POST';
+        payload = gatherPayload(true);
+        if (!payload.ref) { showFormError('Vehicle Ref is required.'); return; }
+        if (!payload.make) { showFormError('Make is required.'); return; }
+        if (!payload.model) { showFormError('Model is required.'); return; }
+      }
+      const r = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!r.ok) {
+        let detail = 'HTTP ' + r.status;
+        try {
+          const e = await r.json();
+          if (e && (e.error || e.detail)) detail = e.error || e.detail;
+        } catch {}
+        if (r.status === 409) detail = 'A vehicle with that ref already exists.';
+        showFormError(detail);
+        return;
+      }
+      // Refresh cached list and return to list view
+      await loadVehicles();
+      showList();
+      toast(isEdit ? 'Vehicle updated' : 'Vehicle added', 'success');
+    } catch (e) {
+      console.warn('submit vehicle failed:', e);
+      showFormError('Network error: ' + (e.message || 'unknown'));
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = originalLabel;
+    }
+  }
+
+  async function deleteCurrent() {
+    if (editingRef == null) return;
+    const ref = editingRef;
+    if (!confirm('Soft-delete vehicle "' + ref + '"?\n\nIt will be hidden from lists. This action can be reversed by an admin.')) return;
+    deleteBtn.disabled = true;
+    const originalLabel = deleteBtn.textContent;
+    deleteBtn.textContent = 'Deleting...';
+    try {
+      const r = await fetch(cfg.url + '/vehicles/' + encodeURIComponent(ref), {
+        method: 'DELETE',
+        signal: AbortSignal.timeout(12000),
+      });
+      if (!r.ok && r.status !== 204) {
+        let detail = 'HTTP ' + r.status;
+        try { const e = await r.json(); if (e && (e.error || e.detail)) detail = e.error || e.detail; } catch {}
+        showFormError(detail);
+        return;
+      }
+      await loadVehicles();
+      showList();
+      toast('Vehicle deleted', 'success');
+    } catch (e) {
+      console.warn('delete vehicle failed:', e);
+      showFormError('Network error: ' + (e.message || 'unknown'));
+    } finally {
+      deleteBtn.disabled = false;
+      deleteBtn.textContent = originalLabel;
+    }
+  }
+
+  // Wiring
+  if (openBtn)   openBtn.addEventListener('click', openOverlay);
+  if (closeBtn)  closeBtn.addEventListener('click', closeOverlay);
+  if (addBtn)    addBtn.addEventListener('click', () => showForm(null));
+  if (backBtn)   backBtn.addEventListener('click', showList);
+  if (cancelBtn) cancelBtn.addEventListener('click', showList);
+  if (deleteBtn) deleteBtn.addEventListener('click', deleteCurrent);
+  if (form)      form.addEventListener('submit', e => { e.preventDefault(); submitForm(); });
+  if (saveBtn)   saveBtn.addEventListener('click', e => { e.preventDefault(); submitForm(); });
+
+  // Search input → debounced filter
+  if (searchInput) {
+    let searchTmr;
+    searchInput.addEventListener('input', () => {
+      filterTerm = searchInput.value;
+      clearTimeout(searchTmr);
+      searchTmr = setTimeout(renderList, 80);
+    });
+  }
+
+  // Tap row → edit
+  listEl.addEventListener('click', e => {
+    const row = e.target.closest('.veh-row');
+    if (!row) return;
+    const ref = row.dataset.ref;
+    const v = (window.PA_VEHICLES || []).find(x => x.ref === ref);
+    if (v) showForm(v);
+  });
+
+  // Uppercase VIN on blur (ref is uppercased by its own dynamic-input handler)
+  if (fields.vin) fields.vin.addEventListener('blur', () => {
+    fields.vin.value = fields.vin.value.trim().toUpperCase();
+  });
+
+  // Pre-load list in background after init so first overlay open is instant
+  // (use a slight delay so we don't compete with /lookup-panel and /health on page load)
+  setTimeout(() => { if (!listLoaded) loadVehicles(); }, 300);
+})();
 
 (function initModeToggle(){
   var btns = document.querySelectorAll('.mode-btn');
