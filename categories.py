@@ -134,6 +134,7 @@ BODY_PANEL_CATEGORIES: list[dict] = [
     {"id": "sill_right", "label": "Sill — Right"},
     {"id": "mirror_left", "label": "Mirror — Left"},
     {"id": "mirror_right", "label": "Mirror — Right"},
+    {"id": "fuel_flap", "label": "Fuel Flap"},
 ]
 
 
