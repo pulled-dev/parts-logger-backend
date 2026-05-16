@@ -1970,7 +1970,7 @@ exportBtn.addEventListener('click', () => {
   if (!parts.length) { toast('No parts to export'); return; }
   const rows = [['Part Number','Part Description','Price','Ref']];
   parts.forEach(p => rows.push([
-    formatPartNumber(p.part_number),
+    /^[A-Z0-9]+$/.test(p.part_number) ? formatPartNumber(p.part_number) : p.part_number,
     p.description,
     p.your_price != null ? p.your_price.toFixed(2) : '',
     p.vehicle_ref || '',
@@ -1983,7 +1983,7 @@ exportBtn.addEventListener('click', () => {
     }).join(',')
   ).join('\r\n');
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.href = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }));
   a.download = 'parts-' + new Date().toISOString().slice(0, 10) + '.csv';
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
