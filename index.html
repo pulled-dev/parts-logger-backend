@@ -2676,11 +2676,37 @@ window.PA_BODY_PANEL_CATS = window.PA_BODY_PANEL_CATS || [];
     return base;
   }
 
+  // Snapshot every value the user has entered on the current schedule DOM,
+  // keyed by the row's category id (unique per selection — a category can be
+  // selected at most once). Lets renderSchedule() MERGE instead of rebuild so
+  // back-navigation to add/remove items never wipes entered price/note/toggles.
+  function captureScheduleState() {
+    const state = {};
+    schedule.querySelectorAll('.bp-sched-row').forEach(row => {
+      const priceEl = row.querySelector('.bp-sched-price');
+      const noteEl  = row.querySelector('.bp-sched-note');
+      const toggles = {};
+      row.querySelectorAll('.bp-toggle-group').forEach(g => {
+        const sel = g.querySelector('.bp-chip.selected');
+        if (sel) toggles[g.dataset.key] = sel.dataset.opt;
+      });
+      state[row.dataset.id] = {
+        price:   priceEl ? priceEl.value : '',
+        note:    noteEl  ? noteEl.value  : '',
+        toggles: toggles,
+      };
+    });
+    return state;
+  }
+
   function renderSchedule() {
     const v = selectedVehicle;
+    const prev = captureScheduleState();   // preserve entered values before rebuild
     schedule.innerHTML = '';
     const frag = document.createDocumentFragment();
     selectedCategories.forEach(c => {
+      const saved = prev[c.id] || {};
+      const savedToggles = saved.toggles || {};
       const row = document.createElement('div');
       row.className = 'bp-sched-row';
       row.dataset.id = c.id;
@@ -2689,8 +2715,10 @@ window.PA_BODY_PANEL_CATS = window.PA_BODY_PANEL_CATS || [];
 
       (c.toggles || []).forEach(t => {
         html += '<div class="bp-toggle-group" data-key="' + escHtml(t.key) + '">';
+        const chosen = savedToggles[t.key];
         t.options.forEach((opt, i) => {
-          html += '<button type="button" class="bp-chip' + (i === 0 ? ' selected' : '') +
+          const isSel = chosen != null ? (opt === chosen) : (i === 0);
+          html += '<button type="button" class="bp-chip' + (isSel ? ' selected' : '') +
             '" data-opt="' + escHtml(opt) + '">' + escHtml(opt) + '</button>';
         });
         html += '</div>';
@@ -2707,11 +2735,13 @@ window.PA_BODY_PANEL_CATS = window.PA_BODY_PANEL_CATS || [];
       }
 
       html += '<input type="text" class="bp-sched-price" inputmode="decimal" ' +
-        'placeholder="£0.00" autocomplete="off" autocorrect="off" spellcheck="false">';
+        'placeholder="£0.00" autocomplete="off" autocorrect="off" spellcheck="false" ' +
+        'value="' + escHtml(saved.price || '') + '">';
 
       html += '<input type="text" class="bp-sched-note" ' +
         'placeholder="Part No. / Notes (optional)" autocomplete="off" ' +
-        'autocorrect="off" spellcheck="false">';
+        'autocorrect="off" spellcheck="false" ' +
+        'value="' + escHtml(saved.note || '') + '">';
 
       row.innerHTML = html;
       frag.appendChild(row);
