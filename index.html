@@ -440,6 +440,21 @@
     }
     .yp-hint { font-family: var(--mono); font-size: 11px; color: var(--text-muted); }
 
+    .partno-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-top: 10px;
+      flex-wrap: wrap;
+    }
+    .pn-note-input {
+      flex: 1 1 140px !important;
+      height: 40px !important;
+      font-family: var(--mono) !important;
+      font-size: 14px !important;
+      padding: 0 10px !important;
+    }
+
     .remove-btn {
       position: absolute;
       top: 8px; right: 8px;
@@ -992,6 +1007,23 @@
       transition: border-color 0.15s, box-shadow 0.15s;
     }
     .bp-sched-price:focus {
+      border-color: var(--accent-red);
+      box-shadow: 0 0 0 2px rgba(227,30,36,0.35);
+    }
+    .bp-sched-note {
+      width: 100%;
+      height: 42px;
+      padding: 0 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-family: var(--mono);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .bp-sched-note:focus {
       border-color: var(--accent-red);
       box-shadow: 0 0 0 2px rgba(227,30,36,0.35);
     }
@@ -1838,6 +1870,7 @@ async function addPart() {
       breakerpro_price: d.breakerpro_price || null,
       vehicle_ref:     ref,
       your_price:      prefill,
+      part_note:       '',
     });
     pnInput.value = '';
     saveParts();
@@ -2000,6 +2033,10 @@ function render() {
         <span class="yp-label">Your price</span>
         <input type="text" class="yp-input" data-yp="${p.id}" placeholder="£0.00" value="${esc(ypVal)}">
         ${hasPricing ? `<span class="yp-hint">Suggested: ${fmt(p.suggested_price)}</span>` : ''}
+      </div>
+      <div class="partno-row">
+        <span class="yp-label">Part No. / Notes</span>
+        <input type="text" class="pn-note-input" data-pn="${p.id}" placeholder="Optional" value="${esc(p.part_note || '')}">
       </div>`;
 
     // Wire up editable description (after innerHTML is set)
@@ -2030,6 +2067,15 @@ partsList.addEventListener('input', e => {
   updateStats();
 });
 
+partsList.addEventListener('input', e => {
+  const inp = e.target.closest('[data-pn]');
+  if (!inp) return;
+  const p = parts.find(x => x.id === +inp.dataset.pn);
+  if (!p) return;
+  p.part_note = inp.value;
+  saveParts();
+});
+
 clearBtn.addEventListener('click', () => {
   if (!confirm('Clear all ' + parts.length + ' part' + (parts.length !== 1 ? 's' : '') + '?')) return;
   parts = [];
@@ -2056,12 +2102,16 @@ function formatPartNumber(pn) {
 exportBtn.addEventListener('click', () => {
   if (!parts.length) { toast('No parts to export'); return; }
   const rows = [['Part Number','Part Description','Price','Ref']];
-  parts.forEach(p => rows.push([
-    /^[A-Z0-9]+$/.test(p.part_number) ? formatPartNumber(p.part_number) : p.part_number,
+  parts.forEach(p => {
+    const note = (p.part_note || '').trim();
+    const pnCell = note || p.part_number;
+    rows.push([
+    /^[A-Z0-9]+$/.test(pnCell) ? formatPartNumber(pnCell) : pnCell,
     p.description,
     p.your_price != null ? p.your_price.toFixed(2) : '',
     p.vehicle_ref || '',
-  ]));
+    ]);
+  });
   const csv = rows.map(r =>
     r.map(c => {
       const s = String(c);
@@ -2659,6 +2709,10 @@ window.PA_BODY_PANEL_CATS = window.PA_BODY_PANEL_CATS || [];
       html += '<input type="text" class="bp-sched-price" inputmode="decimal" ' +
         'placeholder="£0.00" autocomplete="off" autocorrect="off" spellcheck="false">';
 
+      html += '<input type="text" class="bp-sched-note" ' +
+        'placeholder="Part No. / Notes (optional)" autocomplete="off" ' +
+        'autocorrect="off" spellcheck="false">';
+
       row.innerHTML = html;
       frag.appendChild(row);
     });
@@ -2687,9 +2741,11 @@ window.PA_BODY_PANEL_CATS = window.PA_BODY_PANEL_CATS || [];
         })
         .filter(Boolean);
       const rawPrice = row.querySelector('.bp-sched-price').value.replace(/[^\d.]/g, '');
+      const noteEl = row.querySelector('.bp-sched-note');
       return {
         description: buildRowDescription(c, opts),
         your_price:  rawPrice ? parseFloat(rawPrice) : null,
+        part_note:   noteEl ? noteEl.value.trim() : '',
       };
     });
 
@@ -2718,6 +2774,7 @@ window.PA_BODY_PANEL_CATS = window.PA_BODY_PANEL_CATS || [];
         parts.unshift({
           id:               now + i,
           part_number:      '',            // Naveed fills real part numbers later
+          part_note:        rec.part_note, // optional Part No. / Notes captured at log time
           description:      rec.description,
           avg_price:        null,
           median_price:     null,
