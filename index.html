@@ -899,6 +899,102 @@
       background: var(--bg-card);
       color: var(--accent-red);
     }
+    .bp-cat-btn.selected {
+      border-color: var(--accent-red);
+      background: rgba(227,30,36,0.14);
+      color: var(--accent-red);
+      font-weight: 600;
+      box-shadow: inset 0 0 0 1px var(--accent-red);
+    }
+
+    /* Primary "Price N items" action under the grid */
+    .bp-price-btn {
+      width: 100%;
+      min-height: 52px;
+      margin-top: 14px;
+      padding: 0 16px;
+      border: none;
+      border-radius: 4px;
+      background: var(--accent-red);
+      color: #fff;
+      font-family: var(--display);
+      font-size: 15px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .bp-price-btn:hover:not(:disabled) { background: var(--accent-red-hover); }
+    .bp-price-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* Pricing schedule (Step 3) — one row per selected item */
+    .bp-schedule { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+    .bp-sched-row {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .bp-sched-title {
+      font-family: var(--display);
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: var(--text-primary);
+    }
+    .bp-toggle-group { display: flex; flex-wrap: wrap; gap: 6px; }
+    .bp-chip {
+      min-height: 38px;
+      padding: 0 14px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      font-family: var(--sans);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .bp-chip.selected {
+      border-color: var(--accent-red);
+      background: rgba(227,30,36,0.14);
+      color: var(--accent-red);
+      font-weight: 600;
+    }
+    .bp-sched-paint {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      gap: 6px;
+      align-items: baseline;
+    }
+    .bp-sched-paint .bp-sp-code {
+      font-family: var(--mono);
+      font-weight: 700;
+      color: var(--data-yellow);
+      letter-spacing: 0.04em;
+    }
+    .bp-sched-paint.bp-warn { color: var(--data-yellow); }
+    .bp-sched-price {
+      width: 100%;
+      height: 46px;
+      padding: 0 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-primary);
+      font-family: var(--mono);
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .bp-sched-price:focus {
+      border-color: var(--accent-red);
+      box-shadow: 0 0 0 2px rgba(227,30,36,0.35);
+    }
 
     .bp-paint-row {
       background: var(--bg-elevated);
@@ -1418,32 +1514,23 @@
     <div class="bp-summary" id="bp-summary-step2"></div>
     <div id="bp-cat-status" class="bp-status"></div>
     <div class="bp-cat-grid" id="bp-cat-grid"></div>
+    <button type="button" class="bp-price-btn" id="bp-price-btn" disabled>Price 0 items</button>
   </div>
 
-  <!-- Step 3: Confirm + Log -->
+  <!-- Step 3: Pricing schedule -->
   <div class="bp-step" id="bp-step3" style="display:none">
     <div class="bp-step-head">
       <button type="button" class="bp-back-btn" id="bp-step3-back" aria-label="Back">&#x2190;</button>
       <span class="bp-step-num">3</span>
-      <span class="bp-step-title">Confirm &amp; Log</span>
+      <span class="bp-step-title">Pricing</span>
     </div>
     <div class="bp-summary" id="bp-summary-step3"></div>
-    <div class="bp-paint-row" id="bp-paint-row"></div>
-    <div class="bp-form-field">
-      <label for="bp-desc-input">Description</label>
-      <textarea id="bp-desc-input" rows="3"></textarea>
-    </div>
-    <div class="bp-form-field">
-      <label for="bp-price-input">Your Price</label>
-      <input type="text" id="bp-price-input" inputmode="decimal" placeholder="£0.00"
-             autocomplete="off" autocorrect="off" spellcheck="false">
-    </div>
+    <div class="bp-schedule" id="bp-schedule"></div>
     <div class="bp-actions">
       <button type="button" class="bp-log-btn" id="bp-log-btn">
         <div class="spinner"></div>
-        <span id="bp-log-label">Log Part</span>
+        <span id="bp-log-label">Log all</span>
       </button>
-      <button type="button" class="bp-reset-btn" id="bp-reset-btn">Reset</button>
     </div>
   </div>
 </div>
@@ -1899,9 +1986,9 @@ function render() {
       <button class="remove-btn" data-rm="${p.id}" title="Remove">×</button>
       <div class="card-top">
         <div class="card-id">
-          <div class="card-pn">${esc(p.part_number)}</div>
+          <div class="card-pn">${esc(p.part_number || p.description)}</div>
           ${p.vehicle_ref ? `<div class="card-ref">${esc(p.vehicle_ref)}</div>` : ''}
-          <div class="card-desc" title="Tap to correct description">${esc(p.description)}</div>
+          ${p.part_number ? `<div class="card-desc" title="Tap to correct description">${esc(p.description)}</div>` : ''}
         </div>
         <div class="card-tags">
           ${sourceTags(p.source)}
@@ -2395,21 +2482,19 @@ window.PA_BODY_PANEL_CATS = window.PA_BODY_PANEL_CATS || [];
   const vehList      = document.getElementById('bp-veh-list');
   const catStatus    = document.getElementById('bp-cat-status');
   const catGrid      = document.getElementById('bp-cat-grid');
+  const priceBtn     = document.getElementById('bp-price-btn');
   const summaryStep2 = document.getElementById('bp-summary-step2');
   const summaryStep3 = document.getElementById('bp-summary-step3');
-  const paintRow     = document.getElementById('bp-paint-row');
-  const descInput    = document.getElementById('bp-desc-input');
-  const priceInput   = document.getElementById('bp-price-input');
+  const schedule     = document.getElementById('bp-schedule');
   const logBtn       = document.getElementById('bp-log-btn');
   const logLabel     = document.getElementById('bp-log-label');
-  const resetBtn     = document.getElementById('bp-reset-btn');
   const step2Back    = document.getElementById('bp-step2-back');
   const step3Back    = document.getElementById('bp-step3-back');
 
-  let selectedVehicle  = null;
-  let selectedCategory = null;
-  let categoriesLoaded = false;
-  let filterTerm       = '';
+  let selectedVehicle    = null;
+  let selectedCategories = [];   // tap order preserved
+  let categoriesLoaded   = false;
+  let filterTerm         = '';
 
   function escHtml(s) {
     return String(s == null ? '' : s)
@@ -2474,8 +2559,9 @@ window.PA_BODY_PANEL_CATS = window.PA_BODY_PANEL_CATS || [];
     const v = selectedVehicle;
     const headline = v.vin || v.ref;
     const meta = vehicleMeta(v);
-    const cat = selectedCategory
-      ? '<span class="bp-s-cat">' + escHtml(selectedCategory.label) + '</span>'
+    const n = selectedCategories.length;
+    const cat = n
+      ? '<span class="bp-s-cat">' + n + ' item' + (n !== 1 ? 's' : '') + '</span>'
       : '';
     target.innerHTML =
       '<span class="bp-s-vrm">' + escHtml(headline) + '</span>' +
@@ -2507,54 +2593,105 @@ window.PA_BODY_PANEL_CATS = window.PA_BODY_PANEL_CATS || [];
     catStatus.classList.remove('show');
     catGrid.innerHTML = '';
     const cats = window.PA_BODY_PANEL_CATS || [];
+    const selIds = new Set(selectedCategories.map(c => c.id));
     const frag = document.createDocumentFragment();
     cats.forEach(c => {
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'bp-cat-btn';
+      btn.className = 'bp-cat-btn' + (selIds.has(c.id) ? ' selected' : '');
       btn.dataset.id = c.id;
       btn.textContent = c.label;
       frag.appendChild(btn);
     });
     catGrid.appendChild(frag);
+    updatePriceButton();
   }
 
-  function buildDefaultDescription() {
-    const v = selectedVehicle, c = selectedCategory;
-    if (!v || !c) return '';
-    const head = [v.year_range, v.make, v.model].filter(Boolean).join(' ').trim();
-    const lhs = [head, c.label].filter(Boolean).join(' ').trim();
-    const paintCode = v.paint_code ? ' — Paint Code ' + v.paint_code : '';
-    const paintName = v.paint_name ? ' ' + v.paint_name : '';
-    return lhs + paintCode + paintName;
+  function updatePriceButton() {
+    const n = selectedCategories.length;
+    priceBtn.disabled = n === 0;
+    priceBtn.textContent = 'Price ' + n + ' item' + (n !== 1 ? 's' : '');
   }
 
-  function enterStep3() {
-    renderSummary(summaryStep3);
-    const v = selectedVehicle;
-    if (v.paint_code || v.paint_name) {
-      paintRow.classList.remove('bp-warn');
-      paintRow.innerHTML =
-        '<span class="bp-p-label">Paint</span>' +
-        (v.paint_code ? '<span class="bp-p-code">' + escHtml(v.paint_code) + '</span>' : '') +
-        (v.paint_name ? '<span class="bp-p-name">' + escHtml(v.paint_name) + '</span>' : '');
-    } else {
-      paintRow.classList.add('bp-warn');
-      paintRow.innerHTML =
-        '<span class="bp-p-label">Paint</span>' +
-        '<span class="bp-p-name">No paint code on file — edit vehicle to add.</span>';
+  // Build the CSV description string for one scheduled row.
+  //   base = csv_code
+  //   + " — " + selected toggle options (space-joined) when the item has toggles
+  //   + " — " + vehicle paint code when the item is painted and a code is on file
+  function buildRowDescription(cat, selectedOpts) {
+    let base = cat.csv_code || cat.label;
+    if (selectedOpts.length) base += ' — ' + selectedOpts.join(' ');
+    if (cat.paint && selectedVehicle && selectedVehicle.paint_code) {
+      base += ' — ' + selectedVehicle.paint_code;
     }
-    descInput.value = buildDefaultDescription();
-    priceInput.value = '';
+    return base;
+  }
+
+  function renderSchedule() {
+    const v = selectedVehicle;
+    schedule.innerHTML = '';
+    const frag = document.createDocumentFragment();
+    selectedCategories.forEach(c => {
+      const row = document.createElement('div');
+      row.className = 'bp-sched-row';
+      row.dataset.id = c.id;
+
+      let html = '<div class="bp-sched-title">' + escHtml(c.csv_code || c.label) + '</div>';
+
+      (c.toggles || []).forEach(t => {
+        html += '<div class="bp-toggle-group" data-key="' + escHtml(t.key) + '">';
+        t.options.forEach((opt, i) => {
+          html += '<button type="button" class="bp-chip' + (i === 0 ? ' selected' : '') +
+            '" data-opt="' + escHtml(opt) + '">' + escHtml(opt) + '</button>';
+        });
+        html += '</div>';
+      });
+
+      if (c.paint) {
+        if (v && v.paint_code) {
+          html += '<div class="bp-sched-paint">Paint <span class="bp-sp-code">' +
+            escHtml(v.paint_code) + '</span>' +
+            (v.paint_name ? escHtml(' ' + v.paint_name) : '') + '</div>';
+        } else {
+          html += '<div class="bp-sched-paint bp-warn">No paint code on file</div>';
+        }
+      }
+
+      html += '<input type="text" class="bp-sched-price" inputmode="decimal" ' +
+        'placeholder="£0.00" autocomplete="off" autocorrect="off" spellcheck="false">';
+
+      row.innerHTML = html;
+      frag.appendChild(row);
+    });
+    schedule.appendChild(frag);
+  }
+
+  function enterPricingSchedule() {
+    if (!selectedCategories.length) return;
+    renderSummary(summaryStep3);
+    renderSchedule();
     showStep(3);
   }
 
-  async function logPart() {
-    const v = selectedVehicle, c = selectedCategory;
-    if (!v || !c) return;
-    const desc = descInput.value.trim() || buildDefaultDescription();
-    const rawPrice = priceInput.value.replace(/[^\d.]/g, '');
-    const yourPrice = rawPrice ? parseFloat(rawPrice) : null;
+  async function logAll() {
+    const v = selectedVehicle;
+    if (!v || !selectedCategories.length) return;
+
+    // Read one record per schedule row, in tap order, straight from the DOM.
+    const rows = Array.from(schedule.querySelectorAll('.bp-sched-row'));
+    const records = rows.map(row => {
+      const c = selectedCategories.find(x => x.id === row.dataset.id);
+      const opts = Array.from(row.querySelectorAll('.bp-toggle-group'))
+        .map(g => {
+          const sel = g.querySelector('.bp-chip.selected');
+          return sel ? sel.dataset.opt : '';
+        })
+        .filter(Boolean);
+      const rawPrice = row.querySelector('.bp-sched-price').value.replace(/[^\d.]/g, '');
+      return {
+        description: buildRowDescription(c, opts),
+        your_price:  rawPrice ? parseFloat(rawPrice) : null,
+      };
+    });
 
     logBtn.disabled = true;
     logBtn.classList.add('loading');
@@ -2562,10 +2699,8 @@ window.PA_BODY_PANEL_CATS = window.PA_BODY_PANEL_CATS || [];
 
     try {
       // Body panels don't have meaningful eBay market data via the current
-      // /lookup endpoint (it strips spaces + uppercases the description into a
-      // single token that always returns 0 listings). Use a lightweight /health
-      // ping so the ERROR badge still surfaces on offline, then write the
-      // record locally with no_pricing fields. Demo mode skips the ping.
+      // /lookup endpoint. Ping /health so the ERROR badge still surfaces on
+      // offline, then write the records locally. Demo mode skips the ping.
       if (!cfg.demo) {
         try {
           const r = await fetch(cfg.url + '/health', { signal: AbortSignal.timeout(6000) });
@@ -2577,68 +2712,67 @@ window.PA_BODY_PANEL_CATS = window.PA_BODY_PANEL_CATS || [];
         }
       }
 
-      parts.unshift({
-        id:               Date.now(),
-        part_number:      c.label,
-        description:      desc,
-        avg_price:        null,
-        median_price:     null,
-        low_price:        null,
-        high_price:       null,
-        suggested_price:  null,
-        total_listings:   0,
-        confidence:       null,
-        source:           'body_panel',
-        breakerpro_price: null,
-        vehicle_ref:      v.ref,
-        your_price:       yourPrice,
+      const now = Date.now();
+      // Unshift so the batch appears newest-first while preserving tap order.
+      records.slice().reverse().forEach((rec, i) => {
+        parts.unshift({
+          id:               now + i,
+          part_number:      '',            // Naveed fills real part numbers later
+          description:      rec.description,
+          avg_price:        null,
+          median_price:     null,
+          low_price:        null,
+          high_price:       null,
+          suggested_price:  null,
+          total_listings:   0,
+          confidence:       null,
+          source:           'body_panel',
+          breakerpro_price: null,
+          vehicle_ref:      v.ref,
+          your_price:       rec.your_price,
+        });
       });
       saveParts();
       render();
       updateStats();
       setMode(cfg.demo ? 'demo' : 'live');
-      toast('Part logged', 'success');
-      // Same vehicle, fresh slate for next part: clear category + form, return to step 2.
-      clearCategoryAndForm();
+      toast(records.length + ' item' + (records.length !== 1 ? 's' : '') + ' logged', 'success');
+      // Fresh slate for the next car: clear the grid, back to step 2.
+      clearSelection();
       showStep(2);
     } finally {
       logBtn.disabled = false;
       logBtn.classList.remove('loading');
-      logLabel.textContent = 'Log Part';
+      logLabel.textContent = 'Log all';
     }
   }
 
-  // Clear category + form fields, keep selected vehicle. Used after a successful
-  // log (so user can immediately log the next part on the same car) and by the
-  // step-3 "Reset" button.
-  function clearCategoryAndForm() {
-    selectedCategory = null;
-    descInput.value = '';
-    priceInput.value = '';
-    paintRow.innerHTML = '';
-    paintRow.classList.remove('bp-warn');
+  // Clear the selected panels + schedule, keep the selected vehicle. Used after
+  // a successful batch log so the user can start the next car immediately.
+  function clearSelection() {
+    selectedCategories = [];
+    schedule.innerHTML = '';
     summaryStep3.innerHTML = '';
     renderSummary(summaryStep2);
+    renderCategories();
   }
 
-  // Full reset back to step 1: drop vehicle too. Used when entering body-panel
-  // mode and when the user taps the step-2 "Change Vehicle" button.
+  // Full reset back to step 1: drop the vehicle too. Used when entering
+  // body-panel mode and when the user taps the step-2 "Change Vehicle" button.
   function reset() {
     selectedVehicle = null;
-    selectedCategory = null;
+    selectedCategories = [];
     filterTerm = '';
     if (vehSearch)  vehSearch.value = '';
-    descInput.value = '';
-    priceInput.value = '';
-    paintRow.innerHTML = '';
-    paintRow.classList.remove('bp-warn');
+    schedule.innerHTML = '';
     summaryStep2.innerHTML = '';
     summaryStep3.innerHTML = '';
+    updatePriceButton();
     renderVehicleList();
     showStep(1);
   }
 
-  // Wiring
+  // Wiring.
   if (vehSearch) {
     let tmr;
     vehSearch.addEventListener('input', () => {
@@ -2666,17 +2800,33 @@ window.PA_BODY_PANEL_CATS = window.PA_BODY_PANEL_CATS || [];
     const id = btn.dataset.id;
     const c = (window.PA_BODY_PANEL_CATS || []).find(x => x.id === id);
     if (!c) return;
-    selectedCategory = c;
-    enterStep3();
+    var pos = selectedCategories.indexOf(c);
+    if (pos < 0) {
+      selectedCategories.push(c);
+      btn.classList.add('selected');
+    } else {
+      selectedCategories.splice(pos, 1);
+      btn.classList.remove('selected');
+    }
+    renderSummary(summaryStep2);
+    updatePriceButton();
   });
 
-  // Step-2 "Change Vehicle" button: drop vehicle, go back to step 1.
+  // Step-3 schedule: tapping a chip switches the selected option within its group.
+  schedule.addEventListener('click', function(e) {
+    var chip = e.target.closest('.bp-chip');
+    if (!chip) return;
+    var group = chip.closest('.bp-toggle-group');
+    if (!group) return;
+    var chips = group.querySelectorAll('.bp-chip');
+    for (var i = 0; i < chips.length; i++) chips[i].classList.remove('selected');
+    chip.classList.add('selected');
+  });
+
+  priceBtn.addEventListener('click', enterPricingSchedule);
   step2Back.addEventListener('click', reset);
-  // Step-3 back arrow: return to step 2 with everything intact.
-  step3Back.addEventListener('click', () => { showStep(2); });
-  // Step-3 "Reset" button: keep the vehicle, clear category + form, back to step 2.
-  resetBtn.addEventListener('click', () => { clearCategoryAndForm(); showStep(2); });
-  logBtn.addEventListener('click', logPart);
+  step3Back.addEventListener('click', function() { showStep(2); });
+  logBtn.addEventListener('click', logAll);
 
   // Hooks invoked by mode toggle
   window.PA_bodyPanelOnEnter = function() {
