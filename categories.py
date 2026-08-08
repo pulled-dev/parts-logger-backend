@@ -146,6 +146,11 @@ BODY_PANEL_CATEGORIES: list[dict] = [
     {"id": "rear_light_passenger_outer", "label": "Rear Light — Passenger Outer", "csv_code": "NSR Outer Light", "paint": False},
     {"id": "rear_light_passenger_inner", "label": "Rear Light — Passenger Inner", "csv_code": "NSR Inner Light", "paint": False},
 
+    # ── Front-end structural — no paint ──
+    {"id": "slam_panel", "label": "Slam Panel", "csv_code": "Slam Panel", "paint": False},
+    {"id": "main_grill", "label": "Main Grill", "csv_code": "Main Grill", "paint": False},
+    {"id": "rad_pack",   "label": "Rad Pack",   "csv_code": "Rad Pack",   "paint": False},
+
     # ── Drivetrain — no paint, with toggle ──
     {"id": "engine",  "label": "Engine",  "csv_code": "Engine",  "paint": False,
      "toggles": [{"key": "fuel",  "options": ["Diesel", "Petrol"]}]},
