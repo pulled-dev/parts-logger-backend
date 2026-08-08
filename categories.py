@@ -117,24 +117,40 @@ VALID_CATEGORY_KEYS: set[str] = set(CATEGORIES.keys())
 # for the Body Panel mode tap-grid. Distinct from CATEGORIES above
 # (which drives /lookup-panel eBay search construction).
 BODY_PANEL_CATEGORIES: list[dict] = [
-    {"id": "door_front_left", "label": "Door — Front Left"},
-    {"id": "door_front_right", "label": "Door — Front Right"},
-    {"id": "door_rear_left", "label": "Door — Rear Left"},
-    {"id": "door_rear_right", "label": "Door — Rear Right"},
-    {"id": "wing_front_left", "label": "Wing — Front Left"},
-    {"id": "wing_front_right", "label": "Wing — Front Right"},
-    {"id": "bonnet", "label": "Bonnet"},
-    {"id": "bumper_front", "label": "Bumper — Front"},
-    {"id": "bumper_rear", "label": "Bumper — Rear"},
-    {"id": "tailgate", "label": "Tailgate / Boot Lid"},
-    {"id": "roof", "label": "Roof"},
-    {"id": "quarter_panel_left", "label": "Quarter Panel — Left"},
-    {"id": "quarter_panel_right", "label": "Quarter Panel — Right"},
-    {"id": "sill_left", "label": "Sill — Left"},
-    {"id": "sill_right", "label": "Sill — Right"},
-    {"id": "mirror_left", "label": "Mirror — Left"},
-    {"id": "mirror_right", "label": "Mirror — Right"},
-    {"id": "fuel_flap", "label": "Fuel Flap"},
+    # ── Body panels — painted (paint code appended in CSV when available) ──
+    {"id": "door_front_left",  "label": "Door — Front Left",   "csv_code": "NSF Door",     "paint": True},
+    {"id": "door_front_right", "label": "Door — Front Right",  "csv_code": "OSF Door",     "paint": True},
+    {"id": "door_rear_left",   "label": "Door — Rear Left",    "csv_code": "NSR Door",     "paint": True},
+    {"id": "door_rear_right",  "label": "Door — Rear Right",   "csv_code": "OSR Door",     "paint": True},
+    {"id": "wing_front_left",  "label": "Wing — Front Left",   "csv_code": "NSF Wing",     "paint": True},
+    {"id": "wing_front_right", "label": "Wing — Front Right",  "csv_code": "OSF Wing",     "paint": True},
+    {"id": "bonnet",           "label": "Bonnet",              "csv_code": "Bonnet",       "paint": True},
+    {"id": "bumper_front",     "label": "Bumper — Front",      "csv_code": "Front Bumper", "paint": True},
+    {"id": "bumper_rear",      "label": "Bumper — Rear",       "csv_code": "Rear Bumper",  "paint": True},
+    {"id": "tailgate",         "label": "Tailgate / Boot Lid", "csv_code": "Tailgate",     "paint": True},
+    {"id": "fuel_flap",        "label": "Fuel Flap",           "csv_code": "Fuel Flap",    "paint": True},
+
+    # ── Wing mirrors — painted, with actuation + fold toggles ──
+    {"id": "mirror_left",  "label": "Mirror — Left",  "csv_code": "NS Mirror", "paint": True,
+     "toggles": [{"key": "act",  "options": ["Electric", "Manual"]},
+                 {"key": "fold", "options": ["Folding", "Non-Folding"]}]},
+    {"id": "mirror_right", "label": "Mirror — Right", "csv_code": "OS Mirror", "paint": True,
+     "toggles": [{"key": "act",  "options": ["Electric", "Manual"]},
+                 {"key": "fold", "options": ["Folding", "Non-Folding"]}]},
+
+    # ── Lights — no paint ──
+    {"id": "headlight_driver",           "label": "Headlight — Driver",           "csv_code": "OSF Headlight",   "paint": False},
+    {"id": "headlight_passenger",        "label": "Headlight — Passenger",        "csv_code": "NSF Headlight",   "paint": False},
+    {"id": "rear_light_driver_outer",    "label": "Rear Light — Driver Outer",    "csv_code": "OSR Outer Light", "paint": False},
+    {"id": "rear_light_driver_inner",    "label": "Rear Light — Driver Inner",    "csv_code": "OSR Inner Light", "paint": False},
+    {"id": "rear_light_passenger_outer", "label": "Rear Light — Passenger Outer", "csv_code": "NSR Outer Light", "paint": False},
+    {"id": "rear_light_passenger_inner", "label": "Rear Light — Passenger Inner", "csv_code": "NSR Inner Light", "paint": False},
+
+    # ── Drivetrain — no paint, with toggle ──
+    {"id": "engine",  "label": "Engine",  "csv_code": "Engine",  "paint": False,
+     "toggles": [{"key": "fuel",  "options": ["Diesel", "Petrol"]}]},
+    {"id": "gearbox", "label": "Gearbox", "csv_code": "Gearbox", "paint": False,
+     "toggles": [{"key": "trans", "options": ["Manual", "Auto"]}]},
 ]
 
 
