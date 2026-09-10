@@ -46,6 +46,31 @@ def parse_paint_code(colour: str) -> str | None:
     return None
 
 
+def parse_paint_name(colour: str, code: str | None) -> str | None:
+    """Extract the human paint NAME from a messy Colour string.
+
+    Removes the paint code token (case-insensitive) and any parentheses,
+    collapses whitespace, strips, and Title-Cases the remainder.
+    Returns None if nothing is left.
+
+    Examples:
+        "LO41 FLAT BLACK"/LO41 -> "Flat Black"
+        "Black (LC9X)"/LC9X    -> "Black"
+        "Lava Grey Lz7l"/LZ7L  -> "Lava Grey"
+        "Red"/None             -> "Red"
+    """
+    if not colour:
+        return None
+    text = colour
+    if code:
+        text = re.sub(re.escape(code), '', text, flags=re.IGNORECASE)
+    text = text.replace('(', ' ').replace(')', ' ')
+    text = re.sub(r'\s+', ' ', text).strip()
+    if not text:
+        return None
+    return text.title()
+
+
 def parse_engine_code(engine: str) -> str | None:
     """Extract a 3-4 letter engine code from messy engine strings."""
     if not engine:
@@ -80,7 +105,7 @@ def parse_year(year_str: str) -> int | None:
 # Fields the importer is allowed to backfill on an EXISTING vehicle.
 # make/model are excluded (they are required at create time and never blank),
 # and everything else the API stores is left untouched.
-BACKFILL_FIELDS = ("year_range", "vin", "paint_code", "engine_code")
+BACKFILL_FIELDS = ("year_range", "vin", "paint_code", "paint_name", "engine_code")
 
 
 def _is_empty(value) -> bool:
@@ -231,6 +256,7 @@ def main():
                 continue
 
             paint_code = parse_paint_code(colour)
+            paint_name = parse_paint_name(colour, paint_code)
             engine_code = parse_engine_code(engine_raw)
 
             # NOTE: the API model (VehicleIn) accepts `year_range` (str) and
@@ -244,6 +270,7 @@ def main():
                 "model": model.strip(),
                 "year_range": str(year),
                 "paint_code": paint_code or "",
+                "paint_name": paint_name or "",
                 "engine_code": engine_code or "",
                 "vin": vin or "",
                 "is_active": True,
@@ -257,6 +284,7 @@ def main():
                     "year_range": str(year),
                     "vin": vin or "",
                     "paint_code": paint_code or "",
+                    "paint_name": paint_name or "",
                     "engine_code": engine_code or "",
                 }
                 status, msg = backfill_vehicle(ref, candidate, dry_run)

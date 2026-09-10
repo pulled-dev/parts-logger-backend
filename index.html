@@ -2101,15 +2101,42 @@ function formatPartNumber(pn) {
 
 exportBtn.addEventListener('click', () => {
   if (!parts.length) { toast('No parts to export'); return; }
-  const rows = [['Part Number','Part Description','Price','Ref']];
+
+  // Stable-sort so painted items come first WITHIN each vehicle_ref group,
+  // keeping each vehicle's rows contiguous and otherwise preserving tap order.
+  const order = [];
+  const groups = new Map();
   parts.forEach(p => {
-    const note = (p.part_note || '').trim();
-    const pnCell = note || p.part_number;
+    const key = p.vehicle_ref || '';
+    if (!groups.has(key)) { groups.set(key, []); order.push(key); }
+    groups.get(key).push(p);
+  });
+  const sorted = [];
+  order.forEach(key => {
+    const g = groups.get(key);
+    sorted.push(...g.filter(p => p.paint), ...g.filter(p => !p.paint));
+  });
+
+  const rows = [['Part Number','Part Description','Price','Ref']];
+  sorted.forEach(p => {
+    const realPN = (p.part_number || '').trim();
+    const note   = (p.part_note || '').trim();
+    // Part Number cell: real part number (spaced) > paint code (as-is) > blank.
+    let pnCell;
+    if (realPN) {
+      pnCell = /^[A-Z0-9]+$/.test(realPN) ? formatPartNumber(realPN) : realPN;
+    } else if (p.paint && p.paint_code) {
+      pnCell = p.paint_code;   // paint codes stay verbatim — no 3-3-3 spacing
+    } else {
+      pnCell = '';
+    }
+    // Any typed note moves out of the Part Number column into the description.
+    const description = p.description + (note ? ' — ' + note : '');
     rows.push([
-    /^[A-Z0-9]+$/.test(pnCell) ? formatPartNumber(pnCell) : pnCell,
-    p.description,
-    p.your_price != null ? p.your_price.toFixed(2) : '',
-    p.vehicle_ref || '',
+      pnCell,
+      description,
+      p.your_price != null ? p.your_price.toFixed(2) : '',
+      p.vehicle_ref || '',
     ]);
   });
   const csv = rows.map(r =>
@@ -2671,7 +2698,8 @@ window.PA_BODY_PANEL_CATS = window.PA_BODY_PANEL_CATS || [];
     let base = cat.csv_code || cat.label;
     if (selectedOpts.length) base += ' — ' + selectedOpts.join(' ');
     if (cat.paint && selectedVehicle && selectedVehicle.paint_code) {
-      base += ' — ' + selectedVehicle.paint_code;
+      base += ' — ' + selectedVehicle.paint_code +
+        (selectedVehicle.paint_name ? ' ' + selectedVehicle.paint_name : '');
     }
     return base;
   }
@@ -2776,6 +2804,8 @@ window.PA_BODY_PANEL_CATS = window.PA_BODY_PANEL_CATS || [];
         description: buildRowDescription(c, opts),
         your_price:  rawPrice ? parseFloat(rawPrice) : null,
         part_note:   noteEl ? noteEl.value.trim() : '',
+        paint:       !!c.paint,
+        paint_code:  (c.paint && v.paint_code) ? v.paint_code : '',
       };
     });
 
@@ -2817,6 +2847,8 @@ window.PA_BODY_PANEL_CATS = window.PA_BODY_PANEL_CATS || [];
           breakerpro_price: null,
           vehicle_ref:      v.ref,
           your_price:       rec.your_price,
+          paint:            rec.paint,
+          paint_code:       rec.paint_code,
         });
       });
       saveParts();
