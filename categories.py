@@ -118,12 +118,14 @@ VALID_CATEGORY_KEYS: set[str] = set(CATEGORIES.keys())
 # (which drives /lookup-panel eBay search construction).
 BODY_PANEL_CATEGORIES: list[dict] = [
     # ── Body panels — painted (paint code appended in CSV when available) ──
-    {"id": "door_front_left",  "label": "Door — Front Left",   "csv_code": "NSF Door",     "paint": True},
-    {"id": "door_front_right", "label": "Door — Front Right",  "csv_code": "OSF Door",     "paint": True},
-    {"id": "door_rear_left",   "label": "Door — Rear Left",    "csv_code": "NSR Door",     "paint": True},
-    {"id": "door_rear_right",  "label": "Door — Rear Right",   "csv_code": "OSR Door",     "paint": True},
-    {"id": "wing_front_left",  "label": "Wing — Front Left",   "csv_code": "NSF Wing",     "paint": True},
-    {"id": "wing_front_right", "label": "Wing — Front Right",  "csv_code": "OSF Wing",     "paint": True},
+    # Labels use trade codes (NS/OS = nearside/offside = passenger/driver;
+    # F/R = front/rear) and match csv_code exactly, so the tile shows what it logs.
+    {"id": "door_front_left",  "label": "NSF Door",     "csv_code": "NSF Door",     "paint": True},
+    {"id": "door_front_right", "label": "OSF Door",     "csv_code": "OSF Door",     "paint": True},
+    {"id": "door_rear_left",   "label": "NSR Door",     "csv_code": "NSR Door",     "paint": True},
+    {"id": "door_rear_right",  "label": "OSR Door",     "csv_code": "OSR Door",     "paint": True},
+    {"id": "wing_front_left",  "label": "NSF Wing",     "csv_code": "NSF Wing",     "paint": True},
+    {"id": "wing_front_right", "label": "OSF Wing",     "csv_code": "OSF Wing",     "paint": True},
     {"id": "bonnet",           "label": "Bonnet",              "csv_code": "Bonnet",       "paint": True},
     {"id": "bumper_front",     "label": "Bumper — Front",      "csv_code": "Front Bumper", "paint": True},
     {"id": "bumper_rear",      "label": "Bumper — Rear",       "csv_code": "Rear Bumper",  "paint": True},
@@ -131,20 +133,20 @@ BODY_PANEL_CATEGORIES: list[dict] = [
     {"id": "fuel_flap",        "label": "Fuel Flap",           "csv_code": "Fuel Flap",    "paint": True},
 
     # ── Wing mirrors — painted, with actuation + fold toggles ──
-    {"id": "mirror_left",  "label": "Mirror — Left",  "csv_code": "NS Mirror", "paint": True,
+    {"id": "mirror_left",  "label": "NS Mirror", "csv_code": "NS Mirror", "paint": True,
      "toggles": [{"key": "act",  "options": ["Electric", "Manual"]},
                  {"key": "fold", "options": ["Folding", "Non-Folding"]}]},
-    {"id": "mirror_right", "label": "Mirror — Right", "csv_code": "OS Mirror", "paint": True,
+    {"id": "mirror_right", "label": "OS Mirror", "csv_code": "OS Mirror", "paint": True,
      "toggles": [{"key": "act",  "options": ["Electric", "Manual"]},
                  {"key": "fold", "options": ["Folding", "Non-Folding"]}]},
 
     # ── Lights — no paint ──
-    {"id": "headlight_driver",           "label": "Headlight — Driver",           "csv_code": "OSF Headlight",   "paint": False},
-    {"id": "headlight_passenger",        "label": "Headlight — Passenger",        "csv_code": "NSF Headlight",   "paint": False},
-    {"id": "rear_light_driver_outer",    "label": "Rear Light — Driver Outer",    "csv_code": "OSR Outer Light", "paint": False},
-    {"id": "rear_light_driver_inner",    "label": "Rear Light — Driver Inner",    "csv_code": "OSR Inner Light", "paint": False},
-    {"id": "rear_light_passenger_outer", "label": "Rear Light — Passenger Outer", "csv_code": "NSR Outer Light", "paint": False},
-    {"id": "rear_light_passenger_inner", "label": "Rear Light — Passenger Inner", "csv_code": "NSR Inner Light", "paint": False},
+    {"id": "headlight_driver",           "label": "OSF Headlight",   "csv_code": "OSF Headlight",   "paint": False},
+    {"id": "headlight_passenger",        "label": "NSF Headlight",   "csv_code": "NSF Headlight",   "paint": False},
+    {"id": "rear_light_driver_outer",    "label": "OSR Light Outer", "csv_code": "OSR Light Outer", "paint": False},
+    {"id": "rear_light_driver_inner",    "label": "OSR Light Inner", "csv_code": "OSR Light Inner", "paint": False},
+    {"id": "rear_light_passenger_outer", "label": "NSR Light Outer", "csv_code": "NSR Light Outer", "paint": False},
+    {"id": "rear_light_passenger_inner", "label": "NSR Light Inner", "csv_code": "NSR Light Inner", "paint": False},
 
     # ── Front-end structural — no paint ──
     {"id": "slam_panel", "label": "Slam Panel", "csv_code": "Slam Panel", "paint": False},
