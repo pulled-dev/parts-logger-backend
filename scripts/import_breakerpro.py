@@ -77,8 +77,26 @@ def parse_year(year_str: str) -> int | None:
     return None
 
 
-def post_vehicle(payload: dict) -> tuple[bool, str]:
-    """POST to /vehicles endpoint. Returns (success, message)."""
+# Fields the importer is allowed to backfill on an EXISTING vehicle.
+# make/model are excluded (they are required at create time and never blank),
+# and everything else the API stores is left untouched.
+BACKFILL_FIELDS = ("year_range", "vin", "paint_code", "engine_code")
+
+
+def _is_empty(value) -> bool:
+    """A field counts as empty (backfillable) if it is None or blank string."""
+    return value is None or (isinstance(value, str) and value.strip() == "")
+
+
+def post_vehicle(payload: dict, dry_run: bool = False) -> tuple[str, str]:
+    """POST to /vehicles. Returns (status, message) where status is one of
+    'created', 'exists', 'failed'. In dry_run mode, performs a read-only GET
+    to determine whether the vehicle already exists — no writes are made."""
+    if dry_run:
+        exists = get_vehicle(payload["ref"]) is not None
+        if exists:
+            return "exists", "Already exists"
+        return "created", "[dry-run] would create"
     data = json.dumps(payload).encode('utf-8')
     req = urllib.request.Request(
         f"{API_BASE}/vehicles",
@@ -88,29 +106,99 @@ def post_vehicle(payload: dict) -> tuple[bool, str]:
     )
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
-            body = resp.read().decode('utf-8')
-            return True, f"Created (HTTP {resp.status})"
+            resp.read()
+            return "created", f"Created (HTTP {resp.status})"
     except urllib.error.HTTPError as e:
         body = e.read().decode('utf-8') if e.fp else ""
         if e.code == 409 or "already exists" in body.lower() or "duplicate" in body.lower():
-            return True, "Already exists (skipped)"
+            return "exists", "Already exists"
+        return "failed", f"HTTP {e.code}: {body[:200]}"
+    except Exception as e:
+        return "failed", f"Error: {e}"
+
+
+def get_vehicle(ref: str) -> dict | None:
+    """GET /vehicles/{ref}. Returns the record dict, or None if 404/error."""
+    req = urllib.request.Request(f"{API_BASE}/vehicles/{ref}", method="GET")
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read().decode('utf-8'))
+    except Exception:
+        return None
+
+
+def patch_vehicle(ref: str, fields: dict) -> tuple[bool, str]:
+    """PATCH /vehicles/{ref} with only the given fields. Returns (ok, message)."""
+    data = json.dumps(fields).encode('utf-8')
+    req = urllib.request.Request(
+        f"{API_BASE}/vehicles/{ref}",
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method="PATCH",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            resp.read()
+            return True, f"Patched (HTTP {resp.status})"
+    except urllib.error.HTTPError as e:
+        body = e.read().decode('utf-8') if e.fp else ""
         return False, f"HTTP {e.code}: {body[:200]}"
     except Exception as e:
         return False, f"Error: {e}"
 
 
+def backfill_vehicle(ref: str, candidate: dict, dry_run: bool) -> tuple[str, str]:
+    """Fill ONLY blank fields on an existing vehicle. Never overwrites a value
+    that is already set. Returns (status, message) where status is one of
+    'updated', 'complete', 'failed'.
+
+    `candidate` holds the values parsed from the CSV for BACKFILL_FIELDS.
+    """
+    current = get_vehicle(ref)
+    if current is None:
+        return "failed", "could not GET existing record"
+
+    to_fill = {}
+    for field in BACKFILL_FIELDS:
+        new_val = candidate.get(field)
+        if _is_empty(new_val):
+            continue  # nothing to write for this field
+        if _is_empty(current.get(field)):
+            to_fill[field] = new_val  # existing is blank → safe to fill
+
+    if not to_fill:
+        return "complete", "already complete"
+
+    summary = ", ".join(f"{k}={v}" for k, v in to_fill.items())
+    if dry_run:
+        return "updated", f"[dry-run] would fill {summary}"
+
+    ok, msg = patch_vehicle(ref, to_fill)
+    if ok:
+        return "updated", f"filled {summary}"
+    return "failed", msg
+
+
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: python import_breakerpro.py path/to/vehicles.csv")
+    args = [a for a in sys.argv[1:]]
+    fill_missing = "--fill-missing" in args
+    dry_run = "--dry-run" in args
+    positional = [a for a in args if not a.startswith("--")]
+
+    if len(positional) != 1:
+        print("Usage: python import_breakerpro.py path/to/vehicles.csv "
+              "[--fill-missing] [--dry-run]")
         sys.exit(1)
 
-    csv_path = Path(sys.argv[1])
+    csv_path = Path(positional[0])
     if not csv_path.exists():
         print(f"File not found: {csv_path}")
         sys.exit(1)
 
     print(f"Reading {csv_path}...")
-    print(f"Posting to {API_BASE}/vehicles\n")
+    print(f"Target API: {API_BASE}")
+    print(f"Mode: {'fill-missing (backfill blanks on existing)' if fill_missing else 'create-only'}"
+          f"{'  [DRY RUN — no writes]' if dry_run else ''}\n")
 
     with open(csv_path, encoding='utf-8') as f:
         # BreakerPro CSVs have 3 garbage header rows before the real header
@@ -118,7 +206,8 @@ def main():
             f.readline()
         reader = csv.DictReader(f)
 
-        stats = {"created": 0, "exists": 0, "failed": 0, "skipped": 0}
+        stats = {"created": 0, "updated": 0, "complete": 0, "exists": 0,
+                 "failed": 0, "skipped": 0}
         failures = []
 
         for i, row in enumerate(reader, start=1):
@@ -128,6 +217,7 @@ def main():
             year_raw = (row.get("Year Manufacture") or "").strip()
             colour = (row.get("Colour") or "").strip()
             engine_raw = (row.get("Engine") or "").strip()
+            vin = (row.get("Vin") or "").strip()
 
             if not ref or not make or not model:
                 stats["skipped"] += 1
@@ -143,37 +233,62 @@ def main():
             paint_code = parse_paint_code(colour)
             engine_code = parse_engine_code(engine_raw)
 
+            # NOTE: the API model (VehicleIn) accepts `year_range` (str) and
+            # `vin`, and ignores unknown fields (extra="ignore"). Earlier this
+            # script sent year_from/year_to, which were silently dropped — so
+            # every vehicle imported with a NULL year. Map to year_range, and
+            # capture the VIN, so imported vehicles are complete.
             payload = {
                 "ref": ref,
                 "make": make.upper().strip(),
                 "model": model.strip(),
-                "year_from": year,
-                "year_to": year,
+                "year_range": str(year),
                 "paint_code": paint_code or "",
                 "engine_code": engine_code or "",
+                "vin": vin or "",
                 "is_active": True,
             }
 
-            success, msg = post_vehicle(payload)
-            if success:
-                if "exists" in msg:
-                    stats["exists"] += 1
-                else:
-                    stats["created"] += 1
-                print(f"  [{i}] OK   {ref:8} {make:8} {model[:40]:40} {paint_code or '----':6} {engine_code or '----':6} — {msg}")
-            else:
+            status, msg = post_vehicle(payload, dry_run=dry_run)
+
+            # On an existing vehicle, optionally backfill only blank fields.
+            if status == "exists" and fill_missing:
+                candidate = {
+                    "year_range": str(year),
+                    "vin": vin or "",
+                    "paint_code": paint_code or "",
+                    "engine_code": engine_code or "",
+                }
+                status, msg = backfill_vehicle(ref, candidate, dry_run)
+
+            label = {
+                "created": "NEW ",
+                "updated": "FILL",
+                "complete": "DONE",
+                "exists": "SKIP",
+                "failed": "FAIL",
+            }.get(status, "????")
+
+            if status == "failed":
                 stats["failed"] += 1
                 failures.append((ref, msg))
                 print(f"  [{i}] FAIL {ref:8} — {msg}")
+            else:
+                stats[status] += 1
+                print(f"  [{i}] {label} {ref:8} {make:8} {model[:34]:34} "
+                      f"{paint_code or '----':6} {engine_code or '----':6} — {msg}")
 
             # Be polite to the API
             time.sleep(0.05)
 
     print(f"\n--- Summary ---")
-    print(f"  Created:        {stats['created']}")
-    print(f"  Already exists: {stats['exists']}")
-    print(f"  Skipped:        {stats['skipped']}")
-    print(f"  Failed:         {stats['failed']}")
+    print(f"  Created (new):          {stats['created']}")
+    print(f"  Updated (blanks filled):{stats['updated']}")
+    print(f"  Already complete:       {stats['complete']}")
+    if not fill_missing:
+        print(f"  Already exists:         {stats['exists']}")
+    print(f"  Skipped:                {stats['skipped']}")
+    print(f"  Failed:                 {stats['failed']}")
 
     if failures:
         print(f"\n--- Failures ---")
