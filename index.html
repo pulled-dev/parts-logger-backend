@@ -2117,23 +2117,28 @@ exportBtn.addEventListener('click', () => {
     sorted.push(...g.filter(p => p.paint), ...g.filter(p => !p.paint));
   });
 
-  const rows = [['Part Number','Part Description','Price','Ref']];
+  const rows = [['Part Number','Paint Code','Part Description','Price','Ref']];
   sorted.forEach(p => {
-    const realPN = (p.part_number || '').trim();
-    const note   = (p.part_note || '').trim();
-    // Part Number cell: real part number (spaced) > paint code (as-is) > blank.
-    let pnCell;
-    if (realPN) {
-      pnCell = /^[A-Z0-9]+$/.test(realPN) ? formatPartNumber(realPN) : realPN;
-    } else if (p.paint && p.paint_code) {
-      pnCell = p.paint_code;   // paint codes stay verbatim — no 3-3-3 spacing
+    const typed = (p.part_note || p.part_number || '').trim();
+    let partNumber, paintCode, description;
+    if (p.paint) {
+      // Painted item: code+name in its own column; typed value is a note that
+      // gets appended to the description. Part Number stays blank.
+      partNumber  = '';
+      paintCode   = p.paint_code
+        ? p.paint_code + (p.paint_name ? ' ' + p.paint_name : '')
+        : '';
+      description = p.description + (typed ? ' — ' + typed : '');
     } else {
-      pnCell = '';
+      // Non-painted item: typed value is the part number (3-3-3 spaced only if
+      // code-like). Paint Code blank; nothing appended to the description.
+      partNumber  = /^[A-Z0-9]+$/.test(typed) ? formatPartNumber(typed) : typed;
+      paintCode   = '';
+      description = p.description;
     }
-    // Any typed note moves out of the Part Number column into the description.
-    const description = p.description + (note ? ' — ' + note : '');
     rows.push([
-      pnCell,
+      partNumber,
+      paintCode,
       description,
       p.your_price != null ? p.your_price.toFixed(2) : '',
       p.vehicle_ref || '',
@@ -2695,12 +2700,10 @@ window.PA_BODY_PANEL_CATS = window.PA_BODY_PANEL_CATS || [];
   //   + " — " + selected toggle options (space-joined) when the item has toggles
   //   + " — " + vehicle paint code when the item is painted and a code is on file
   function buildRowDescription(cat, selectedOpts) {
+    // Description is the part label plus any toggle options only. Paint code
+    // and name now live in their own CSV column, so they are NOT appended here.
     let base = cat.csv_code || cat.label;
     if (selectedOpts.length) base += ' — ' + selectedOpts.join(' ');
-    if (cat.paint && selectedVehicle && selectedVehicle.paint_code) {
-      base += ' — ' + selectedVehicle.paint_code +
-        (selectedVehicle.paint_name ? ' ' + selectedVehicle.paint_name : '');
-    }
     return base;
   }
 
@@ -2806,6 +2809,7 @@ window.PA_BODY_PANEL_CATS = window.PA_BODY_PANEL_CATS || [];
         part_note:   noteEl ? noteEl.value.trim() : '',
         paint:       !!c.paint,
         paint_code:  (c.paint && v.paint_code) ? v.paint_code : '',
+        paint_name:  (c.paint && v.paint_code) ? (v.paint_name || '') : '',
       };
     });
 
@@ -2849,6 +2853,7 @@ window.PA_BODY_PANEL_CATS = window.PA_BODY_PANEL_CATS || [];
           your_price:       rec.your_price,
           paint:            rec.paint,
           paint_code:       rec.paint_code,
+          paint_name:       rec.paint_name,
         });
       });
       saveParts();
