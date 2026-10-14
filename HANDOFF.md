@@ -1,12 +1,35 @@
 # Pricing engine: handoff
 
-_Branch `pricing-engine`, 14 Oct 2026. Nothing has been merged or deployed. The
-live yard tool is untouched until you merge._
+_Branch `pricing-engine`, 14 Oct 2026 (updated the same day: tightened
+fallback, shadow mode, backtest re-run). Nothing has been merged or deployed.
+The live yard tool is untouched until you merge. **Even after you merge, the
+logger screen won't change: the engine starts in shadow mode** (see below)._
 
 ## 1. What was built
 
-When a logger types a part number, the Parts Logger now asks a new **pricing
-engine** for a price. The engine works through these sources in order:
+### Shadow mode (the default) and live mode
+
+There's a new Railway setting, **`PRICING_MODE`**:
+
+- **`shadow` (default, also used if the setting is missing or misspelt):** the
+  logger screen looks and behaves **exactly as it does today**: same price,
+  no badge, no new text. I checked this pixel by pixel against the current
+  page at phone width. In the background, the engine still works out its
+  price for every part. On export, the system records three prices for each
+  card: the **current-method price**, the **engine's price**, and the **final
+  price the logger actually used**.
+- **`live`:** the logger shows the engine's price, a High / Medium / Low badge
+  and a one-line reason (the behaviour described below).
+
+`/price/report` compares the three prices side by side. Once items sell, it
+shows which of the three was closest to the sold price, and the **days to
+sell** for each item. That gives you real evidence before you ever switch to
+`live`.
+
+### The engine
+
+When a logger types a part number, the Parts Logger asks the new **pricing
+engine** for a price. It works through these sources in order:
 
 1. **Our own eBay sales** of that part number (last 12 months, recent sales
    count more). This is the strongest signal.
@@ -15,14 +38,24 @@ engine** for a price. The engine works through these sources in order:
    (`pulled_apart_ltd`, `singlesorsets`) excluded. Results are cached for 7
    days so we stay well inside eBay's limits.
 3. **Fallbacks** when neither exists: our sales of the same kind of part on the
-   same car (e.g. "Golf Mk7 · window motor"), then the old BreakerPro group
-   average, then a default.
+   **same model AND generation** (e.g. "Golf Mk7 · window motor", never just
+   "Golf"), then a default. Nothing is borrowed from other models or
+   generations. The old all-models BreakerPro group average is no longer used.
+4. **Variant-sensitive parts never get a fallback price.** These are
+   headlights, tail lights, airbag modules, ECUs/control modules, clusters,
+   steering wheels and infotainment/sat-nav. Their price depends on the exact
+   variant, so with no sales of that exact number and no live competitors,
+   the engine gives **no price**: just Low, "Check price", and the same-car
+   price range for reference. You can edit the list in `pricing_config.py`
+   (`VARIANT_SENSITIVE_PART_TYPES`, with exceptions like "switch" or "trim" in
+   `VARIANT_SENSITIVE_EXCLUDE`).
 
 Each price comes with a **High / Medium / Low** badge and a one-line reason,
 e.g. *"13 of our sales (median £17.99, last 11 months)"*. Low shows a red
-**"Check price"** marker.
+**"Check price"** marker. (Live mode only; in shadow mode none of this is
+shown.)
 
-On the logger screen:
+On the logger screen in **live** mode:
 
 - The price fills itself in a moment after the part is added. Logging is never
   held up. If the engine is slow or down, the old price stays and you can carry
@@ -32,8 +65,9 @@ On the logger screen:
 - The **vehicle ref still stays filled in** between parts, as before.
 - The **CSV export is unchanged**: same 5 columns, same order, byte-for-byte.
   An automated test checks this.
-- When you export, the final price on each card is sent back quietly. That
-  lets the system measure which suggestions loggers changed.
+- When you export, the final price and the current-method price on each card
+  are sent back quietly, in both modes. That lets the system measure which
+  suggestions loggers changed.
 
 Behind the scenes:
 
@@ -50,39 +84,46 @@ Behind the scenes:
 
 I replayed the last 12 months of sales. For each sale I asked what the engine
 *would* have suggested using only sales before that day, and compared it with
-what the old method would have pre-filled.
+what the current method would have pre-filled. Re-run with the tightened
+fallback, on the same 1,975 sales where both gave a price:
 
 | | Typical miss (median error) | Priced within ±15% |
 |---|---|---|
-| Old method | 20.0% | 40.5% |
-| New engine | 21.9% | 35.6% |
+| Current method | 20.0% | 39.8% |
+| Engine before tightening | 21.4% | 36.5% |
+| **Engine now (tightened)** | **24.2%** | **32.9%** |
 
-(2,165 sales where both methods could give a price.)
+**The engine is still not better than the current method on past data, and the
+tightening made its numbers worse.** I haven't changed any settings to improve
+them. Why, briefly (full detail in `docs/pricing-backtest.md`):
 
-**The new engine is not clearly better on past data. On these two numbers it is
-slightly worse.** Why, briefly (full detail in `docs/pricing-backtest.md`):
-
-- **Where we've sold the part before, the engine is level with or better than
-  the old method.** Door locks, bonnet release handles/cables and seat-belt
-  buckles come out clearly better.
-- **Where we haven't, it's worse.** Its fallbacks (averages across models)
-  are weak for parts like headlights, airbag modules and ECUs, where the exact
-  variant drives the price.
-- **The old method's score is flattered.** Its prices came from a March 2026
-  BreakerPro stock export. For older sales, that file often holds *the very
-  item's own price*, so it "knew the answer".
+- **The tightening removed a better-than-nothing guess.** 808 sales used to be
+  priced by borrowing from other models. Under the new rule there's usually no
+  same model + generation group, so they now get the flat £24.99 default.
+  That's the main reason the number went down.
+- **The variant-sensitive rule did its job.** On the 200 headlights, tail
+  lights, clusters, ECUs and so on, the old fallback missed by a median 30%.
+  Now they get no price and a "Check price" instead. They're not counted in
+  the table above.
+- **Where we've sold the part before, the engine still matches or beats the
+  current method.** Door locks, bonnet release handles/cables and window
+  regulators come out clearly better.
+- **The current method's score is flattered.** Its prices came from a March
+  2026 BreakerPro stock export. For older sales, that file often holds *the
+  very item's own price*, so it "knew the answer".
 - **The engine's competitor-price leg couldn't be tested,** because eBay has
-  no record of past asking prices. That's the leg meant for parts we haven't
-  sold before, which is exactly where it lost.
-- **The old method under-prices by about 12% on a typical sale.** The engine
-  doesn't lean either way.
+  no record of past asking prices.
+- **The current method under-prices by about 12% on a typical sale.** The
+  engine doesn't lean either way.
 
-**My recommendation:** go live with the eBay keys set, so the competitor leg
-works. Then check `/price/report` after 4–6 weeks: that's the first real test.
-Treat Low-confidence prices as "check price". There's also an optional switch
-(`USE_BREAKERPRO_EXACT` in `pricing_config.py`, **off** by default) that does
-better in the backtest. I explain in the report why that figure can't be fully
-trusted.
+**My recommendation:** merge and run in **shadow** mode, with the eBay keys set
+so the competitor leg works. After 4–6 weeks, check `/price/report`, which
+compares current method vs engine vs what loggers actually listed at, then vs
+what sold and how fast. Only switch to `live` if the engine is clearly ahead
+there. One more option for you to consider: when the engine has nothing better
+than the flat default, it could give **no price** (like variant-sensitive
+parts) instead of £24.99. I haven't made that change. `USE_BREAKERPRO_EXACT`
+stays **off**.
 
 ## 3. Blockers and things I couldn't check
 
@@ -91,7 +132,7 @@ trusted.
 | **No eBay "user token" for automatic order sync** | Sales can't flow in automatically yet. The message bot's token is a different kind (Trading API) and can't be reused. | Use the CSV import weekly (step 6), or set up the token (section 5). The sync code is built and tested, just switched off. |
 | **No eBay keys on this PC** | I tested the competitor search against recorded sample responses, never against live eBay. | It'll run live once Railway has `EBAY_APP_ID` / `EBAY_CERT_ID` (already set for the current tool). Check step 5 below. |
 | **eBay daily call limit not confirmed** | Default is 5,000 searches/day; we'd use roughly 250 a week. | Optional: check under "API call limits" in the eBay developer portal. |
-| **`.gitignore` was never committed** | It's what keeps `data/` (your sales file) out of GitHub. It works on this PC, but it isn't saved in the repo. | Commit it yourself when convenient: `git add .gitignore` then `git commit -m "Add gitignore"`. I wasn't allowed to touch your uncommitted files. |
+| **`.gitignore`** | Now committed on this branch (it keeps `data/` and your sales file out of GitHub). | Nothing: it goes live with the merge. |
 | **Open questions in the spec** (rounding, minimum prices, pricing stance, postage) | Defaults are used: £x.99 under £50, £5 − 1p above; £9.99 minimum; match the market; prices include postage. | Change them in `pricing_config.py` whenever you like. |
 
 ## 4. Going live: step by step
@@ -110,6 +151,7 @@ single-variable "New Variable" field, one at a time:
 | Variable | Value | Needed? |
 |---|---|---|
 | `PRICING_ADMIN_TOKEN` | the password from Step 1 | **Yes (new)** |
+| `PRICING_MODE` | `shadow` | Optional: shadow is already the default. Setting it makes the choice visible. Change it to `live` only when you're ready (Step 8). |
 | `EBAY_APP_ID` | already there | Check it's set |
 | `EBAY_CERT_ID` | already there | Check it's set |
 | `DB_PATH` | already there (the volume path, e.g. `/data/vehicles.db`) | Check it's set. The new tables go in the same file. |
@@ -128,7 +170,8 @@ single-variable "New Variable" field, one at a time:
 
 Open these in a browser:
 
-- https://web-production-7a1f0.up.railway.app/health should say `"status":"ok"`.
+- https://web-production-7a1f0.up.railway.app/health should say `"status":"ok"`
+  and `"pricing_mode":"shadow"`.
 - https://web-production-7a1f0.up.railway.app/price/part-types should show `[]`
   (empty until Step 5).
 
@@ -154,8 +197,10 @@ along when you switch to `main`; nothing is lost. If Python complains about a
 missing module, run `pip install -r requirements.txt` once and try again.
 Running the import twice is harmless: duplicates are skipped.
 
-Then add a part you sell often in the logger. You should see a price, a
-**PRICE · HIGH** badge and a reason line.
+Then add a part you sell often in the logger. In shadow mode the screen should
+look **exactly as it always has**. Open
+https://web-production-7a1f0.up.railway.app/price/report?format=csv and you'll
+see a row for that part with the engine's price.
 
 ### Step 6. Keeping it up to date (weekly, about 2 minutes)
 
@@ -175,10 +220,27 @@ afterwards**, as it contains buyer details. Don't put sales files in
 
 ### Step 7. Watching accuracy
 
-- https://web-production-7a1f0.up.railway.app/price/report shows accuracy by
-  confidence level and which part types loggers override most.
+- https://web-production-7a1f0.up.railway.app/price/report shows:
+  - **listing:** how often the logger's final price matched the current method
+    and how often it matched the engine, plus how far each method was from the
+    final price;
+  - **after_sale:** once items sell, how close the **current method**, the
+    **engine** and the **final listed price** each were to the sold price
+    (typical miss, % within ±15%, and whether each runs high or low);
+  - **days_to_sell:** overall, and split by whether the item was listed
+    below, at or above the engine's price;
+  - **sold_items:** each sold item with all three prices, the sold price and
+    its days to sell;
+  - accuracy by confidence level, and which part types loggers change most.
 - Add `?format=csv` to the end of that address for a spreadsheet, one row per
-  suggestion.
+  suggestion, with all of the above per item.
+
+### Step 8. Switching to live (only when the report says so)
+
+Railway → Variables → set `PRICING_MODE` to `live` → Railway redeploys. The
+logger then shows the engine price, badge and reason (hard-refresh the phones).
+To go back, set it to `shadow` again. Nothing else changes, and the CSV export
+is identical in both modes.
 
 ### If something goes wrong
 
@@ -220,5 +282,5 @@ asked); the CSV import already covers the older history.
 - Endpoints: `GET /price/suggest`, `GET /price/report`, `GET /price/part-types`,
   `POST /price/suggestions/final`, and (admin) `POST /price/sold-history/import`,
   `POST /price/sync-orders`.
-- Tests: `python -m pytest` (152 tests; needs Node.js for the CSV check). They
-  never call eBay.
+- Tests: `python -m pytest` (needs Node.js for the CSV and shadow/live
+  checks). They never call eBay.

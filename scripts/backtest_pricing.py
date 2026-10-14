@@ -55,14 +55,22 @@ def render(s: dict, v: dict, end: date, days: int) -> str:
         f"| With a part number in the title (engine can be asked) | {s['with_part_number']} |",
         f"| No part number (body panels etc.; neither method applies) | {s['no_part_number']} |",
         f"| Old method had a replayable DB price | {s['old_has_price']} |",
+        f"| Engine deliberately gave **no price** (variant-sensitive, \"Check price\") | "
+        f"{s['engine_no_price']['count']} |",
+        f"| Both methods gave a price (head-to-head set) | {s['both_priced']} |",
         "",
-        "### Headline: head-to-head on the same sales",
+        f"On the {s['engine_no_price']['count']} no-price sales the old method's DB price had MdAPE "
+        f"{s['engine_no_price']['old']['mdape']}% and {s['engine_no_price']['old']['within']}% within ±15% "
+        f"(n={s['engine_no_price']['old']['n']}). Those sales are excluded from the head-to-head, not counted "
+        "as wins or losses for either side.",
+        "",
+        "### Headline: head-to-head on the same sales (both gave a price)",
         "",
         "| Method | Sales | MdAPE | Within ±15% | Median bias |",
         "|---|---|---|---|---|",
         f"| Old method (BreakerPro DB price) | {h['old']['n']} | {h['old']['mdape']}% | {h['old']['within']}% | "
         f"{s['median_signed_pct']['old']:+.1f}% |",
-        f"| New engine (spec, no market data) | {h['new']['n']} | {h['new']['mdape']}% | {h['new']['within']}% | "
+        f"| New engine (tightened fallback, no market data) | {h['new']['n']} | {h['new']['mdape']}% | {h['new']['within']}% | "
         f"{s['median_signed_pct']['new']:+.1f}% |",
         "",
         f"Sale by sale, the new engine was closer on **{s['new_wins']}** sales, the old method on "

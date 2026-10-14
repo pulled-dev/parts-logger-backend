@@ -163,3 +163,18 @@ rather than stop. Each one below is resolved and the build carries on.
    clear how many sales the old method could price at all.
 10. **Rounding wording.** "Nearest £x.99" is taken literally: £24.40 → £23.99,
     £24.60 → £24.99. At £50+, nearest £5 minus 1p: £87 → £84.99, £88 → £89.99.
+
+## 5. Addendum (14 Oct 2026, later the same day): decisions from Naveed
+
+These supersede resolutions 2 and 3 above:
+
+- **Part-type groups must match model AND generation.** The BreakerPro 6-digit
+  group average (all models) and the "same part type, any model" median are
+  **no longer price sources**. After the same model + generation group, only
+  the configured category default remains (Low / check price).
+- **Variant-sensitive categories** (`VARIANT_SENSITIVE_PART_TYPES` in
+  `pricing_config.py`) never use a group fallback. With no exact-number sales
+  and no usable market, the engine returns no price, confidence Low, a
+  "check price" reason, and the same-car group range for reference only.
+- **`PRICING_MODE`** = `shadow` (default) or `live`. Shadow keeps the logger
+  screen exactly as before and only logs. `USE_BREAKERPRO_EXACT` stays off.
