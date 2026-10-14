@@ -384,3 +384,110 @@ def test_link_window(configured, conn):
     run_snapshot(conn, [page_xml([item_xml("late", MOTOR, "29.99", start="2026-09-21T08:00:00.000Z")])], DAY1)
     assert linked(conn, sid) is None  # 82 days later: outside the 60-day window
     assert listings.link_listings(conn, window_days=90) == 1 and linked(conn, sid) == "late"
+
+
+# ── Admin endpoint + daily job ──────────────────────────────────────────
+
+def test_endpoint_needs_admin_token(client, monkeypatch):
+    assert client.post("/price/sync-listings").status_code == 503  # admin token not set: disabled
+    monkeypatch.setenv("PRICING_ADMIN_TOKEN", "s3cret")
+    assert client.post("/price/sync-listings").status_code == 401
+    assert client.post("/price/sync-listings", headers={"X-Admin-Token": "wrong"}).status_code == 401
+
+
+def test_endpoint_reports_missing_vars(client, monkeypatch):
+    monkeypatch.setenv("PRICING_ADMIN_TOKEN", "s3cret")
+    r = client.post("/price/sync-listings", headers={"X-Admin-Token": "s3cret"})
+    assert r.status_code == 503 and "EBAY_AUTH_TOKEN" in r.json()["error"]
+
+
+def _patch_client(monkeypatch, pages, calls):
+    real = httpx.AsyncClient
+    monkeypatch.setattr(listings.httpx, "AsyncClient", lambda **kw: real(transport=transport(pages, calls)))
+
+
+def test_endpoint_runs_snapshot(client, conn, configured, monkeypatch):
+    monkeypatch.setenv("PRICING_ADMIN_TOKEN", "s3cret")
+    calls = []
+    _patch_client(monkeypatch, [page_xml([item_xml("111", MOTOR, "24.99")])], calls)
+    r = client.post("/price/sync-listings", headers={"X-Admin-Token": "s3cret"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["items"] == 1 and body["api_calls"] == 1 and body["new"] == 1 and body["skipped"] is False
+    assert len(calls) == 1 and conn.execute("SELECT COUNT(*) FROM listing_snapshots").fetchone()[0] == 1
+
+
+def test_endpoint_auth_error_is_502(client, configured, monkeypatch):
+    monkeypatch.setenv("PRICING_ADMIN_TOKEN", "s3cret")
+    _patch_client(monkeypatch, [ERROR_XML], [])
+    r = client.post("/price/sync-listings", headers={"X-Admin-Token": "s3cret"})
+    assert r.status_code == 502 and "eBay rejected the token" in r.json()["error"]
+    assert TOKEN not in r.text
+
+
+class _Stop(Exception):
+    pass
+
+
+def _one_day(monkeypatch, order_sync, snap):
+    import main
+    from pricing import ebay_orders as eo
+
+    async def stop(_):
+        raise _Stop
+
+    monkeypatch.setattr(eo, "sync_orders", order_sync)
+    monkeypatch.setattr(listings, "snapshot", snap)
+    monkeypatch.setattr(main.asyncio, "sleep", stop)
+    with pytest.raises(_Stop):
+        asyncio.run(main._daily_order_sync())
+
+
+def test_daily_job_syncs_orders_then_snapshots(tmp_db, monkeypatch, capsys):
+    order = []
+
+    async def orders(conn):
+        order.append("orders")
+        return {"skipped": False, "inserted": 2}
+
+    async def snap(conn):
+        order.append("snapshot")
+        return {"skipped": False, "items": 5, "api_calls": 1, "new": 5, "changed": 0, "gone": 0}
+
+    _one_day(monkeypatch, orders, snap)
+    assert order == ["orders", "snapshot"]
+    assert "Daily listing snapshot: 5 active listings, 1 API call(s)" in capsys.readouterr().out
+
+
+def test_daily_job_snapshot_runs_even_if_orders_fail(tmp_db, monkeypatch, capsys):
+    ran = []
+
+    async def orders(conn):
+        raise RuntimeError("GetOrders HTTP 500 after 3 attempts")
+
+    async def snap(conn):
+        ran.append(1)
+        return {"skipped": False, "items": 0, "api_calls": 1, "new": 0, "changed": 0, "gone": 0}
+
+    _one_day(monkeypatch, orders, snap)
+    out = capsys.readouterr().out
+    assert ran == [1] and "Daily order sync failed" in out
+
+
+def test_daily_job_skips_cleanly_without_env(tmp_db, monkeypatch, capsys):
+    """Real snapshot() with no eBay vars: skipped and logged, no exception, no call."""
+    import main
+
+    async def orders(conn):
+        return {"skipped": True, "reason": "eBay order sync skipped: missing env var(s) EBAY_APP_ID"}
+
+    async def stop(_):
+        raise _Stop
+
+    from pricing import ebay_orders as eo
+    monkeypatch.setattr(eo, "sync_orders", orders)
+    monkeypatch.setattr(main.asyncio, "sleep", stop)
+    with pytest.raises(_Stop):
+        asyncio.run(main._daily_order_sync())
+    out = capsys.readouterr().out
+    assert "eBay listing snapshot skipped: missing env var(s)" in out and "failed" not in out

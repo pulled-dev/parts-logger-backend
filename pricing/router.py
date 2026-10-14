@@ -18,7 +18,7 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 
 import db
-from pricing import ebay_orders, engine, feedback, history, market, store
+from pricing import ebay_orders, engine, feedback, history, listings, market, store
 from pricing.normalise import normalise
 from pricing.sales_import import import_rows, sanitise_row
 from pricing.titles import engine_group, parse_model
@@ -185,6 +185,25 @@ def suggestion_warning(suggestion_id: int, body: WarningBody):
         if not feedback.record_warning(conn, suggestion_id, body.price_shown, body.basis):
             return _err(404, "unknown suggestion_id")
         return {"recorded": True}
+
+
+@router.post("/price/sync-listings")
+async def sync_listings(dry_run: bool = False, x_admin_token: str | None = Header(default=None)):
+    """Snapshot our active eBay listings now (admin only). Read-only on eBay:
+    GetMyeBaySelling ActiveList, nothing is created, revised or ended."""
+    denied = _check_admin(x_admin_token)
+    if denied:
+        return denied
+    missing = listings.missing_env()
+    if missing:
+        return _err(503, f"listing snapshot not configured: missing {', '.join(missing)} (see HANDOFF.md)")
+    with store.session() as conn:
+        try:
+            return await listings.snapshot(conn, dry_run=dry_run)
+        except ebay_orders.AuthError as e:
+            return _err(502, f"listing snapshot failed: {e}. Check EBAY_AUTH_TOKEN (renewed in the message bot?)")
+        except Exception as e:  # surface eBay failures as 502, never a silent 500
+            return _err(502, f"listing snapshot failed: {e}")
 
 
 @router.get("/price/report")
