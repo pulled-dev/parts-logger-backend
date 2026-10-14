@@ -206,8 +206,8 @@ Railway → the **Parts Logger backend** service → **Variables**. Use the
 |---|---|---|
 | `EBAY_APP_ID` | copy from the **message bot** service | **Yes** (probably already there) |
 | `EBAY_CERT_ID` | copy from the message bot service | **Yes** (probably already there) |
-| `EBAY_DEV_ID` | copy from the message bot service | **Yes (new here)** |
-| `EBAY_AUTH_TOKEN` | copy from the message bot service | **Yes (new here)**. See the warning below. |
+| `EBAY_DEV_ID` | a Railway **reference** to the message bot service's variable (`${{pulled-apart-message-bot.EBAY_DEV_ID}}`) | **Yes (new here)**. This is how it's set up now. |
+| `EBAY_AUTH_TOKEN` | a Railway **reference** to the message bot service's variable (`${{pulled-apart-message-bot.EBAY_AUTH_TOKEN}}`) | **Yes (new here)**. This is how it's set up now. See the note below. |
 | `PRICING_ADMIN_TOKEN` | the password from Step 1 | **Yes (new)** |
 | `PRICING_MODE` | `shadow` | **Yes**. Shadow is the default anyway; setting it makes the choice visible. Change to `live` only at Step 8. |
 | `PRICING_DAILY_SYNC` | `1` | Optional: turns on the daily order top-up. |
@@ -218,10 +218,14 @@ Raw Editor.** The token contains `#` characters, and the Raw Editor cuts it
 off at the first `#`. The order sync would then fail with "eBay rejected the
 token". (`EBAY_SITE_ID` isn't needed: it defaults to 3, the UK.)
 
-**If the eBay token is ever renewed, update `EBAY_AUTH_TOKEN` in BOTH Railway
-services:** the message bot and the parts logger. Otherwise one of them stops
-working. If the parts logger's copy is out of date, the order sync reports
-"eBay rejected the token (check EBAY_AUTH_TOKEN)". Logging and pricing keep
+**On the parts logger's web service, `EBAY_DEV_ID` and `EBAY_AUTH_TOKEN` are
+references to the `pulled-apart-message-bot` service's variables, not
+copies.** So **if the eBay token is ever renewed, update it only in the
+message bot service.** The parts logger picks up the new value automatically
+(Railway redeploys it). Don't paste a separate copy into the parts logger: that
+would break the link, and the two would drift apart again. If the order sync
+ever reports "eBay rejected the token (check EBAY_AUTH_TOKEN)", the token in
+the message bot itself has expired or been cut off. Logging and pricing keep
 working regardless.
 
 ### Step 3. Merge the branch
@@ -336,9 +340,10 @@ It reports how many new sales it added. Running it again adds nothing, because
 duplicates are skipped. After that it runs once a day by itself.
 
 - **If it says a variable is missing:** add that variable in Railway (Step 2).
-- **If it says the token was rejected:** the `EBAY_AUTH_TOKEN` copy is cut off
-  or out of date. Re-paste it from the message bot using the single-variable
-  field.
+- **If it says the token was rejected:** the token in the **message bot**
+  service is cut off or out of date. Renew/re-paste it there (single-variable
+  field). The parts logger references it, so nothing needs changing on the
+  parts logger itself.
 
 You can also refresh the competitor-price cache on demand (it normally runs
 nightly):
