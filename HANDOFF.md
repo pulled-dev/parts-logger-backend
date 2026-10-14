@@ -3,10 +3,13 @@
 _Branch `pricing-engine`, 14 Oct 2026 (updated since: tightened fallback,
 shadow mode, Hybrid backtest, order sync with the message bot's eBay token,
 3-second speed limit, "not worth listing" warning). Pull request:
-https://github.com/pulled-dev/parts-logger-backend/pull/1. Nothing has been
-merged or deployed.
-The live yard tool is untouched until you merge. **Even after you merge, the
-logger screen won't change: the engine starts in shadow mode** (see below)._
+https://github.com/pulled-dev/parts-logger-backend/pull/1, **merged and
+deployed 14 Oct 2026**: all 3,705 past sales are loaded and the order sync
+works with the message bot's token. **The logger screen hasn't changed: the
+engine runs in shadow mode** (see below).
+Added since (branch `listing-snapshot`): a daily, read-only snapshot of our
+live eBay listings, so the report judges the price that was REALLY on eBay
+(see "Real eBay listings" below)._
 
 ## 1. What was built
 
@@ -118,6 +121,51 @@ from the one-off CSV import. Only order/item numbers, title, prices and dates
 are kept. Buyer names, usernames, emails, addresses and phone numbers are
 thrown away as the data is read.
 
+### Real eBay listings (daily snapshot, read-only)
+
+**The problem it fixes:** the report used to treat the price the logger
+exported as "the listed price". But prices often get changed in BreakerPro
+after logging, and those changes go to eBay. Also, the report only saw items
+that **sold**, so over-priced items sitting unsold were invisible.
+
+**What it does now:** once a day, straight after the order top-up, the backend
+reads **our own active eBay listings** (the same list you see under "Active" in
+Seller Hub). For each listing it notes:
+
+- the price **including postage**;
+- when it went live;
+- whether Best Offer is on;
+- the part number from the title.
+
+It **only reads**. It never creates, changes or ends a listing.
+
+From that it works out, for every listing:
+
+- the **first price** it went on eBay at and its **current price**;
+- **every price change**, with the date;
+- **how many days** it's been listed;
+- whether it **sold** or **ended unsold**. When a listing disappears from the
+  active list, it's checked against our sales by eBay item number. No matching
+  sale means it ended unsold.
+
+Each engine suggestion is matched to the listing it most likely became: the
+same part number, listed on or after the day of the suggestion (within 60
+days), the nearest one first. Each listing is matched to only one suggestion.
+
+**What changes in `/price/report`:** wherever a suggestion is matched to a
+listing, the report uses **the real first eBay price** instead of the logger's
+exported price, and **that listing's own sale**. There's also a new
+**`ebay_listings`** section (see Step 7).
+
+To save space, a listing only gets a new row when something changes (price,
+postage, title or Best Offer). Otherwise only its "last seen" date moves on.
+If a run fails half-way (e.g. eBay times out), nothing from that run is
+saved, so listings never wrongly look "ended".
+
+It uses one eBay call per 200 listings, plus any automatic retries. With
+3,000 listings that's about 15 calls a day. eBay's default allowance is 5,000
+calls a day, so this is well within it. Each run logs how many calls it made.
+
 Behind the scenes:
 
 - All 3,705 of your eBay sales (Jan 2025 – Oct 2026) can be loaded into the
@@ -185,6 +233,8 @@ decide. `USE_BREAKERPRO_EXACT` stays **off**.
 | Item | What it means | What to do |
 |---|---|---|
 | **No eBay keys on this PC** | The order sync and competitor search were tested only against made-up sample responses. The optional live check (one read-only call) was skipped because `EBAY_AUTH_TOKEN` isn't set on this PC. | After merging, run the sync test in section 5. It'll tell you straight away if a variable is wrong. |
+| **Listing snapshot not yet tried against the real eBay** | It was built and tested only against made-up sample responses. `EBAY_AUTH_TOKEN` isn't on this PC, so the optional one-call live check was skipped. | After merging, run the listing test in section 5 once. |
+| **"Best Offer on" may read as off** | eBay doesn't always say in this list whether Best Offer is switched on. The count of Best-Offer listings could come out too low. | Nothing to do. The Best Offer figures in the report don't depend on it: they compare the sold price with the price that was on eBay that day. |
 | **eBay daily call limit not confirmed** | Default is 5,000 searches/day; we'd use roughly 250 a week. | Optional: check under "API call limits" in the eBay developer portal. |
 | **`.gitignore`** | Now committed on this branch (it keeps `data/` and your sales file out of GitHub). | Nothing: it goes live with the merge. |
 | **Open questions in the spec** (rounding, pricing stance, postage) | Defaults are used: £x.99 under £50, £5 − 1p above; match the market; prices include postage. There's no minimum price any more, just the £8 "not worth listing" warning. | Change them in `pricing_config.py` whenever you like. |
@@ -210,7 +260,7 @@ Railway → the **Parts Logger backend** service → **Variables**. Use the
 | `EBAY_AUTH_TOKEN` | a Railway **reference** to the message bot service's variable (`${{pulled-apart-message-bot.EBAY_AUTH_TOKEN}}`) | **Yes (new here)**. This is how it's set up now. See the note below. |
 | `PRICING_ADMIN_TOKEN` | the password from Step 1 | **Yes (new)** |
 | `PRICING_MODE` | `shadow` | **Yes**. Shadow is the default anyway; setting it makes the choice visible. Change to `live` only at Step 8. |
-| `PRICING_DAILY_SYNC` | `1` | Optional: turns on the daily order top-up. |
+| `PRICING_DAILY_SYNC` | `1` | Optional, but **needed for the report's real eBay prices**: turns on the daily order top-up and the daily listing snapshot. |
 | `DB_PATH` | already there (the volume path, e.g. `/data/vehicles.db`) | Check it's set. The new tables go in the same file. |
 
 **Important: paste `EBAY_AUTH_TOKEN` into the single-variable field, not the
@@ -306,9 +356,30 @@ afterwards**, as it contains buyer details. Don't put sales files in
     of those parts were listed anyway, and how they sold;
   - **response_time:** typical and slowest-5% times for a price, and how often
     the competitor prices came from the cache vs live vs timed out;
-  - accuracy by confidence level, and which part types loggers change most.
+  - accuracy by confidence level, and which part types loggers change most;
+  - **ebay_listings** (from the daily listing snapshot; empty until it has
+    run):
+    - **vs_sold_price:** how close the engine, the current method and **the
+      real first eBay price** each were to what it sold for;
+    - **repriced_after_logging:** how many prices were changed after logging.
+      There are two parts: from the logger's price to the first eBay price,
+      and while the item was listed. Each shows whether prices went up or
+      down, by how much (typical change), and whether they moved **toward or
+      away from the engine's price**;
+    - **sell_through:** % of listings sold within 14, 30 and 60 days. It's
+      split by whether the first eBay price was above, at (within 5%) or
+      below the engine's price. A listing only counts for "30 days" once it's
+      been up 30 days, so new listings don't drag the numbers down;
+    - **unsold_over_60_days:** listings still unsold after 60 days, and how
+      their price compares with the engine's;
+    - **best_offer:** how many items sold for less than the price on eBay
+      that day, and the typical discount.
 - Add `?format=csv` to the end of that address for a spreadsheet, one row per
-  suggestion, with all of the above per item.
+  suggestion, with all of the above per item. The spreadsheet has the same
+  columns as before. New columns at the end show the real eBay price, the
+  listing's item number, its price changes, whether it sold, and days listed.
+  `final_price` is still the logger's exported price; `listed_price` is the
+  real eBay one when there's a match.
 
 ### Step 8. Switching to live (only when the report says so)
 
@@ -323,7 +394,7 @@ On GitHub, open the merged pull request and click **Revert**, then merge the
 revert. Railway and the logger go back to how they were. The new database
 tables are left in place, but nothing old reads them, so they're harmless.
 
-## 5. Automatic daily order top-up
+## 5. Automatic daily order top-up and listing snapshot
 
 This uses the message bot's eBay token, so there's nothing new to set up at
 eBay. You just need the four eBay variables from Step 2 plus
@@ -345,6 +416,19 @@ duplicates are skipped. After that it runs once a day by itself.
   field). The parts logger references it, so nothing needs changing on the
   parts logger itself.
 
+The same daily run then takes the **listing snapshot**. To try it once by
+hand (it only reads from eBay):
+
+```powershell
+Invoke-RestMethod -Method Post -Uri https://web-production-7a1f0.up.railway.app/price/sync-listings -Headers @{ "X-Admin-Token" = $env:PRICING_ADMIN_TOKEN }
+```
+
+It reports how many active listings it found (`items`), how many eBay calls it
+made (`api_calls`), and how many listings were new, changed or gone since the
+last run. Add `?dry_run=true` to the address to see the numbers without saving
+anything. A missing variable or a rejected token is reported the same way as
+for the order sync above, and the fix is the same.
+
 You can also refresh the competitor-price cache on demand (it normally runs
 nightly):
 
@@ -362,7 +446,13 @@ Invoke-RestMethod -Method Post -Uri https://web-production-7a1f0.up.railway.app/
 - Endpoints: `GET /price/suggest`, `GET /price/report`, `GET /price/part-types`,
   `POST /price/suggestions/final`, `POST /price/suggestions/{id}/warning`, and
   (admin) `POST /price/sold-history/import`, `POST /price/sync-orders`,
-  `POST /price/prewarm`.
+  `POST /price/sync-listings`, `POST /price/prewarm`.
+- Listing snapshot: `pricing/listings.py`. Trading API `GetMyeBaySelling`
+  (ActiveList only, 200 a page) with the same token and headers as the order
+  sync. Tables `listing_snapshots` (one row per listing per state) and
+  `listing_snapshot_runs`. `price_suggestions.listing_item_id` holds the
+  match. Settings in `pricing_config.py`: `LISTING_LINK_WINDOW_DAYS`,
+  `SELL_THROUGH_DAYS`, `UNSOLD_LONG_DAYS`.
 - Order sync: Trading API `GetOrders` with `EBAY_AUTH_TOKEN` (IAF header),
   last 90 days only. Nightly pre-warm: `PRICING_PREWARM=0` turns it off.
 - Tests: `python -m pytest` (needs Node.js for the CSV and shadow/live

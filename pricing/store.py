@@ -9,6 +9,10 @@ sold_history       our own eBay sales (one row per order line). Contains NO
                    buyer data: only order/item identifiers, title, money, dates.
 market_snapshots   cached Browse API competitor stats per part number (Phase 3)
 price_suggestions  every suggestion the engine served + what the logger did (Phase 6)
+listing_snapshots  our ACTIVE eBay listings, read daily (GetMyeBaySelling). One row
+                   per item per state: a new row only when the price/title/Best
+                   Offer changes; otherwise last_seen_date on the latest row moves on
+listing_snapshot_runs  one row per completed snapshot (to tell "still listed" from "ended")
 """
 
 from __future__ import annotations
@@ -87,6 +91,38 @@ _SCHEMA = [
     )
     """,
     "CREATE INDEX IF NOT EXISTS ix_sugg_pn ON price_suggestions (part_number_norm, timestamp)",
+    """
+    CREATE TABLE IF NOT EXISTS listing_snapshots (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        item_id TEXT NOT NULL,
+        title TEXT NOT NULL DEFAULT '',
+        part_number_norm TEXT NOT NULL DEFAULT '',
+        current_price REAL NOT NULL,    -- total: item + P&P
+        item_price REAL,
+        shipping REAL NOT NULL DEFAULT 0,
+        start_time TEXT,                -- eBay listing start (ISO UTC)
+        snapshot_date TEXT NOT NULL,    -- day this state was first seen (yyyy-mm-dd)
+        last_seen_date TEXT NOT NULL,   -- last day this state was seen in ActiveList
+        best_offer_enabled INTEGER NOT NULL DEFAULT 0,
+        UNIQUE (item_id, snapshot_date)
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS ix_listing_pn ON listing_snapshots (part_number_norm, start_time)",
+    """
+    CREATE TABLE IF NOT EXISTS listing_snapshot_runs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        run_date TEXT NOT NULL,         -- yyyy-mm-dd (UTC)
+        started_at TEXT NOT NULL,
+        finished_at TEXT NOT NULL,
+        items INTEGER NOT NULL,
+        pages INTEGER NOT NULL,
+        api_calls INTEGER NOT NULL,
+        new_items INTEGER NOT NULL,
+        changed INTEGER NOT NULL,
+        unchanged INTEGER NOT NULL,
+        gone INTEGER NOT NULL           -- items seen on the previous run but not this one
+    )
+    """,
 ]
 
 
@@ -117,6 +153,7 @@ _MIGRATIONS = [
     ("price_suggestions", "nwl_warned", "INTEGER"),
     ("price_suggestions", "nwl_price_shown", "REAL"),
     ("price_suggestions", "nwl_basis", "TEXT"),
+    ("price_suggestions", "listing_item_id", "TEXT"),   # linked eBay listing (listing_snapshots.item_id)
 ]
 
 

@@ -85,3 +85,8 @@ ROUNDING_THRESHOLD = 50.0
 # consider scrap" warning, and can still list it. Change the number here and
 # redeploy; no other code changes are needed.
 NOT_WORTH_LISTING_BELOW = 8.00
+
+# ── Active-listing snapshot (GetMyeBaySelling, read-only) ───────────────
+LISTING_LINK_WINDOW_DAYS = 60    # a suggestion links to a listing that started within N days of it
+SELL_THROUGH_DAYS = (14, 30, 60) # /price/report sell-through windows
+UNSOLD_LONG_DAYS = 60            # "unsold over N days" in /price/report

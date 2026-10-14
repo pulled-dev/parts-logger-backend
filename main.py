@@ -36,7 +36,10 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 USE_MOCK = not (EBAY_APP_ID and EBAY_CERT_ID)
 
 async def _daily_order_sync():
-    """Opt-in (PRICING_DAILY_SYNC=1): pull new eBay orders once a day."""
+    """Opt-in (PRICING_DAILY_SYNC=1): once a day, pull new eBay orders, then
+    snapshot our active listings (read-only). Orders go first so a listing
+    that sold since yesterday is already matched to its sale."""
+    from pricing import listings
     from pricing.store import session
     while True:
         try:
@@ -48,6 +51,16 @@ async def _daily_order_sync():
                 print(f"Daily order sync: {summary['inserted']} new sales")
         except Exception as e:
             print(f"Daily order sync failed: {type(e).__name__}: {e}")
+        try:
+            with session() as conn:
+                snap = await listings.snapshot(conn)
+            if snap.get("skipped"):
+                print(snap["reason"])
+            else:
+                print(f"Daily listing snapshot: {snap['items']} active listings, {snap['api_calls']} API call(s), "
+                      f"{snap['new']} new, {snap['changed']} changed, {snap['gone']} gone")
+        except Exception as e:
+            print(f"Daily listing snapshot failed: {type(e).__name__}: {e}")
         await asyncio.sleep(24 * 3600)
 
 
