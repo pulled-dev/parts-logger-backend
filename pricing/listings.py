@@ -237,11 +237,12 @@ def listing_history(conn: sqlite3.Connection, today: date | None = None) -> dict
     """item_id -> what happened to that listing:
     first / current price, every price change with its date, days listed, and
     outcome: "sold" (a sold_history row with this item number, on or after the
-    listing start), "active" (in the latest snapshot), or "ended_unsold"
-    (dropped out of ActiveList with no matching sale).
+    listing start), "active" (in the latest snapshot), or "ended_without_ebay_sale"
+    (dropped out of ActiveList with no matching eBay sale; parts sold over the
+    counter or to trade and then ended on eBay land here too).
 
     Worked out fresh each time, so a sale imported after the listing vanished
-    still turns "ended_unsold" into "sold"."""
+    still turns "ended_without_ebay_sale" into "sold"."""
     today = today or datetime.now(timezone.utc).date()
     latest = latest_run_date(conn)
     by_item: dict[str, list] = {}
@@ -271,7 +272,8 @@ def listing_history(conn: sqlite3.Connection, today: date | None = None) -> dict
                                    if s["snapshot_date"] <= sale[0][:10]), first["current_price"])
         else:
             active = latest is not None and last_seen >= latest
-            outcome, end, listed_at_sale = ("active", today, None) if active else ("ended_unsold", _day(last_seen), None)
+            outcome, end, listed_at_sale = (("active", today, None) if active
+                                            else ("ended_without_ebay_sale", _day(last_seen), None))
         out[item_id] = {
             "item_id": item_id,
             "title": last["title"],

@@ -144,9 +144,10 @@ From that it works out, for every listing:
 - the **first price** it went on eBay at and its **current price**;
 - **every price change**, with the date;
 - **how many days** it's been listed;
-- whether it **sold** or **ended unsold**. When a listing disappears from the
+- whether it **sold** or **ended without an eBay sale**. When a listing disappears from the
   active list, it's checked against our sales by eBay item number. No matching
-  sale means it ended unsold.
+  sale means it "ended without an eBay sale". Note: parts sold over the
+  counter or to trade and then ended on eBay are counted here too.
 
 Each engine suggestion is matched to the listing it most likely became: the
 same part number, listed on or after the day of the suggestion (within 60
@@ -372,6 +373,9 @@ afterwards**, as it contains buyer details. Don't put sales files in
       been up 30 days, so new listings don't drag the numbers down;
     - **unsold_over_60_days:** listings still unsold after 60 days, and how
       their price compares with the engine's;
+    - **tracked_listings → ended_without_ebay_sale:** listings that left eBay
+      with no eBay sale. Parts sold over the counter or to trade and then
+      ended on eBay land here too (the report repeats this in its `note`);
     - **best_offer:** how many items sold for less than the price on eBay
       that day, and the typical discount.
 - Add `?format=csv` to the end of that address for a spreadsheet, one row per

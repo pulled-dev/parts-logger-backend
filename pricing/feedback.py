@@ -35,6 +35,8 @@ WITHIN_PCT = 15
 SAME_PRICE_TOLERANCE = 0.005       # prices within half a penny are "the same"
 ENGINE_BAND_PCT = 5                # listed within ±5% of the engine = "at engine price"
 METHODS = (("current", "current_price"), ("engine", "suggested"), ("final", "final_price"))
+ENDED_NOTE = ("'Ended without an eBay sale' = the listing left eBay with no eBay sale under its item number. "
+              "Parts sold over the counter or to trade and then ended on eBay are counted here too.")
 
 
 def log_suggestion(conn: sqlite3.Connection, result: dict, vehicle_ref: str | None, mode: str = "shadow",
@@ -291,9 +293,10 @@ def ebay_listings_report(rows: list[dict], hist: dict, today: date, snapshots: d
 
     return {
         "snapshots": snapshots or {"runs": 0, "last": None},
+        "note": ENDED_NOTE,
         "tracked_listings": {
             "total": len(hist), "active": outcomes.count("active"), "sold": outcomes.count("sold"),
-            "ended_unsold": outcomes.count("ended_unsold"),
+            "ended_without_ebay_sale": outcomes.count("ended_without_ebay_sale"),
             "with_price_change": sum(1 for it in hist.values() if it["price_changes"]),
         },
         "linked_suggestions": len(linked),
@@ -322,7 +325,7 @@ def ebay_listings_report(rows: list[dict], hist: dict, today: date, snapshots: d
         f"unsold_over_{long_days}_days": {
             "count": len(stale),
             "still_listed": sum(it["outcome"] == "active" for it in stale),
-            "ended": sum(it["outcome"] == "ended_unsold" for it in stale),
+            "ended_without_ebay_sale": sum(it["outcome"] == "ended_without_ebay_sale" for it in stale),
             "with_engine_price": len(stale_vs),
             "median_pct_vs_engine": _round1(_median((p - e) / e * 100 for p, e in stale_vs)),
             "above_engine": sum(_vs_engine(p, e) == "above_engine" for p, e in stale_vs),
