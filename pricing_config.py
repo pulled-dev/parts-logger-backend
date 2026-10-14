@@ -62,13 +62,10 @@ VARIANT_SENSITIVE_EXCLUDE = (
     "CABLE", "BUTTON", "SURROUND", "WASHER",
 )
 PART_TYPE_MEDIUM_SALES = 5       # >= this many -> Medium confidence, else Low
-# There is NO general flat default: with no real evidence (no own sales of the
-# number, no usable market, no same model + generation group) the engine gives
-# no price, Low / "Check price", and the logger keeps the current-method price.
-# Optional: pin a price for specific part types, e.g. {"ENGINE": 349.99}. Empty
-# by default; only used if you add entries. Keys are canonical part types as
-# shown by GET /price/part-types.
-CATEGORY_DEFAULTS: dict[str, float] = {}
+# There are NO default or pinned prices of any kind: with no real evidence (no
+# own sales of the number, no usable market, no same model + generation group)
+# the engine gives no price, Low / "Check price", and the logger keeps the
+# current-method price.
 
 # ── Rounding and floor ──────────────────────────────────────────────────
 # "x99_then_5": nearest £x.99 under £50, nearest £5 minus 1p at £50+.

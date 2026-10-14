@@ -22,9 +22,10 @@ Ladder
      VARIANT_SENSITIVE_PART_TYPES) -> NO price: Low / "Check price" with the
      same-car group range for reference only.
      otherwise -> own sales of the same part type on the same model AND
-     generation (§4c), then a CATEGORY_DEFAULTS pin if one is configured.
+     generation (§4c).
      Nothing else -> NO price (source "no_evidence", Low / "Check price"):
-     the logger keeps the current-method price. There is no flat default.
+     the logger keeps the current-method price. There are no default or
+     pinned prices.
    Nothing is borrowed across models or generations (the old cross-model
    BreakerPro group average and "any model" medians were removed).
 Then rounding and the per-category floor.
@@ -341,9 +342,6 @@ def _fallback(conn, pn, ptype, car, before, look, nothing):
             return (med, "part_type", conf, "part_type",
                     f"{nothing} · {len(rows)} of our {car_label} {ptype.lower()} sales (median {_gbp(med)})")
 
-    if ptype and ptype in cfg.CATEGORY_DEFAULTS:
-        v = cfg.CATEGORY_DEFAULTS[ptype]
-        return v, "category_default", LOW, "none", f"{nothing} · {ptype.lower()} default ({_gbp(v)})"
     # No real evidence: no flat default. Give no price so the logger keeps the
     # current-method price, and say what was checked.
     if ptype and model and gen:

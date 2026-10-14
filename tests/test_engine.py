@@ -172,10 +172,10 @@ def test_no_cross_model_breakerpro_group_average(conn):
     assert "BreakerPro" not in r["reason"]
 
 
-def test_category_default_from_config(conn, monkeypatch):
-    monkeypatch.setitem(cfg.CATEGORY_DEFAULTS, "WIDGET THING", 77.0)
+def test_no_category_defaults(conn):
+    assert not hasattr(cfg, "CATEGORY_DEFAULTS")  # pinned per-type prices are gone
     r = suggest(conn, "9Z9 111 111", part_type="widget thing", as_of=AS_OF)
-    assert r["source"] == "category_default" and r["suggested_price"] == 74.99
+    assert r["source"] == "no_evidence" and r["suggested_price"] is None
 
 
 def test_no_cross_model_part_type_borrowing(conn):

@@ -181,5 +181,6 @@ These supersede resolutions 2 and 3 above:
 - **No flat default.** The general `DEFAULT_PRICE` (£24.99) is removed. With
   no own sales, no usable market and no same model + generation group, the
   engine gives no price (source `no_evidence`, Low / "check price"), and in
-  live mode the logger keeps the current-method price. Only an explicit
-  `CATEGORY_DEFAULTS` pin (empty by default) can still supply a price.
+  live mode the logger keeps the current-method price. `CATEGORY_DEFAULTS`
+  (per-part-type pinned prices) has been removed as well, so there are no
+  default or pinned prices of any kind.
