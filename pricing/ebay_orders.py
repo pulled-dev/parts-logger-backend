@@ -63,14 +63,14 @@ def is_configured() -> bool:
     return not missing_env()
 
 
-def _headers() -> dict:
+def _headers(call_name: str = "GetOrders") -> dict:
     return {
         "X-EBAY-API-SITEID": os.environ.get("EBAY_SITE_ID", "3") or "3",
         "X-EBAY-API-COMPATIBILITY-LEVEL": COMPATIBILITY_LEVEL,
         "X-EBAY-API-APP-NAME": os.environ.get("EBAY_APP_ID", ""),
         "X-EBAY-API-DEV-NAME": os.environ.get("EBAY_DEV_ID", ""),
         "X-EBAY-API-CERT-NAME": os.environ.get("EBAY_CERT_ID", ""),
-        "X-EBAY-API-CALL-NAME": "GetOrders",
+        "X-EBAY-API-CALL-NAME": call_name,
         "X-EBAY-API-IAF-TOKEN": os.environ.get("EBAY_AUTH_TOKEN", ""),
         "Content-Type": "text/xml",
     }
@@ -166,17 +166,23 @@ def order_to_rows(order) -> list[dict]:
     return rows
 
 
-def parse_response(xml_text: str) -> tuple[list, bool, int]:
-    """(orders, has_more, total_pages). Raises AuthError / RuntimeError on Ack Failure."""
+def parse_root(xml_text: str, call_name: str = "GetOrders"):
+    """Parse a Trading API response. Raises AuthError / RuntimeError on Ack Failure."""
     if "<!DOCTYPE" in xml_text[:1000].upper():  # eBay never sends one; refuse entity tricks
-        raise RuntimeError("GetOrders response contained a DOCTYPE; refusing to parse")
+        raise RuntimeError(f"{call_name} response contained a DOCTYPE; refusing to parse")
     root = ET.fromstring(xml_text)
     ack = _text(root, "e:Ack")
     if ack == "Failure":
         codes = [(_text(e, "e:ErrorCode"), _text(e, "e:ShortMessage")) for e in root.findall("e:Errors", NS)]
         if any(code in AUTH_ERROR_CODES for code, _ in codes):
             raise AuthError(f"eBay rejected the token (error {', '.join(c for c, _ in codes)})")
-        raise RuntimeError(f"GetOrders failed: {'; '.join(f'{c} {m}' for c, m in codes)}")
+        raise RuntimeError(f"{call_name} failed: {'; '.join(f'{c} {m}' for c, m in codes)}")
+    return root
+
+
+def parse_response(xml_text: str) -> tuple[list, bool, int]:
+    """(orders, has_more, total_pages). Raises AuthError / RuntimeError on Ack Failure."""
+    root = parse_root(xml_text, "GetOrders")
     orders = root.findall("e:OrderArray/e:Order", NS)
     has_more = _text(root, "e:HasMoreOrders").lower() == "true"
     try:
@@ -188,29 +194,35 @@ def parse_response(xml_text: str) -> tuple[list, bool, int]:
 
 # ── HTTP with retries ────────────────────────────────────────────────────
 
-async def _post(client: httpx.AsyncClient, body: str, sleep=asyncio.sleep) -> str:
+async def _post(client: httpx.AsyncClient, body: str, sleep=asyncio.sleep, call_name: str = "GetOrders",
+                stats: dict | None = None) -> str:
+    """POST one Trading API call with retries. `stats["calls"]` (if given)
+    counts every HTTP request actually sent, retries included."""
     for attempt in range(1, MAX_ATTEMPTS + 1):
         last = attempt == MAX_ATTEMPTS
+        if stats is not None:
+            stats["calls"] = stats.get("calls", 0) + 1
         try:
-            resp = await client.post(API_URL, headers=_headers(), content=body.encode("utf-8"), timeout=TIMEOUT)
+            resp = await client.post(API_URL, headers=_headers(call_name), content=body.encode("utf-8"),
+                                     timeout=TIMEOUT)
         except (httpx.TimeoutException, httpx.TransportError) as e:
             if last:
-                raise RuntimeError(f"GetOrders network failure after {attempt} attempts: {type(e).__name__}")
-            log.warning("GetOrders %s (attempt %d), retrying", type(e).__name__, attempt)
+                raise RuntimeError(f"{call_name} network failure after {attempt} attempts: {type(e).__name__}")
+            log.warning("%s %s (attempt %d), retrying", call_name, type(e).__name__, attempt)
             await sleep(BACKOFF_BASE * 2 ** (attempt - 1))
             continue
         if resp.status_code in (401, 403):
             raise AuthError(f"eBay rejected the token (HTTP {resp.status_code})")
         if resp.status_code >= 500:
             if last:
-                raise RuntimeError(f"GetOrders HTTP {resp.status_code} after {attempt} attempts")
-            log.warning("GetOrders HTTP %d (attempt %d), retrying", resp.status_code, attempt)
+                raise RuntimeError(f"{call_name} HTTP {resp.status_code} after {attempt} attempts")
+            log.warning("%s HTTP %d (attempt %d), retrying", call_name, resp.status_code, attempt)
             await sleep(BACKOFF_BASE * 2 ** (attempt - 1))
             continue
         if resp.status_code != 200:
-            raise RuntimeError(f"GetOrders HTTP {resp.status_code}")
+            raise RuntimeError(f"{call_name} HTTP {resp.status_code}")
         return resp.text
-    raise RuntimeError("GetOrders exhausted retries")  # unreachable
+    raise RuntimeError(f"{call_name} exhausted retries")  # unreachable
 
 
 async def fetch_orders(client: httpx.AsyncClient, start: datetime, end: datetime, sleep=asyncio.sleep) -> list:
