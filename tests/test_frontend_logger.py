@@ -137,7 +137,8 @@ def test_pricing_call_is_parallel_and_cannot_throw():
 
 def test_suggestion_respects_manual_price():
     s = _src()
-    assert "if (!p.price_touched && s.suggested_price != null) p.your_price = s.suggested_price;" in s
+    assert ("if (mode === 'live' && !p.price_touched && s.suggested_price != null) "
+            "p.your_price = s.suggested_price;") in s
     assert "p.price_touched = true;" in s
 
 
@@ -154,3 +155,102 @@ def test_final_prices_recorded_via_capture_listener():
     assert "keepalive: true" in s
     # capture phase on document -> runs before the export handler clears `parts`
     assert re.search(r"closest\('#export-btn'\)\) recordFinalPrices\(\);\n\}, true\);", s)
+
+
+
+# ── Shadow vs live: run the real pricing code in Node ──────────────────
+
+MODE_HARNESS = r"""
+const out = {};
+let parts = [];
+const window = { PA_PRICING_MODE: __DEFAULT_MODE__ };
+const cfg = { url: 'http://x' };
+let domTouched = 0, statsCalls = 0;
+const partsList = { querySelector() { domTouched++; return null; } };
+const saveParts = () => {};
+const updateStats = () => { statsCalls++; };
+const esc = s => String(s);
+const document = { activeElement: null, addEventListener() {} };
+__SECTION__
+function card(extra) {
+  return Object.assign({ id: 1, part_number: '5G1941006', your_price: 24.99, current_price: 24.99,
+                         price_touched: false, engine: { state: 'loading', mode: window.PA_PRICING_MODE } }, extra || {});
+}
+// 1. loading state html
+parts = [card()];
+out.loadingHtml = suggestionHtml(parts[0]);
+// 2. suggestion arrives with a price
+applySuggestion(1, { mode: __RESP_MODE__, suggested_price: 84.99, confidence: 'high', reason: 'r', source: 'own_sold', suggestion_id: 7 });
+out.priceAfter = parts[0].your_price;
+out.okHtml = suggestionHtml(parts[0]);
+out.suggestionId = parts[0].engine.suggestion_id;
+out.domTouched = domTouched;
+out.statsCalls = statsCalls;
+// 3. engine failure
+parts = [card()];
+applySuggestion(1, null);
+out.failedHtml = suggestionHtml(parts[0]);
+out.priceAfterFail = parts[0].your_price;
+// 4. logger typed a price first
+parts = [card({ price_touched: true, your_price: 30 })];
+applySuggestion(1, { mode: __RESP_MODE__, suggested_price: 84.99, confidence: 'high', reason: 'r', suggestion_id: 8 });
+out.touchedPrice = parts[0].your_price;
+// 5. no-price (variant-sensitive) answer
+parts = [card()];
+applySuggestion(1, { mode: __RESP_MODE__, suggested_price: null, confidence: 'low', reason: 'x · check price', suggestion_id: 9 });
+out.noPricePrice = parts[0].your_price;
+out.noPriceHtml = suggestionHtml(parts[0]);
+process.stdout.write(JSON.stringify(out));
+"""
+
+
+def _pricing_section(text: str) -> str:
+    a = text.index("// ── Pricing engine (non-blocking)")
+    b = text.index("// ── Pricing feedback")
+    return text[a:b]
+
+
+def _run_modes(tmp_path, default_mode: str, resp_mode: str) -> dict:
+    assert NODE, "Node.js is required for the shadow/live behaviour check"
+    js = (MODE_HARNESS.replace("__SECTION__", _pricing_section(_src()))
+          .replace("__DEFAULT_MODE__", json.dumps(default_mode)).replace("__RESP_MODE__", json.dumps(resp_mode)))
+    script = tmp_path / f"modes_{default_mode}_{resp_mode}.js"
+    script.write_text(js, encoding="utf-8")
+    res = subprocess.run([NODE, str(script)], capture_output=True, text=True, timeout=60)
+    assert res.returncode == 0, res.stderr
+    return json.loads(res.stdout)
+
+
+def test_shadow_mode_leaves_screen_exactly_as_today(tmp_path):
+    out = _run_modes(tmp_path, "shadow", "shadow")
+    assert out["loadingHtml"] == ""            # no "Pricing..." text
+    assert out["priceAfter"] == 24.99          # current price untouched
+    assert out["okHtml"] == ""                 # no badge / reason
+    assert out["failedHtml"] == ""             # no "engine unavailable" text
+    assert out["noPriceHtml"] == "" and out["noPricePrice"] == 24.99
+    assert out["domTouched"] == 0 and out["statsCalls"] == 0  # card DOM never patched
+    assert out["suggestionId"] == 7            # still kept for the export log
+
+
+def test_live_mode_shows_engine_price_badge_and_reason(tmp_path):
+    out = _run_modes(tmp_path, "live", "live")
+    assert "Pricing" in out["loadingHtml"]
+    assert out["priceAfter"] == 84.99
+    assert "PRICE &middot; HIGH" in out["okHtml"]
+    assert "unavailable" in out["failedHtml"] and out["priceAfterFail"] == 24.99
+    assert out["touchedPrice"] == 30           # a typed price is never overwritten
+    assert out["noPricePrice"] == 24.99 and "Check price" in out["noPriceHtml"]
+
+
+def test_server_mode_wins_over_cached_mode(tmp_path):
+    # Page still thinks 'live' but the server answers 'shadow': stay silent.
+    out = _run_modes(tmp_path, "live", "shadow")
+    assert out["priceAfter"] == 24.99 and out["okHtml"] == ""
+
+
+def test_shadow_is_default_and_export_sends_current_price():
+    s = _src()
+    assert "window.PA_PRICING_MODE = 'shadow';" in s
+    assert "window.PA_PRICING_MODE = d.pricing_mode === 'live' ? 'live' : 'shadow';" in s
+    assert "current_price:   prefill," in s
+    assert "current_price: p.current_price != null ? Number(p.current_price) : null," in s

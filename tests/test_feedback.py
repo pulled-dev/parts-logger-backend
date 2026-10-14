@@ -14,10 +14,11 @@ def sale(conn, title, price, day):
                         "postage": "0", "total_price": "", "sale_date": day, "dispatched_date": ""}], "csv_clean")
 
 
-def suggestion(conn, pn, suggested, conf="high", ts="2026-09-01T10:00:00+00:00", part_type="WINDOW MOTOR FRONT"):
+def suggestion(conn, pn, suggested, conf="high", ts="2026-09-01T10:00:00+00:00", part_type="WINDOW MOTOR FRONT",
+               mode="live"):
     cur = conn.execute(
-        "INSERT INTO price_suggestions (timestamp, part_number_norm, part_type, suggested, confidence, source, reason)"
-        " VALUES (?, ?, ?, ?, ?, 'own_sold', 'r')", (ts, pn, part_type, suggested, conf))
+        "INSERT INTO price_suggestions (timestamp, part_number_norm, part_type, suggested, confidence, source, reason,"
+        " mode) VALUES (?, ?, ?, ?, ?, 'own_sold', 'r', ?)", (ts, pn, part_type, suggested, conf, mode))
     conn.commit()
     return cur.lastrowid
 
@@ -87,9 +88,9 @@ def test_report_accuracy_and_overrides(client, conn):
     high = rep["by_confidence"]["high"]
     assert high["suggestions"] == 2 and high["sold"] == 2
     assert high["override_rate_pct"] == 50.0
-    assert high["suggested_vs_sold"]["pct_within_15"] == 50.0
-    assert high["suggested_vs_sold"]["median_abs_pct_error"] == round((100 / 31 + 25) / 2, 1)
-    assert rep["by_confidence"]["low"]["suggested_vs_sold"]["median_abs_pct_error"] == 20.0
+    assert high["after_sale"]["engine"]["pct_within_15"] == 50.0
+    assert high["after_sale"]["engine"]["median_abs_pct_error"] == round((100 / 31 + 25) / 2, 1)
+    assert rep["by_confidence"]["low"]["after_sale"]["engine"]["median_abs_pct_error"] == 20.0
     top = rep["most_overridden_part_types"]
     assert top[0]["overridden"] == 1 and {t["part_type"] for t in top} == {"WINDOW MOTOR FRONT", "SLIP RING"}
     slip = next(t for t in top if t["part_type"] == "SLIP RING")
@@ -105,9 +106,94 @@ def test_report_csv_download(client, conn):
     assert "attachment" in r.headers["content-disposition"]
     rows = list(csv.DictReader(io.StringIO(r.text)))
     assert rows[0]["overridden"] == "yes" and rows[0]["sold_price"] == "33.0" and rows[0]["days_to_sell"] == "4"
+    assert rows[0]["mode"] == "live" and rows[0]["engine_price"] == "30.0" and rows[0]["final_price"] == "35.0"
 
 
 def test_report_empty(client):
     rep = client.get("/price/report").json()
     assert rep["total_suggestions"] == 0
-    assert rep["by_confidence"]["high"]["suggested_vs_sold"]["n"] == 0
+    assert rep["by_confidence"]["high"]["after_sale"]["engine"]["n"] == 0
+    assert rep["after_sale"]["current"]["n"] == 0 and rep["sold_items"] == []
+
+
+
+# ── Shadow mode ────────────────────────────────────────────────────────
+
+def test_suggest_endpoint_reports_and_logs_mode(client, conn, monkeypatch):
+    r = client.get("/price/suggest", params={"part_number": "5Q0959802A"}).json()
+    assert r["mode"] == "shadow"  # default
+    monkeypatch.setenv("PRICING_MODE", "live")
+    r2 = client.get("/price/suggest", params={"part_number": "5Q0959802A"}).json()
+    assert r2["mode"] == "live"
+    monkeypatch.setenv("PRICING_MODE", "nonsense")
+    assert client.get("/price/suggest", params={"part_number": "5Q0959802A"}).json()["mode"] == "shadow"
+    modes = [row[0] for row in conn.execute("SELECT mode FROM price_suggestions ORDER BY id")]
+    assert modes == ["shadow", "live", "shadow"]
+
+
+def test_health_exposes_pricing_mode(client, monkeypatch):
+    assert client.get("/health").json()["pricing_mode"] == "shadow"
+    monkeypatch.setenv("PRICING_MODE", "LIVE")
+    assert client.get("/health").json()["pricing_mode"] == "live"
+
+
+def test_shadow_override_measured_against_current_price(client, conn):
+    a = suggestion(conn, "5Q0959802A", 29.99, mode="shadow")
+    b = suggestion(conn, "5Q0959802A", 29.99, mode="shadow")
+    c = suggestion(conn, "5Q0959802A", 29.99, mode="shadow")
+    client.post("/price/suggestions/final", json={"items": [
+        {"suggestion_id": a, "final_price": 24.99, "current_price": 24.99},   # kept the current price
+        {"suggestion_id": b, "final_price": 29.99, "current_price": 24.99},   # changed it (to the engine's)
+        {"suggestion_id": c, "final_price": 20.00},                           # current price unknown
+    ]})
+    rows = {r["id"]: r for r in conn.execute("SELECT * FROM price_suggestions")}
+    assert rows[a]["overridden"] == 0 and rows[a]["current_price"] == 24.99
+    assert rows[b]["overridden"] == 1
+    assert rows[c]["overridden"] is None
+
+
+def test_live_mode_with_no_engine_price_compares_to_current(conn):
+    sid = suggestion(conn, "5G1941999B", None, conf="low", part_type="HEADLIGHT", mode="live")
+    feedback.record_finals(conn, [{"suggestion_id": sid, "final_price": 99.0, "current_price": 99.0}])
+    assert conn.execute("SELECT overridden FROM price_suggestions WHERE id=?", (sid,)).fetchone()[0] == 0
+
+
+def test_report_compares_current_engine_and_final(client, conn):
+    a = suggestion(conn, "5Q0959802A", 30, mode="shadow")
+    b = suggestion(conn, "5Q0959802A", 30, mode="shadow", ts="2026-09-02T10:00:00+00:00")
+    feedback.record_finals(conn, [{"suggestion_id": a, "final_price": 20, "current_price": 20},
+                                  {"suggestion_id": b, "final_price": 30, "current_price": 20}])
+    sale(conn, "WINDOW MOTOR 5Q0 959 802 A", 30, "2026-09-11")   # oldest unused sale for b: 9 days
+    sale(conn, "WINDOW MOTOR 5Q0 959 802 A", 30, "2026-09-05")   # a (oldest suggestion) takes this: 4 days
+    rep = client.get("/price/report").json()
+    assert rep["by_mode"] == {"shadow": 2, "live": 0}
+    lst = rep["listing"]
+    assert lst["with_final_price"] == 2
+    assert lst["final_equals_current_pct"] == 50.0 and lst["final_equals_engine_pct"] == 50.0
+    after = rep["after_sale"]
+    assert after["engine"]["n"] == 2 and after["engine"]["median_abs_pct_error"] == 0.0
+    assert after["current"]["median_abs_pct_error"] == round(100 / 3, 1)
+    assert after["current"]["median_bias_pct"] == round(-100 / 3, 1)
+    assert after["final"]["n"] == 2
+    days = rep["days_to_sell"]
+    assert days["all"]["sold"] == 2
+    assert days["listed_below_engine"]["sold"] == 1 and days["listed_at_engine"]["sold"] == 1
+    assert days["final_equals_current"]["sold"] == 1 and days["final_differs_from_current"]["sold"] == 1
+    items = rep["sold_items"]
+    assert len(items) == 2
+    assert {(i["final_price"], i["days_to_sell"]) for i in items} == {(20, 4), (30, 9)}
+    assert {(i["current_price"], i["engine_price"], i["final_price"]) for i in items} == {(20, 30, 20), (20, 30, 30)}
+
+
+def test_migration_adds_columns_to_existing_table(tmp_path):
+    import sqlite3
+    from pricing.store import init_pricing_db
+    c = sqlite3.connect(tmp_path / "old.db")
+    c.execute("CREATE TABLE price_suggestions (id INTEGER PRIMARY KEY, timestamp TEXT, part_number_norm TEXT)")
+    c.execute("INSERT INTO price_suggestions (timestamp, part_number_norm) VALUES ('t', 'X')")
+    init_pricing_db(c)
+    init_pricing_db(c)  # idempotent
+    cols = {r[1] for r in c.execute("PRAGMA table_info(price_suggestions)")}
+    assert {"mode", "current_price"} <= cols
+    assert c.execute("SELECT COUNT(*) FROM price_suggestions").fetchone()[0] == 1
+    c.close()

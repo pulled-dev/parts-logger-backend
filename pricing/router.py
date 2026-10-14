@@ -10,6 +10,8 @@ from __future__ import annotations
 import hmac
 import os
 
+import pricing_config as cfg
+
 from fastapi import APIRouter, Header, Query
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
@@ -23,6 +25,13 @@ from pricing.titles import engine_group, parse_model
 router = APIRouter()
 
 MAX_IMPORT_ROWS = 2000
+
+
+def pricing_mode() -> str:
+    """PRICING_MODE env var: 'live' or 'shadow'. Anything else -> shadow (the
+    safe choice: the logger behaves exactly as it did before the engine)."""
+    mode = os.environ.get("PRICING_MODE", cfg.DEFAULT_PRICING_MODE).strip().lower()
+    return mode if mode in cfg.PRICING_MODES else cfg.DEFAULT_PRICING_MODE
 
 
 def _err(status: int, message: str) -> JSONResponse:
@@ -115,7 +124,11 @@ async def price_suggest(
     with store.session() as conn:
         mkt = await market.get_market(conn, pn)
         result = engine.suggest(conn, pn, part_type=part_type, car=car, market=mkt)
-        result["suggestion_id"] = feedback.log_suggestion(conn, result, _clean_ref(vehicle_ref)) if log else None
+        mode = pricing_mode()
+        result["mode"] = mode
+        result["suggestion_id"] = (
+            feedback.log_suggestion(conn, result, _clean_ref(vehicle_ref), mode=mode) if log else None
+        )
         return result
 
 
@@ -131,6 +144,7 @@ def _clean_ref(vehicle_ref: str | None) -> str | None:
 class FinalPrice(BaseModel):
     suggestion_id: int
     final_price: float
+    current_price: float | None = None  # what the current method pre-filled
 
 
 class FinalsBody(BaseModel):
@@ -139,7 +153,8 @@ class FinalsBody(BaseModel):
 
 @router.post("/price/suggestions/final")
 def suggestions_final(body: FinalsBody):
-    """Called by the logger on CSV export with each card's final price."""
+    """Called by the logger on CSV export with each card's final price and
+    the current-method price it started from."""
     if len(body.items) > 1000:
         return _err(400, "max 1000 items")
     with store.session() as conn:
@@ -148,8 +163,9 @@ def suggestions_final(body: FinalsBody):
 
 @router.get("/price/report")
 def price_report(format: str = Query("json", pattern="^(json|csv)$")):
-    """Accuracy by confidence level + most-overridden part types. format=csv
-    downloads one row per suggestion."""
+    """Current method vs engine vs final listed price (and vs the sold price
+    once items sell, with days to sell), accuracy by confidence, most-overridden
+    part types. format=csv downloads one row per suggestion."""
     with store.session() as conn:
         if format == "csv":
             return Response(

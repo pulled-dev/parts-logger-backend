@@ -1812,6 +1812,7 @@ async function checkStatus() {
     if (!r.ok) throw new Error();
     const d = await r.json();
     setMode(d.mode === 'live' ? 'live' : 'demo');
+    window.PA_PRICING_MODE = d.pricing_mode === 'live' ? 'live' : 'shadow';
   } catch {
     setMode('error');
   }
@@ -1824,6 +1825,9 @@ function setMode(mode) {
 
 // ── Paint codes (cached on init for body-panel mode) ─────────────────────────
 window.PA_PAINT_CODES = [];
+// Pricing engine mode (PRICING_MODE on the server). 'shadow' = the screen looks
+// and behaves exactly as before; the engine only runs and logs in the background.
+window.PA_PRICING_MODE = 'shadow';
 async function loadPaintCodes() {
   try {
     const r = await fetch(cfg.url + '/paint-codes', { signal: AbortSignal.timeout(8000) });
@@ -1855,6 +1859,13 @@ async function lookup(pn) {
 // ── Pricing engine (non-blocking) ────────────────────────────────────────────
 // Runs alongside /lookup. If it fails or is slow, the card keeps the old
 // pre-filled price and logging carries on as before.
+// Shadow mode: nothing on screen changes (no price change, no badge, no
+// loading text); the suggestion id is only kept so the final price can be
+// reported on export. Live mode: price, badge and reason are shown.
+function engineLive(p) {
+  return !!(p.engine && p.engine.mode === 'live');
+}
+
 async function fetchSuggestion(pn, ref) {
   const qs = new URLSearchParams({ part_number: pn });
   if (ref) qs.set('vehicle_ref', ref);
@@ -1865,7 +1876,7 @@ async function fetchSuggestion(pn, ref) {
 
 function suggestionHtml(p) {
   const e = p.engine;
-  if (!e) return '';
+  if (!e || !engineLive(p)) return '';
   if (e.state === 'loading') return '<div class="ps-line"><span class="ps-muted">Pricing&hellip;</span></div>';
   if (e.state !== 'ok') return '<div class="ps-line"><span class="ps-muted">Price engine unavailable &mdash; using old estimate</span></div>';
   const reason = String(e.reason || '').replace(/ · check price$/, '');
@@ -1885,7 +1896,7 @@ function updateCardSuggestion(p) {
   if (old) old.remove();
   if (row) row.insertAdjacentHTML('beforeend', suggestionHtml(p));
   const hint = row && row.querySelector('.yp-hint');
-  if (hint && p.engine && p.engine.state === 'ok') hint.remove();
+  if (hint && engineLive(p) && p.engine.state === 'ok') hint.remove();
   const inp = card.querySelector('[data-yp]');
   if (inp && document.activeElement !== inp) {
     inp.value = p.your_price != null ? Number(p.your_price).toFixed(2) : '';
@@ -1895,18 +1906,22 @@ function updateCardSuggestion(p) {
 function applySuggestion(id, s) {
   const p = parts.find(x => x.id === id);
   if (!p) return;
+  const mode = (s && s.mode === 'live') ? 'live'
+             : (s && s.mode) ? 'shadow'
+             : (p.engine && p.engine.mode) || window.PA_PRICING_MODE;
   if (s && s.confidence) {
     // suggested_price can be null on purpose (variant-sensitive part, no exact
     // match): show the Low badge + reason and leave the current price alone.
     p.engine = {
-      state: 'ok', price: s.suggested_price, confidence: s.confidence,
+      state: 'ok', mode, price: s.suggested_price, confidence: s.confidence,
       reason: s.reason, source: s.source, suggestion_id: s.suggestion_id != null ? s.suggestion_id : null,
     };
-    if (!p.price_touched && s.suggested_price != null) p.your_price = s.suggested_price;
+    if (mode === 'live' && !p.price_touched && s.suggested_price != null) p.your_price = s.suggested_price;
   } else {
-    p.engine = { state: 'failed' };
+    p.engine = { state: 'failed', mode };
   }
   saveParts();
+  if (mode !== 'live') return;  // shadow: leave the screen exactly as it is
   updateCardSuggestion(p);
   updateStats();
 }
@@ -1920,7 +1935,11 @@ function recordFinalPrices() {
   if (!cfg.url) return;
   const items = parts
     .filter(p => p.engine && p.engine.suggestion_id != null && p.your_price != null)
-    .map(p => ({ suggestion_id: p.engine.suggestion_id, final_price: Number(p.your_price) }));
+    .map(p => ({
+      suggestion_id: p.engine.suggestion_id,
+      final_price: Number(p.your_price),
+      current_price: p.current_price != null ? Number(p.current_price) : null,
+    }));
   if (!items.length) return;
   try {
     fetch(cfg.url + '/price/suggestions/final', {
@@ -1971,7 +1990,8 @@ async function addPart() {
       vehicle_ref:     ref,
       your_price:      prefill,
       part_note:       '',
-      engine:          { state: 'loading' },
+      engine:          { state: 'loading', mode: window.PA_PRICING_MODE },
+      current_price:   prefill,
       price_touched:   false,
     });
     const newId = parts[0].id;
@@ -2136,7 +2156,7 @@ function render() {
       <div class="your-price-row">
         <span class="yp-label">Your price</span>
         <input type="text" class="yp-input" data-yp="${p.id}" placeholder="£0.00" value="${esc(ypVal)}">
-        ${hasPricing && !(p.engine && p.engine.state === 'ok') ? `<span class="yp-hint">Suggested: ${fmt(p.suggested_price)}</span>` : ''}
+        ${hasPricing && !(engineLive(p) && p.engine.state === 'ok') ? `<span class="yp-hint">Suggested: ${fmt(p.suggested_price)}</span>` : ''}
         ${suggestionHtml(p)}
       </div>
       <div class="partno-row">

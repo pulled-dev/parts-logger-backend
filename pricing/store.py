@@ -74,7 +74,9 @@ _SCHEMA = [
         overridden INTEGER,             -- NULL until the logger's final price is known
         sold_history_id INTEGER,        -- linked once the item sells
         sold_price REAL,
-        days_to_sell INTEGER
+        days_to_sell INTEGER,
+        mode TEXT,                      -- shadow | live (PRICING_MODE when served)
+        current_price REAL              -- current-method price the logger was shown first
     )
     """,
     "CREATE INDEX IF NOT EXISTS ix_sugg_pn ON price_suggestions (part_number_norm, timestamp)",
@@ -97,13 +99,24 @@ def session():
         conn.close()
 
 
+# Columns added after a table was first created: (table, column, type).
+_MIGRATIONS = [
+    ("price_suggestions", "mode", "TEXT"),
+    ("price_suggestions", "current_price", "REAL"),
+]
+
+
 def init_pricing_db(conn: sqlite3.Connection | None = None) -> None:
-    """Create pricing tables (idempotent)."""
+    """Create pricing tables and add any missing columns (idempotent)."""
     own = conn is None
     conn = conn or connect()
     try:
         for stmt in _SCHEMA:
             conn.execute(stmt)
+        for table, col, typ in _MIGRATIONS:
+            cols = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+            if col not in cols:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {typ}")
         conn.commit()
     finally:
         if own:

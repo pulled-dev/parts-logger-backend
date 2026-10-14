@@ -23,6 +23,7 @@ from vehicles_router import router as vehicles_router
 from lookup_router import router as lookup_router
 from pricing.router import router as pricing_router
 from pricing.store import init_pricing_db
+from pricing.router import pricing_mode
 from pricing import ebay_orders
 
 # ── CONFIG ───────────────────────────────────────────────────────
@@ -102,6 +103,7 @@ class HealthResponse(BaseModel):
     mode: str
     ebay_configured: bool
     claude_configured: bool
+    pricing_mode: str = "shadow"
 
 # ── MOCK DATA ────────────────────────────────────────────────────
 
@@ -312,6 +314,7 @@ async def health():
         mode="mock" if USE_MOCK else "live",
         ebay_configured=bool(EBAY_APP_ID and EBAY_CERT_ID),
         claude_configured=bool(ANTHROPIC_API_KEY),
+        pricing_mode=pricing_mode(),
     )
 
 

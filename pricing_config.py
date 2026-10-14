@@ -4,6 +4,15 @@ Change a number here and redeploy; no other code changes needed. All prices are
 TOTAL prices in GBP (item + postage), because P&P is now built into our prices.
 """
 
+# ── Mode ────────────────────────────────────────────────────────────────
+# Set with the PRICING_MODE env var in Railway (not here):
+#   shadow (default) - the logger looks and behaves exactly as before; the
+#                      engine runs silently and every suggestion is logged
+#                      next to the current-method price and the final price.
+#   live             - the logger shows the engine price, badge and reason.
+PRICING_MODES = ("shadow", "live")
+DEFAULT_PRICING_MODE = "shadow"
+
 # ── Own sold history ────────────────────────────────────────────────────
 OWN_LOOKBACK_DAYS = 365          # only our sales from the last N days count
 OWN_RECENCY_HALF_LIFE_DAYS = 120 # a sale this old counts half as much as one today
