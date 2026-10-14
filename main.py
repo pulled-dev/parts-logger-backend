@@ -21,6 +21,9 @@ from claude_prompt import build_identification_prompt
 from db import init_db
 from vehicles_router import router as vehicles_router
 from lookup_router import router as lookup_router
+from pricing.router import router as pricing_router
+from pricing.store import init_pricing_db
+from pricing import ebay_orders
 
 # ── CONFIG ───────────────────────────────────────────────────────
 EBAY_APP_ID = os.environ.get("EBAY_APP_ID", "")
@@ -30,10 +33,29 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 # Toggle mock mode when no keys are set
 USE_MOCK = not (EBAY_APP_ID and EBAY_CERT_ID)
 
+async def _daily_order_sync():
+    """Opt-in (PRICING_DAILY_SYNC=1): pull new eBay orders once a day."""
+    from pricing.store import session
+    while True:
+        try:
+            with session() as conn:
+                summary = await ebay_orders.sync_orders(conn)
+            print(f"Daily order sync: {summary['inserted']} new sales")
+        except Exception as e:
+            print(f"Daily order sync failed: {type(e).__name__}: {e}")
+        await asyncio.sleep(24 * 3600)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    init_pricing_db()
+    task = None
+    if os.environ.get("PRICING_DAILY_SYNC") == "1" and ebay_orders.is_configured():
+        task = asyncio.create_task(_daily_order_sync())
     yield
+    if task:
+        task.cancel()
 
 
 app = FastAPI(title="Pulled Apart Parts Logger API", lifespan=lifespan)
@@ -49,6 +71,7 @@ app.add_middleware(
 
 app.include_router(vehicles_router)
 app.include_router(lookup_router)
+app.include_router(pricing_router)
 
 # ── MODELS ───────────────────────────────────────────────────────
 
