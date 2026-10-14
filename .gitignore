@@ -1,2 +1,18 @@
 data/
 __pycache__/
+
+# Local tool state
+.claude/
+
+# Local SQLite DB (live data is on the Railway volume)
+vehicles.db
+
+# Vehicle import drop folders: BreakerPro exports, run logs and generated
+# sheets. Keep only the README in each so the folder's purpose is documented.
+vehicle-imports/inbox/*
+!vehicle-imports/inbox/_README.txt
+vehicle-imports/done/*
+!vehicle-imports/done/_README.txt
+vehicle-imports/logs/*
+!vehicle-imports/logs/_README.txt
+vehicle-imports/stock-sheets/
