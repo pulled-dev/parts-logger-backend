@@ -225,6 +225,14 @@ def latest_run_date(conn: sqlite3.Connection) -> str | None:
     return conn.execute("SELECT MAX(run_date) FROM listing_snapshot_runs").fetchone()[0]
 
 
+def snapshot_runs(conn: sqlite3.Connection) -> dict:
+    """How many snapshots have run, and the latest one (with its API call count)."""
+    n = conn.execute("SELECT COUNT(*) FROM listing_snapshot_runs").fetchone()[0]
+    last = conn.execute("SELECT run_date, finished_at, items, pages, api_calls, new_items, changed, gone "
+                        "FROM listing_snapshot_runs ORDER BY id DESC LIMIT 1").fetchone()
+    return {"runs": n, "last": dict(last) if last else None}
+
+
 def listing_history(conn: sqlite3.Connection, today: date | None = None) -> dict[str, dict]:
     """item_id -> what happened to that listing:
     first / current price, every price change with its date, days listed, and

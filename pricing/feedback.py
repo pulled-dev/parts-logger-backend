@@ -11,6 +11,12 @@
    after the suggestion), it's linked one-to-one: sold price and days to sell.
 4. report() / report_csv() compare current method vs engine vs final listed
    price, before and after the sale.
+5. When the suggestion is linked to a real eBay listing (pricing/listings.py,
+   daily ActiveList snapshot), the "listed" price is the listing's FIRST eBay
+   price, not the logger's exported price (prices are often changed in
+   BreakerPro after logging), and the sale is that listing's own sale (same
+   item number). The ebay_listings section adds re-pricing, sell-through,
+   long-unsold and Best Offer figures.
 """
 
 from __future__ import annotations
@@ -22,6 +28,7 @@ import statistics
 from datetime import date, datetime, timezone
 
 import pricing_config as cfg
+from pricing import listings
 
 LINK_WINDOW_DAYS = 365
 WITHIN_PCT = 15
@@ -199,15 +206,156 @@ def _listed_vs_engine(r) -> str | None:
     return "listed_at_engine"
 
 
-def report(conn: sqlite3.Connection, top: int = 15, items: int = 200) -> dict:
+def with_listing(r, hist: dict) -> dict:
+    """The suggestion row, with the REAL eBay listed price and that listing's
+    own sale when it's linked to a listing; the logger's export otherwise."""
+    d = dict(r)
+    d["logger_final_price"] = d["final_price"]
+    it = hist.get(d.get("listing_item_id") or "")
+    if it:
+        d["final_price"] = it["first_price"]
+        d["sold_price"] = it["sold_price"]
+        d["days_to_sell"] = it["days_to_sell"]
+        d["listed_price_source"] = "ebay"
+    else:
+        d["listed_price_source"] = "logger_export" if d["final_price"] is not None else None
+    d["listing"] = it
+    return d
+
+
+def _pct(part: int, whole: int) -> float | None:
+    return round(100 * part / whole, 1) if whole else None
+
+
+def _round1(v):
+    return None if v is None else round(v, 1)
+
+
+def _vs_engine(price, engine) -> str | None:
+    if price is None or not engine:
+        return None
+    gap = (price - engine) / engine * 100
+    return "above_engine" if gap > ENGINE_BAND_PCT else "below_engine" if gap < -ENGINE_BAND_PCT else "at_engine"
+
+
+def _price_moves(triples) -> dict:
+    """triples: (old price, new price, engine price or None). How many moved,
+    which way, by how much, and whether they moved toward the engine's price."""
+    moved = [(o, n, e) for o, n, e in triples if o and n is not None and abs(n - o) > SAME_PRICE_TOLERANCE]
+    with_engine = [(o, n, e) for o, n, e in moved if e]
+    return {
+        "compared": len(triples),
+        "repriced": len(moved),
+        "repriced_pct": _pct(len(moved), len(triples)),
+        "up": sum(n > o for o, n, _ in moved),
+        "down": sum(n < o for o, n, _ in moved),
+        "median_change_pct": _round1(_median((n - o) / o * 100 for o, n, _ in moved)),
+        "toward_engine": sum(abs(n - e) < abs(o - e) - SAME_PRICE_TOLERANCE for o, n, e in with_engine),
+        "away_from_engine": sum(abs(n - e) > abs(o - e) + SAME_PRICE_TOLERANCE for o, n, e in with_engine),
+        "no_engine_price": len(moved) - len(with_engine),
+    }
+
+
+def ebay_listings_report(rows: list[dict], hist: dict, today: date, snapshots: dict | None = None) -> dict:
+    """Real eBay listings. `rows` are with_listing() suggestion rows; `hist` is
+    listings.listing_history(); `snapshots` is listings.snapshot_runs()."""
+    linked = [r for r in rows if r["listing"]]
+    sold = [r for r in linked if r["listing"]["outcome"] == "sold"]
+    outcomes = [it["outcome"] for it in hist.values()]
+
+    # Sell-through: a listing only counts for the N-day window once it has been
+    # up N days, so brand-new listings don't drag the rate down.
+    sell_through = {}
+    for group in ("all", "above_engine", "at_engine", "below_engine", "no_engine_price"):
+        members = [r for r in linked if group == "all"
+                   or (_vs_engine(r["listing"]["first_price"], r["suggested"]) or "no_engine_price") == group]
+        block = {"listings": len(members)}
+        for days in cfg.SELL_THROUGH_DAYS:
+            eligible = [r for r in members if (today - date.fromisoformat(r["listing"]["start_date"])).days >= days]
+            hit = sum(1 for r in eligible
+                      if r["listing"]["days_to_sell"] is not None and r["listing"]["days_to_sell"] <= days)
+            block[f"eligible_{days}d"] = len(eligible)
+            block[f"sold_within_{days}d_pct"] = _pct(hit, len(eligible))
+        sell_through[group] = block
+
+    # Long unsold: still listed, or ended without a sale, after more than N days.
+    long_days = cfg.UNSOLD_LONG_DAYS
+    stale = [it for it in hist.values() if it["outcome"] != "sold" and it["days_listed"] > long_days]
+    engine_by_item = {r["listing"]["item_id"]: r["suggested"] for r in linked}
+    stale_vs = [(it["current_price"], engine_by_item.get(it["item_id"])) for it in stale]
+    stale_vs = [(p, e) for p, e in stale_vs if e]
+
+    # Best Offer: sold for less than the price that was on eBay that day.
+    sold_all = [it for it in hist.values() if it["outcome"] == "sold" and it["listed_price_at_sale"]]
+    under = [it for it in sold_all if it["sold_price"] < it["listed_price_at_sale"] - SAME_PRICE_TOLERANCE]
+
+    return {
+        "snapshots": snapshots or {"runs": 0, "last": None},
+        "tracked_listings": {
+            "total": len(hist), "active": outcomes.count("active"), "sold": outcomes.count("sold"),
+            "ended_unsold": outcomes.count("ended_unsold"),
+            "with_price_change": sum(1 for it in hist.values() if it["price_changes"]),
+        },
+        "linked_suggestions": len(linked),
+        # engine vs current method vs the REAL first eBay price, each judged against the sold price
+        "vs_sold_price": {
+            "n_sold": len(sold),
+            "current": _accuracy(sold, "current_price"),
+            "engine": _accuracy(sold, "suggested"),
+            "first_listed": _accuracy(sold, "final_price"),
+            "median_days_to_sell": _median(r["days_to_sell"] for r in sold),
+        },
+        "repriced_after_logging": {
+            # the logger's exported price -> the first price that actually went on eBay
+            "logger_to_first_listed": _price_moves(
+                [(r["logger_final_price"], r["listing"]["first_price"], r["suggested"])
+                 for r in linked if r["logger_final_price"] is not None]),
+            # the first eBay price -> the latest one (or the one it sold at): changes made while listed
+            "while_listed": _price_moves(
+                [(r["listing"]["first_price"], r["listing"]["listed_price_at_sale"] or r["listing"]["current_price"],
+                  r["suggested"]) for r in linked]),
+        },
+        "first_listed_vs_engine": {g: sum(1 for r in linked if _vs_engine(r["listing"]["first_price"],
+                                                                          r["suggested"]) == g)
+                                   for g in ("above_engine", "at_engine", "below_engine")},
+        "sell_through": sell_through,
+        f"unsold_over_{long_days}_days": {
+            "count": len(stale),
+            "still_listed": sum(it["outcome"] == "active" for it in stale),
+            "ended": sum(it["outcome"] == "ended_unsold" for it in stale),
+            "with_engine_price": len(stale_vs),
+            "median_pct_vs_engine": _round1(_median((p - e) / e * 100 for p, e in stale_vs)),
+            "above_engine": sum(_vs_engine(p, e) == "above_engine" for p, e in stale_vs),
+            "at_engine": sum(_vs_engine(p, e) == "at_engine" for p, e in stale_vs),
+            "below_engine": sum(_vs_engine(p, e) == "below_engine" for p, e in stale_vs),
+        },
+        "best_offer": {
+            "sold": len(sold_all),
+            "sold_below_listed": len(under),
+            "sold_below_listed_pct": _pct(len(under), len(sold_all)),
+            "median_discount_pct": _round1(_median(
+                (it["listed_price_at_sale"] - it["sold_price"]) / it["listed_price_at_sale"] * 100 for it in under)),
+            "best_offer_enabled_listings": sum(it["best_offer_enabled"] for it in hist.values()),
+        },
+    }
+
+
+def report(conn: sqlite3.Connection, top: int = 15, items: int = 200, today: date | None = None) -> dict:
     link_sales(conn)
-    rows = conn.execute("SELECT * FROM price_suggestions ORDER BY timestamp, id").fetchall()
+    listings.link_listings(conn)
+    today = today or datetime.now(timezone.utc).date()
+    hist = listings.listing_history(conn, today)
+    rows = [with_listing(r, hist) for r in
+            conn.execute("SELECT * FROM price_suggestions ORDER BY timestamp, id").fetchall()]
     finals = [r for r in rows if r["final_price"] is not None]
     sold = [r for r in rows if r["sold_price"] is not None]
 
     # Before the sale: how do the three prices relate?
     listing = {
         "with_final_price": len(finals),
+        # where "final" comes from: the real eBay listing when linked, else the logger's export
+        "listed_price_source": {src: sum(r["listed_price_source"] == src for r in finals)
+                                for src in ("ebay", "logger_export")},
         "final_equals_current_pct": round(100 * sum(_same(r["final_price"], r["current_price"]) for r in finals)
                                           / len(finals), 1) if finals else None,
         "final_equals_engine_pct": round(100 * sum(_same(r["final_price"], r["suggested"]) for r in finals)
@@ -270,7 +418,8 @@ def report(conn: sqlite3.Connection, top: int = 15, items: int = 200) -> dict:
         {"timestamp": r["timestamp"], "part_number": r["part_number_norm"], "part_type": r["part_type"],
          "mode": r["mode"], "confidence": r["confidence"], "current_price": r["current_price"],
          "engine_price": r["suggested"], "final_price": r["final_price"], "sold_price": r["sold_price"],
-         "days_to_sell": r["days_to_sell"]}
+         "days_to_sell": r["days_to_sell"], "listed_price_source": r["listed_price_source"],
+         "logger_final_price": r["logger_final_price"], "listing_item_id": r["listing_item_id"]}
         for r in sorted(sold, key=lambda r: r["timestamp"], reverse=True)[:items]
     ]
     return {
@@ -284,31 +433,49 @@ def report(conn: sqlite3.Connection, top: int = 15, items: int = 200) -> dict:
         "by_confidence": by_conf,
         "most_overridden_part_types": overridden[:top],
         "sold_items": sold_items,
+        "ebay_listings": ebay_listings_report(rows, hist, today, listings.snapshot_runs(conn)),
     }
 
 
 CSV_COLUMNS = ["timestamp", "mode", "part_number", "vehicle_ref", "part_type", "confidence", "source",
                "current_price", "engine_price", "final_price", "overridden", "sold_price", "days_to_sell",
                "current_abs_pct_error", "engine_abs_pct_error", "final_abs_pct_error",
-               "not_worth_listing_warned", "not_worth_listing_price_shown", "not_worth_listing_basis"]
+               "not_worth_listing_warned", "not_worth_listing_price_shown", "not_worth_listing_basis",
+               # real eBay listing (blank until the suggestion is linked to one)
+               "listed_price", "listed_price_source", "listed_abs_pct_error", "listing_item_id",
+               "ebay_first_listed_price", "ebay_current_price", "ebay_price_changes", "listing_outcome",
+               "listing_days_listed"]
 
 
 def _blank(v):
     return "" if v is None else v
 
 
-def report_csv(conn: sqlite3.Connection) -> str:
+def report_csv(conn: sqlite3.Connection, today: date | None = None) -> str:
+    """One row per suggestion. final_price is the logger's exported price;
+    listed_price is the real first eBay price when linked (else the export).
+    sold_price / days_to_sell are the linked listing's own sale when linked."""
     link_sales(conn)
+    listings.link_listings(conn)
+    hist = listings.listing_history(conn, today or datetime.now(timezone.utc).date())
     out = io.StringIO()
     w = csv.writer(out, lineterminator="\r\n")
     w.writerow(CSV_COLUMNS)
-    for r in conn.execute("SELECT * FROM price_suggestions ORDER BY timestamp, id"):
-        errs = [_err_pct(r[col], r["sold_price"]) for _, col in METHODS]
+    for raw in conn.execute("SELECT * FROM price_suggestions ORDER BY timestamp, id"):
+        r = with_listing(raw, hist)
+        it = r["listing"] or {}
+        errs = [_err_pct(r[col], r["sold_price"]) for col in ("current_price", "suggested", "logger_final_price",
+                                                              "final_price")]
+        errs = ["" if e is None else round(e, 1) for e in errs]
         w.writerow([r["timestamp"], _blank(r["mode"]), r["part_number_norm"], r["vehicle_ref"] or "",
                     r["part_type"] or "", r["confidence"], r["source"],
-                    _blank(r["current_price"]), _blank(r["suggested"]), _blank(r["final_price"]),
+                    _blank(r["current_price"]), _blank(r["suggested"]), _blank(r["logger_final_price"]),
                     "" if r["overridden"] is None else ("yes" if r["overridden"] else "no"),
                     _blank(r["sold_price"]), _blank(r["days_to_sell"]),
-                    *["" if e is None else round(e, 1) for e in errs],
-                    "yes" if r["nwl_warned"] else "", _blank(r["nwl_price_shown"]), r["nwl_basis"] or ""])
+                    *errs[:3],
+                    "yes" if r["nwl_warned"] else "", _blank(r["nwl_price_shown"]), r["nwl_basis"] or "",
+                    _blank(r["final_price"]), _blank(r["listed_price_source"]), errs[3],
+                    _blank(r["listing_item_id"]), _blank(it.get("first_price")), _blank(it.get("current_price")),
+                    len(it["price_changes"]) if it else "", _blank(it.get("outcome")),
+                    _blank(it.get("days_listed"))])
     return out.getvalue()
