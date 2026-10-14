@@ -125,6 +125,16 @@ if !FAILS!==0 if exist "%WEBSITE_SCRIPT%" (
   )
 )
 
+rem -- Stock quick reference step --
+set "STOCK_SCRIPT=%HERE%update_stock_sheets.py"
+if !FAILS!==0 if exist "%STOCK_SCRIPT%" (
+  %PY% "%STOCK_SCRIPT%"
+  if errorlevel 1 (
+    echo.
+    echo   ** Quick reference update had an issue - check the output above.
+  )
+)
+
 :finish
 echo.
 pause

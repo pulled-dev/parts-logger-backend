@@ -225,7 +225,9 @@ def main():
     print(f"Mode: {'fill-missing (backfill blanks on existing)' if fill_missing else 'create-only'}"
           f"{'  [DRY RUN — no writes]' if dry_run else ''}\n")
 
-    with open(csv_path, encoding='utf-8') as f:
+    # utf-8-sig strips a BOM if BreakerPro/Excel adds one; errors='replace'
+    # stops a stray non-UTF-8 character (e.g. from Excel re-saving) killing the run.
+    with open(csv_path, encoding='utf-8-sig', errors='replace') as f:
         # BreakerPro CSVs have 3 garbage header rows before the real header
         for _ in range(3):
             f.readline()
@@ -322,6 +324,10 @@ def main():
         print(f"\n--- Failures ---")
         for ref, msg in failures:
             print(f"  {ref}: {msg}")
+
+    # Non-zero exit when anything failed, so the drop-folder runner
+    # (vehicle-imports/Update Vehicles.bat) leaves the CSV in inbox to retry.
+    sys.exit(1 if failures else 0)
 
 
 if __name__ == "__main__":
