@@ -135,7 +135,7 @@ On the 1114 no-price sales the old method's DB price had MdAPE 18.9% and 42.4% w
 | Old method (BreakerPro DB price) | 1160 | 20.8% | 38.9% | -12.1% |
 | New engine (no market data) | 1160 | 20.0% | 39.6% | +0.0% |
 
-Sale by sale, the new engine was closer on **532** sales, the old method on **509**, and they tied on 119.
+Sale by sale, the new engine was closer on **532** sales, the old method on **510**, and they tied on 118.
 
 New engine on every sale with a part number where it gave a price (1183): MdAPE 20.0%, within ±15% 39.4%.
 
@@ -230,7 +230,7 @@ By quarter (leakage check: the current method's DB is most often the sold item's
 | brake servo | 21 | 15.8% | 39.1% | 15.8% | 47.6% |
 | heater blower motor | 21 | 25.0% | 35.5% | 22.7% | 38.1% |
 | window regulator | 21 | 22.5% | 29.5% | 18.5% | 42.9% |
-| indicator stalk | 21 | 41.1% | 11.5% | 26.7% | 33.3% |
+| indicator stalk | 21 | 41.1% | 11.5% | 27.0% | 33.3% |
 | wiper & indicator stalk | 20 | 18.9% | 37.0% | 28.6% | 30.0% |
 
 ### Diagnostic: opt-in `USE_BREAKERPRO_EXACT` rung (off by default)
@@ -244,10 +244,10 @@ Quarter by quarter with the rung on:
 
 | Quarter | Sales | Old MdAPE | Old ±15% | New MdAPE | New ±15% |
 |---|---|---|---|---|---|
-| 2025 Q4 | 287 | 25.9% | 26.1% | 20.8% | 33.1% |
-| 2026 Q1 | 480 | 16.3% | 49.6% | 17.3% | 46.2% |
+| 2025 Q4 | 287 | 25.9% | 26.1% | 21.9% | 33.1% |
+| 2026 Q1 | 480 | 16.3% | 49.6% | 17.5% | 46.2% |
 | 2026 Q2 | 466 | 18.9% | 41.8% | 16.7% | 46.1% |
-| 2026 Q3 | 454 | 20.0% | 41.6% | 20.0% | 38.8% |
+| 2026 Q3 | 454 | 20.0% | 41.6% | 20.0% | 39.0% |
 | 2026 Q4 | 53 | 12.3% | 54.7% | 16.7% | 45.3% |
 
 <!-- AUTO:END -->

@@ -1,7 +1,10 @@
 # Pricing engine: handoff
 
-_Branch `pricing-engine`, 14 Oct 2026 (updated the same day: tightened
-fallback, shadow mode, backtest re-run). Nothing has been merged or deployed.
+_Branch `pricing-engine`, 14 Oct 2026 (updated since: tightened fallback,
+shadow mode, Hybrid backtest, order sync with the message bot's eBay token,
+3-second speed limit, "not worth listing" warning). Pull request:
+https://github.com/pulled-dev/parts-logger-backend/pull/1. Nothing has been
+merged or deployed.
 The live yard tool is untouched until you merge. **Even after you merge, the
 logger screen won't change: the engine starts in shadow mode** (see below)._
 
@@ -74,6 +77,47 @@ On the logger screen in **live** mode:
   are sent back quietly, in both modes. That lets the system measure which
   suggestions loggers changed.
 
+### "Not worth listing" warning (shadow AND live)
+
+If the price a logger is shown is **under £8** (total, including postage),
+that row gets an amber warning: **"Under £8 — not worth listing, consider
+scrap"**, plus what the price is based on, e.g. *"Based on: our last 3 sales
+£5–£7"* or *"Based on: BreakerPro price on file"*.
+
+- It's judged on the price the logger actually sees: today's pre-filled price
+  in shadow mode, the engine's price in live mode.
+- It's **only a warning.** It never blocks logging, never changes the price,
+  and the logger can still list the part.
+- The old hidden "minimum price" (which quietly raised low prices to £9.99) is
+  **gone**. A low price is shown as it is, with the warning.
+- Each warning is recorded. `/price/report` shows how many were warned, how
+  many were listed anyway, and how those sold.
+
+**To change the £8:** open `pricing_config.py`, change
+`NOT_WORTH_LISTING_BELOW = 8.00` to the new amount (e.g. `10.00`), commit and
+merge. Railway redeploys, and the logger picks the new number up
+automatically. No other changes are needed.
+
+### Fast enough for the yard
+
+- The engine waits **at most 3 seconds** for live eBay competitor prices. If
+  eBay is slow, the price comes back without them (the reason says "live
+  prices still loading"), the lookup finishes in the background, and the next
+  time that part is added it's instant from the cache.
+- **Every night at about 2am** it refreshes the saved competitor prices for
+  the parts we sell most (up to 300 a night), so most lookups in the day come
+  straight from the cache.
+- `/price/report` shows typical (median) and slowest-5% response times.
+
+### Automatic order top-up
+
+With `PRICING_DAILY_SYNC=1`, the backend fetches new eBay orders once a day,
+using **the same eBay token as the message bot** (`EBAY_AUTH_TOKEN`). eBay
+only allows the last 90 days this way, which is fine: the full history comes
+from the one-off CSV import. Only order/item numbers, title, prices and dates
+are kept. Buyer names, usernames, emails, addresses and phone numbers are
+thrown away as the data is read.
+
 Behind the scenes:
 
 - All 3,705 of your eBay sales (Jan 2025 – Oct 2026) can be loaded into the
@@ -82,8 +126,9 @@ Behind the scenes:
   dates.
 - A report page shows how accurate the suggestions turn out once items sell:
   `/price/report`, plus a spreadsheet version at `/price/report?format=csv`.
-- Every number you might want to change (rounding, minimum price, how much
-  weight the market gets, and so on) is in **one file: `pricing_config.py`**.
+- Every number you might want to change (rounding, the £8 "not worth
+  listing" line, the 3-second limit, how much weight the market gets, and so
+  on) is in **one file: `pricing_config.py`**.
 
 ## 2. Headline backtest result: honest version
 
@@ -139,11 +184,10 @@ decide. `USE_BREAKERPRO_EXACT` stays **off**.
 
 | Item | What it means | What to do |
 |---|---|---|
-| **No eBay "user token" for automatic order sync** | Sales can't flow in automatically yet. The message bot's token is a different kind (Trading API) and can't be reused. | Use the CSV import weekly (step 6), or set up the token (section 5). The sync code is built and tested, just switched off. |
-| **No eBay keys on this PC** | I tested the competitor search against recorded sample responses, never against live eBay. | It'll run live once Railway has `EBAY_APP_ID` / `EBAY_CERT_ID` (already set for the current tool). Check step 5 below. |
+| **No eBay keys on this PC** | The order sync and competitor search were tested only against made-up sample responses. The optional live check (one read-only call) was skipped because `EBAY_AUTH_TOKEN` isn't set on this PC. | After merging, run the sync test in section 5. It'll tell you straight away if a variable is wrong. |
 | **eBay daily call limit not confirmed** | Default is 5,000 searches/day; we'd use roughly 250 a week. | Optional: check under "API call limits" in the eBay developer portal. |
 | **`.gitignore`** | Now committed on this branch (it keeps `data/` and your sales file out of GitHub). | Nothing: it goes live with the merge. |
-| **Open questions in the spec** (rounding, minimum prices, pricing stance, postage) | Defaults are used: £x.99 under £50, £5 − 1p above; £9.99 minimum; match the market; prices include postage. | Change them in `pricing_config.py` whenever you like. |
+| **Open questions in the spec** (rounding, pricing stance, postage) | Defaults are used: £x.99 under £50, £5 − 1p above; match the market; prices include postage. There's no minimum price any more, just the £8 "not worth listing" warning. | Change them in `pricing_config.py` whenever you like. |
 
 ## 4. Going live: step by step
 
@@ -155,23 +199,36 @@ doesn't need it.
 
 ### Step 2. Add the env vars in Railway
 
-Railway → the Parts Logger backend service → **Variables**. Use the
-single-variable "New Variable" field, one at a time:
+Railway → the **Parts Logger backend** service → **Variables**. Use the
+**single-variable "New Variable" field**, one at a time:
 
 | Variable | Value | Needed? |
 |---|---|---|
+| `EBAY_APP_ID` | copy from the **message bot** service | **Yes** (probably already there) |
+| `EBAY_CERT_ID` | copy from the message bot service | **Yes** (probably already there) |
+| `EBAY_DEV_ID` | copy from the message bot service | **Yes (new here)** |
+| `EBAY_AUTH_TOKEN` | copy from the message bot service | **Yes (new here)**. See the warning below. |
 | `PRICING_ADMIN_TOKEN` | the password from Step 1 | **Yes (new)** |
-| `PRICING_MODE` | `shadow` | Optional: shadow is already the default. Setting it makes the choice visible. Change it to `live` only when you're ready (Step 8). |
-| `EBAY_APP_ID` | already there | Check it's set |
-| `EBAY_CERT_ID` | already there | Check it's set |
+| `PRICING_MODE` | `shadow` | **Yes**. Shadow is the default anyway; setting it makes the choice visible. Change to `live` only at Step 8. |
+| `PRICING_DAILY_SYNC` | `1` | Optional: turns on the daily order top-up. |
 | `DB_PATH` | already there (the volume path, e.g. `/data/vehicles.db`) | Check it's set. The new tables go in the same file. |
-| `EBAY_USER_REFRESH_TOKEN` | see section 5 | Optional, later |
-| `PRICING_DAILY_SYNC` | `1` | Optional, only with the token above |
+
+**Important: paste `EBAY_AUTH_TOKEN` into the single-variable field, not the
+Raw Editor.** The token contains `#` characters, and the Raw Editor cuts it
+off at the first `#`. The order sync would then fail with "eBay rejected the
+token". (`EBAY_SITE_ID` isn't needed: it defaults to 3, the UK.)
+
+**If the eBay token is ever renewed, update `EBAY_AUTH_TOKEN` in BOTH Railway
+services:** the message bot and the parts logger. Otherwise one of them stops
+working. If the parts logger's copy is out of date, the order sync reports
+"eBay rejected the token (check EBAY_AUTH_TOKEN)". Logging and pricing keep
+working regardless.
 
 ### Step 3. Merge the branch
 
-1. Open https://github.com/pulled-dev/parts-logger-backend/pull/new/pricing-engine
-2. Click **Create pull request**, then **Merge pull request**.
+1. Open the pull request: https://github.com/pulled-dev/parts-logger-backend/pull/1
+2. Read the "one extra commit" note in it (your `update_website.py` work rides
+   along), then click **Merge pull request**.
 3. Railway redeploys the backend automatically (about 2 minutes), and GitHub
    Pages updates the logger page. Hard-refresh the logger on the phones
    (or close and reopen it) to pick up the new page.
@@ -180,8 +237,8 @@ single-variable "New Variable" field, one at a time:
 
 Open these in a browser:
 
-- https://web-production-7a1f0.up.railway.app/health should say `"status":"ok"`
-  and `"pricing_mode":"shadow"`.
+- https://web-production-7a1f0.up.railway.app/health should say `"status":"ok"`,
+  `"pricing_mode":"shadow"` and `"not_worth_listing_below":8.0`.
 - https://web-production-7a1f0.up.railway.app/price/part-types should show `[]`
   (empty until Step 5).
 
@@ -241,6 +298,10 @@ afterwards**, as it contains buyer details. Don't put sales files in
     below, at or above the engine's price;
   - **sold_items:** each sold item with all three prices, the sold price and
     its days to sell;
+  - **not_worth_listing:** how many "under £8" warnings were shown, how many
+    of those parts were listed anyway, and how they sold;
+  - **response_time:** typical and slowest-5% times for a price, and how often
+    the competitor prices came from the cache vs live vs timed out;
   - accuracy by confidence level, and which part types loggers change most.
 - Add `?format=csv` to the end of that address for a spreadsheet, one row per
   suggestion, with all of the above per item.
@@ -258,29 +319,33 @@ On GitHub, open the merged pull request and click **Revert**, then merge the
 revert. Railway and the logger go back to how they were. The new database
 tables are left in place, but nothing old reads them, so they're harmless.
 
-## 5. Optional: automatic daily order sync
+## 5. Automatic daily order top-up
 
-This needs a one-off eBay "user token" with permission to **read orders**:
+This uses the message bot's eBay token, so there's nothing new to set up at
+eBay. You just need the four eBay variables from Step 2 plus
+`PRICING_DAILY_SYNC=1`.
 
-1. Log in at https://developer.ebay.com → **Application Keys** → under your
-   Production keyset click **User Tokens**.
-2. Choose **"Get a Token from eBay via Your Application"** (OAuth). If asked to
-   add a redirect (RuName), accept the defaults.
-3. Tick the scope `https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly`,
-   sign in as **pulled_apart_ltd** and agree.
-4. Copy the **Refresh Token** (lasts about 18 months; set a reminder to redo
-   this). It contains `#` characters, so paste it into Railway's
-   **single-variable** field as `EBAY_USER_REFRESH_TOKEN`, and add
-   `PRICING_DAILY_SYNC` = `1`.
-5. Test from PowerShell:
+Test it once from PowerShell after merging:
 
 ```powershell
+$env:PRICING_ADMIN_TOKEN = "PASTE-THE-PASSWORD"
 Invoke-RestMethod -Method Post -Uri https://web-production-7a1f0.up.railway.app/price/sync-orders -Headers @{ "X-Admin-Token" = $env:PRICING_ADMIN_TOKEN }
 ```
 
-It reports how many new sales it found. After that it runs once a day by
-itself. eBay only lets it look back 90 days on the first run (up to 2 years if
-asked); the CSV import already covers the older history.
+It reports how many new sales it added. Running it again adds nothing, because
+duplicates are skipped. After that it runs once a day by itself.
+
+- **If it says a variable is missing:** add that variable in Railway (Step 2).
+- **If it says the token was rejected:** the `EBAY_AUTH_TOKEN` copy is cut off
+  or out of date. Re-paste it from the message bot using the single-variable
+  field.
+
+You can also refresh the competitor-price cache on demand (it normally runs
+nightly):
+
+```powershell
+Invoke-RestMethod -Method Post -Uri https://web-production-7a1f0.up.railway.app/price/prewarm -Headers @{ "X-Admin-Token" = $env:PRICING_ADMIN_TOKEN }
+```
 
 ## 6. Where things are (for a developer)
 
@@ -290,7 +355,10 @@ asked); the CSV import already covers the older history.
 - `pricing/`: engine, market search, importer, order sync, feedback, backtest.
   `pricing_config.py`: all tunables.
 - Endpoints: `GET /price/suggest`, `GET /price/report`, `GET /price/part-types`,
-  `POST /price/suggestions/final`, and (admin) `POST /price/sold-history/import`,
-  `POST /price/sync-orders`.
+  `POST /price/suggestions/final`, `POST /price/suggestions/{id}/warning`, and
+  (admin) `POST /price/sold-history/import`, `POST /price/sync-orders`,
+  `POST /price/prewarm`.
+- Order sync: Trading API `GetOrders` with `EBAY_AUTH_TOKEN` (IAF header),
+  last 90 days only. Nightly pre-warm: `PRICING_PREWARM=0` turns it off.
 - Tests: `python -m pytest` (needs Node.js for the CSV and shadow/live
   checks). They never call eBay.

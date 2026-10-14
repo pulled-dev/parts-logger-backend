@@ -184,3 +184,17 @@ These supersede resolutions 2 and 3 above:
   live mode the logger keeps the current-method price. `CATEGORY_DEFAULTS`
   (per-part-type pinned prices) has been removed as well, so there are no
   default or pinned prices of any kind.
+
+## 6. Addendum: order sync, speed, "not worth listing"
+
+- **Order sync now uses the Trading API, not Fulfillment.** This supersedes §2
+  "Message bot user token" and resolution 4. `GetOrders` with the message
+  bot's long-lived `EBAY_AUTH_TOKEN` (IAF header, plus APP/DEV/CERT names,
+  site 3, compatibility level 1199). It only reaches back 90 days, which is
+  fine because history comes from the CSV import. No user refresh token is
+  needed; `EBAY_USER_REFRESH_TOKEN` is no longer used.
+- **Market lookups:** a 3-second time budget, with a background fill into the
+  cache and a nightly pre-warm (300 a night).
+- **The price floor (`MIN_LIST_PRICE`, §5.6 of the spec) is removed.** Low
+  prices are shown as-is and flagged with an amber "not worth listing"
+  warning under `NOT_WORTH_LISTING_BELOW` (£8).
