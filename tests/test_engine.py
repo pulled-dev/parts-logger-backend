@@ -241,3 +241,10 @@ def test_part_type_prefers_what_we_sold_over_description(conn):
                 car={"model": "GOLF", "generation": "MK7"}, as_of=AS_OF)
     assert r["part_type"] == "WINDOW MOTOR FRONT"
     assert r["source"] == "part_type" and r["raw_price"] == 32
+
+
+def test_reason_only_mentions_live_listings_when_market_checked(conn):
+    assert suggest(conn, "9Z9 111 113", as_of=AS_OF)["reason"].startswith("no sales of this number")
+    r = suggest(conn, "9Z9 111 113", market={"count": 0, "lq": None, "median": None, "min": None, "max": None},
+                as_of=AS_OF)
+    assert r["reason"].startswith("no sales or usable live listings")

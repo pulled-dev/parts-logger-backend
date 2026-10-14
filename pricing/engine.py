@@ -228,7 +228,9 @@ def suggest(conn: sqlite3.Connection, part_number: str, *, part_type: str | None
 
     # 3. Fallbacks.
     if price is None:
-        price, source, conf, match, fb_reason = _fallback(conn, pn, ptype, car, before, look)
+        nothing = ("no sales of this number" if market is None
+                   else "no sales or usable live listings for this number")
+        price, source, conf, match, fb_reason = _fallback(conn, pn, ptype, car, before, look, nothing)
         reasons.append(fb_reason)
         if mkt_block:
             reasons.append(f"only {market['count']} live competitor{'s' if market['count'] != 1 else ''}")
@@ -257,11 +259,10 @@ def suggest(conn: sqlite3.Connection, part_number: str, *, part_type: str | None
     }
 
 
-def _fallback(conn, pn, ptype, car, before, look):
+def _fallback(conn, pn, ptype, car, before, look, nothing):
     model = (car.get("model") or "").upper()
     gen = (car.get("generation") or "").upper()
     eng = (car.get("engine_group") or "").upper()
-    nothing = "no sales or live listings for this number"
 
     if ptype and model:
         level, rows = history.part_type_sales(

@@ -440,6 +440,20 @@
     }
     .yp-hint { font-family: var(--mono); font-size: 11px; color: var(--text-muted); }
 
+    /* Pricing engine: confidence badge + one-line reason under the price */
+    .ps-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      width: 100%;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .ps-reason { line-height: 1.35; overflow-wrap: anywhere; min-width: 0; flex: 1 1 180px; }
+    .ps-check  { color: #ef4444; font-weight: 700; white-space: nowrap; }
+    .ps-muted  { color: var(--text-muted); font-style: italic; }
+
     .partno-row {
       display: flex;
       align-items: center;
@@ -1838,6 +1852,63 @@ async function lookup(pn) {
   return r.json();
 }
 
+// ── Pricing engine (non-blocking) ────────────────────────────────────────────
+// Runs alongside /lookup. If it fails or is slow, the card keeps the old
+// pre-filled price and logging carries on as before.
+async function fetchSuggestion(pn, ref) {
+  const qs = new URLSearchParams({ part_number: pn });
+  if (ref) qs.set('vehicle_ref', ref);
+  const r = await fetch(cfg.url + '/price/suggest?' + qs.toString(), { signal: AbortSignal.timeout(12000) });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+function suggestionHtml(p) {
+  const e = p.engine;
+  if (!e) return '';
+  if (e.state === 'loading') return '<div class="ps-line"><span class="ps-muted">Pricing&hellip;</span></div>';
+  if (e.state !== 'ok') return '<div class="ps-line"><span class="ps-muted">Price engine unavailable &mdash; using old estimate</span></div>';
+  const reason = String(e.reason || '').replace(/ · check price$/, '');
+  const conf = ['high', 'medium', 'low'].includes(e.confidence) ? e.confidence : 'none';
+  const badgeHtml = `<span class="confidence-badge ${conf}">PRICE &middot; ${conf.toUpperCase()}</span>`;
+  return `<div class="ps-line">${badgeHtml}<span class="ps-reason">${esc(reason)}</span>` +
+         (e.confidence === 'low' ? '<span class="ps-check">&#9888; Check price</span>' : '') + '</div>';
+}
+
+// Patch one card in place (no full re-render) so a logger typing in another
+// card never loses focus when a suggestion lands.
+function updateCardSuggestion(p) {
+  const card = partsList.querySelector(`[data-id="${p.id}"]`);
+  if (!card) return;
+  const row = card.querySelector('.your-price-row');
+  const old = row && row.querySelector('.ps-line');
+  if (old) old.remove();
+  if (row) row.insertAdjacentHTML('beforeend', suggestionHtml(p));
+  const hint = row && row.querySelector('.yp-hint');
+  if (hint && p.engine && p.engine.state === 'ok') hint.remove();
+  const inp = card.querySelector('[data-yp]');
+  if (inp && document.activeElement !== inp) {
+    inp.value = p.your_price != null ? Number(p.your_price).toFixed(2) : '';
+  }
+}
+
+function applySuggestion(id, s) {
+  const p = parts.find(x => x.id === id);
+  if (!p) return;
+  if (s && s.suggested_price != null) {
+    p.engine = {
+      state: 'ok', price: s.suggested_price, confidence: s.confidence,
+      reason: s.reason, source: s.source, suggestion_id: s.suggestion_id != null ? s.suggestion_id : null,
+    };
+    if (!p.price_touched) p.your_price = s.suggested_price;
+  } else {
+    p.engine = { state: 'failed' };
+  }
+  saveParts();
+  updateCardSuggestion(p);
+  updateStats();
+}
+
 // ── Add part ─────────────────────────────────────────────────────────────────
 async function addPart() {
   const pn  = pnInput.value.trim().toUpperCase();
@@ -1847,6 +1918,9 @@ async function addPart() {
   addBtn.disabled = true;
   addBtn.classList.add('loading');
   addLabel.textContent = 'Looking up...';
+
+  // Start pricing in parallel; never let it throw into the logging flow.
+  const suggestP = fetchSuggestion(pn, ref).catch(() => null);
 
   try {
     const d = await lookup(pn);
@@ -1871,13 +1945,17 @@ async function addPart() {
       vehicle_ref:     ref,
       your_price:      prefill,
       part_note:       '',
+      engine:          { state: 'loading' },
+      price_touched:   false,
     });
+    const newId = parts[0].id;
     pnInput.value = '';
     saveParts();
     render();
     updateStats();
     pnInput.focus();
     setMode(cfg.demo ? 'demo' : 'live');
+    suggestP.then(s => applySuggestion(newId, s));
   } catch (err) {
     toast('⚠ ' + err.message);
     setMode('error');
@@ -2032,7 +2110,8 @@ function render() {
       <div class="your-price-row">
         <span class="yp-label">Your price</span>
         <input type="text" class="yp-input" data-yp="${p.id}" placeholder="£0.00" value="${esc(ypVal)}">
-        ${hasPricing ? `<span class="yp-hint">Suggested: ${fmt(p.suggested_price)}</span>` : ''}
+        ${hasPricing && !(p.engine && p.engine.state === 'ok') ? `<span class="yp-hint">Suggested: ${fmt(p.suggested_price)}</span>` : ''}
+        ${suggestionHtml(p)}
       </div>
       <div class="partno-row">
         <span class="yp-label">Part No. / Notes</span>
@@ -2063,6 +2142,7 @@ partsList.addEventListener('input', e => {
   if (!p) return;
   const raw = inp.value.replace(/[^\d.]/g, '');
   p.your_price = raw ? parseFloat(raw) : null;
+  p.price_touched = true;  // a late suggestion must never overwrite the logger's price
   saveParts();
   updateStats();
 });
