@@ -23,10 +23,11 @@ from __future__ import annotations
 import asyncio
 import logging
 import sqlite3
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 import httpx
 
+import pricing_config as cfg
 from pricing import ebay_orders
 from pricing.ebay_orders import NS, _money, _text
 from pricing.normalise import normalise
@@ -209,5 +210,112 @@ async def snapshot(conn: sqlite3.Connection, client: httpx.AsyncClient | None = 
              datetime.now(timezone.utc).isoformat(timespec="seconds"), len(listings), stats["pages"],
              stats["calls"], counts["new"], counts["changed"], counts["unchanged"], counts["gone"]))
         conn.commit()
+        counts["suggestions_linked"] = link_listings(conn)
     return {"skipped": False, "dry_run": dry_run, "run_date": run_date, "items": len(listings),
             "pages": stats["pages"], "api_calls": stats["calls"], **counts}
+
+
+# ── Per-listing history ─────────────────────────────────────────────────
+
+def _day(iso: str | None) -> date | None:
+    return date.fromisoformat(iso[:10]) if iso else None
+
+
+def latest_run_date(conn: sqlite3.Connection) -> str | None:
+    return conn.execute("SELECT MAX(run_date) FROM listing_snapshot_runs").fetchone()[0]
+
+
+def listing_history(conn: sqlite3.Connection, today: date | None = None) -> dict[str, dict]:
+    """item_id -> what happened to that listing:
+    first / current price, every price change with its date, days listed, and
+    outcome: "sold" (a sold_history row with this item number, on or after the
+    listing start), "active" (in the latest snapshot), or "ended_unsold"
+    (dropped out of ActiveList with no matching sale).
+
+    Worked out fresh each time, so a sale imported after the listing vanished
+    still turns "ended_unsold" into "sold"."""
+    today = today or datetime.now(timezone.utc).date()
+    latest = latest_run_date(conn)
+    by_item: dict[str, list] = {}
+    for r in conn.execute("SELECT * FROM listing_snapshots ORDER BY item_id, snapshot_date"):
+        by_item.setdefault(r["item_id"], []).append(r)
+    if not by_item:
+        return {}
+    sales: dict[str, list] = {}
+    for item_number, sold_date, price in conn.execute(
+            "SELECT item_number, sold_date, price FROM sold_history WHERE item_number != '' ORDER BY sold_date, id"):
+        if item_number in by_item:
+            sales.setdefault(item_number, []).append((sold_date, price))
+
+    out = {}
+    for item_id, states in by_item.items():
+        first, last = states[0], states[-1]
+        start = _day(first["start_time"]) or _day(first["snapshot_date"])
+        changes = [{"date": cur["snapshot_date"], "from": prev["current_price"], "to": cur["current_price"]}
+                   for prev, cur in zip(states, states[1:])
+                   if abs(cur["current_price"] - prev["current_price"]) > PRICE_TOLERANCE]
+        last_seen = last["last_seen_date"]
+        sale = next(((d, p) for d, p in sales.get(item_id, []) if _day(d) >= start), None)
+        if sale:
+            outcome, end = "sold", _day(sale[0])
+            # the price on eBay when it sold: the last state first seen on or before the sale day
+            listed_at_sale = next((s["current_price"] for s in reversed(states)
+                                   if s["snapshot_date"] <= sale[0][:10]), first["current_price"])
+        else:
+            active = latest is not None and last_seen >= latest
+            outcome, end, listed_at_sale = ("active", today, None) if active else ("ended_unsold", _day(last_seen), None)
+        out[item_id] = {
+            "item_id": item_id,
+            "title": last["title"],
+            "part_number_norm": first["part_number_norm"],
+            "start_date": start.isoformat(),
+            "first_seen": first["snapshot_date"],
+            "last_seen": last_seen,
+            "first_price": first["current_price"],
+            "current_price": last["current_price"],
+            "price_changes": changes,
+            "best_offer_enabled": bool(last["best_offer_enabled"]),
+            "outcome": outcome,
+            "sold_date": sale[0][:10] if sale else None,
+            "sold_price": sale[1] if sale else None,
+            "listed_price_at_sale": listed_at_sale,
+            "days_listed": max(0, (end - start).days),
+            "days_to_sell": max(0, (end - start).days) if sale else None,
+        }
+    return out
+
+
+# ── Suggestion <-> listing linking ──────────────────────────────────────
+
+def link_listings(conn: sqlite3.Connection, window_days: int | None = None) -> int:
+    """Link each unlinked suggestion to a listing of the same part number that
+    started on or after the suggestion's day (within LISTING_LINK_WINDOW_DAYS),
+    nearest start first. One listing per suggestion and vice versa; oldest
+    suggestions are linked first. Stores the item ID on the suggestion."""
+    window = cfg.LISTING_LINK_WINDOW_DAYS if window_days is None else window_days
+    used = {r[0] for r in conn.execute(
+        "SELECT listing_item_id FROM price_suggestions WHERE listing_item_id IS NOT NULL")}
+    starts: dict[str, list] = {}
+    for item_id, pn, start, first_seen in conn.execute(
+            "SELECT item_id, part_number_norm, MIN(COALESCE(start_time, snapshot_date)), MIN(snapshot_date) "
+            "FROM listing_snapshots WHERE part_number_norm != '' GROUP BY item_id"):
+        starts.setdefault(pn, []).append((_day(start or first_seen), item_id))
+    for lst in starts.values():
+        lst.sort()
+    linked = 0
+    pending = conn.execute(
+        "SELECT id, timestamp, part_number_norm FROM price_suggestions "
+        "WHERE listing_item_id IS NULL AND part_number_norm != '' ORDER BY timestamp, id").fetchall()
+    for sid, ts, pn in pending:
+        day = _day(ts)
+        for start, item_id in starts.get(pn, []):
+            if start < day or item_id in used:
+                continue
+            if (start - day).days > window:
+                break
+            conn.execute("UPDATE price_suggestions SET listing_item_id = ? WHERE id = ?", (item_id, sid))
+            used.add(item_id)
+            linked += 1
+            break
+    conn.commit()
+    return linked

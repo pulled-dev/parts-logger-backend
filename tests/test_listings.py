@@ -262,3 +262,125 @@ def test_dry_run_writes_nothing(configured, conn):
     assert s["dry_run"] is True and s["new"] == 1
     assert conn.execute("SELECT COUNT(*) FROM listing_snapshots").fetchone()[0] == 0
     assert conn.execute("SELECT COUNT(*) FROM listing_snapshot_runs").fetchone()[0] == 0
+
+
+# ── History: price changes, days listed, sold / ended unsold ────────────
+
+from pricing.sales_import import import_rows  # noqa: E402
+
+_n = iter(range(1, 10_000))
+
+
+def sale(conn, item_id, title, price, day, postage="0"):
+    i = next(_n)
+    import_rows(conn, [{"order_number": f"L-{i}", "sales_record_number": str(i), "item_number": item_id,
+                        "title": title, "custom_label": "", "quantity": "1", "sold_for": str(price),
+                        "postage": postage, "total_price": "", "sale_date": day, "dispatched_date": ""}], "csv_clean")
+
+
+def three_days(conn, day1_items, day2_items, day3_items):
+    run_snapshot(conn, [page_xml(day1_items)], DAY1)
+    run_snapshot(conn, [page_xml(day2_items)], DAY2)
+    run_snapshot(conn, [page_xml(day3_items)], DAY3)
+
+
+def test_history_price_changes_and_days_listed(configured, conn):
+    three_days(conn, [item_xml("111", MOTOR, "29.99", start="2026-09-21T10:00:00.000Z")],
+               [item_xml("111", MOTOR, "24.99", start="2026-09-21T10:00:00.000Z")],
+               [item_xml("111", MOTOR, "27.99", start="2026-09-21T10:00:00.000Z")])
+    h = listings.listing_history(conn, today=DAY3.date())["111"]
+    assert h["first_price"] == 29.99 and h["current_price"] == 27.99
+    assert h["price_changes"] == [{"date": "2026-10-02", "from": 29.99, "to": 24.99},
+                                  {"date": "2026-10-03", "from": 24.99, "to": 27.99}]
+    assert h["outcome"] == "active" and h["start_date"] == "2026-09-21" and h["days_listed"] == 12
+    assert h["first_seen"] == "2026-10-01" and h["last_seen"] == "2026-10-03"
+
+
+def test_title_only_change_is_not_a_price_change(configured, conn):
+    three_days(conn, [item_xml("111", MOTOR, "29.99")], [item_xml("111", MOTOR + " Genuine", "29.99")],
+               [item_xml("111", MOTOR + " Genuine", "29.99")])
+    h = listings.listing_history(conn, today=DAY3.date())["111"]
+    assert h["price_changes"] == [] and h["title"].endswith("Genuine")
+    assert len(rows(conn, "111")) == 2
+
+
+def test_ended_unsold_vs_sold(configured, conn):
+    start = "2026-09-25T10:00:00.000Z"
+    both = [item_xml("111", MOTOR, "29.99", start=start), item_xml("222", PULL, "19.99", start=start)]
+    three_days(conn, both, both, [])  # both gone on day 3
+    sale(conn, "222", PULL, 17.00, "2026-10-02", postage="0")  # 222 sold (Best Offer below 19.99)
+    h = listings.listing_history(conn, today=DAY3.date())
+    assert h["111"]["outcome"] == "ended_unsold" and h["111"]["sold_price"] is None
+    assert h["111"]["days_listed"] == 7  # 25 Sep -> last seen 2 Oct
+    s = h["222"]
+    assert s["outcome"] == "sold" and s["sold_price"] == 17.0 and s["sold_date"] == "2026-10-02"
+    assert s["days_to_sell"] == 7 and s["listed_price_at_sale"] == 19.99
+
+
+def test_sale_imported_late_turns_ended_into_sold(configured, conn):
+    three_days(conn, [item_xml("111", MOTOR, "29.99")], [], [])
+    assert listings.listing_history(conn)["111"]["outcome"] == "ended_unsold"
+    sale(conn, "111", MOTOR, 29.99, "2026-10-01")
+    assert listings.listing_history(conn)["111"]["outcome"] == "sold"
+
+
+def test_sale_of_same_item_before_listing_start_is_ignored(configured, conn):
+    """An older sale under the same item number (before this listing started)
+    isn't this listing's sale."""
+    sale(conn, "111", MOTOR, 29.99, "2026-09-01")
+    run_snapshot(conn, [page_xml([item_xml("111", MOTOR, "29.99", start="2026-09-20T10:00:00.000Z")])], DAY1)
+    run_snapshot(conn, [page_xml([])], DAY2)
+    assert listings.listing_history(conn)["111"]["outcome"] == "ended_unsold"
+
+
+def test_sold_price_compared_at_the_price_in_force_on_sale_day(configured, conn):
+    three_days(conn, [item_xml("111", MOTOR, "29.99")], [item_xml("111", MOTOR, "24.99")], [])
+    sale(conn, "111", MOTOR, 24.99, "2026-10-02")
+    h = listings.listing_history(conn)["111"]
+    assert h["listed_price_at_sale"] == 24.99 and h["first_price"] == 29.99
+
+
+# ── Suggestion <-> listing linking ──────────────────────────────────────
+
+def suggestion(conn, pn, suggested, ts, final=None, current=None, mode="shadow"):
+    cur = conn.execute(
+        "INSERT INTO price_suggestions (timestamp, part_number_norm, part_type, suggested, confidence, source, "
+        "reason, mode, final_price, current_price) VALUES (?, ?, 'WINDOW MOTOR', ?, 'high', 'own_sold', 'r', ?, ?, ?)",
+        (ts, pn, suggested, mode, final, current))
+    conn.commit()
+    return cur.lastrowid
+
+
+def linked(conn, sid):
+    return conn.execute("SELECT listing_item_id FROM price_suggestions WHERE id = ?", (sid,)).fetchone()[0]
+
+
+def test_link_nearest_listing_on_or_after_suggestion(configured, conn):
+    s1 = suggestion(conn, "5Q0959802A", 30, "2026-09-20T09:00:00+00:00")
+    s2 = suggestion(conn, "5Q0959802A", 30, "2026-09-24T09:00:00+00:00")
+    other = suggestion(conn, "3C2823533", 20, "2026-09-20T09:00:00+00:00")
+    run_snapshot(conn, [page_xml([
+        item_xml("old", MOTOR, "29.99", start="2026-09-10T10:00:00.000Z"),   # before both: never linked
+        item_xml("near", MOTOR, "29.99", start="2026-09-21T10:00:00.000Z"),
+        item_xml("far", MOTOR, "29.99", start="2026-09-26T10:00:00.000Z"),
+    ])], DAY1)
+    assert linked(conn, s1) == "near"   # nearest after s1
+    assert linked(conn, s2) == "far"    # "near" started before s2 (and is taken)
+    assert linked(conn, other) is None  # different part number
+
+
+def test_link_same_day_and_one_to_one(configured, conn):
+    s1 = suggestion(conn, "5Q0959802A", 30, "2026-09-21T15:00:00+00:00")
+    s2 = suggestion(conn, "5Q0959802A", 30, "2026-09-21T16:00:00+00:00")
+    run_snapshot(conn, [page_xml([item_xml("a", MOTOR, "29.99", start="2026-09-21T08:00:00.000Z")])], DAY1)
+    assert linked(conn, s1) == "a" and linked(conn, s2) is None
+    run_snapshot(conn, [page_xml([item_xml("a", MOTOR, "29.99", start="2026-09-21T08:00:00.000Z"),
+                                  item_xml("b", MOTOR, "29.99", start="2026-09-30T08:00:00.000Z")])], DAY2)
+    assert linked(conn, s1) == "a" and linked(conn, s2) == "b"   # existing link never moves
+
+
+def test_link_window(configured, conn):
+    sid = suggestion(conn, "5Q0959802A", 30, "2026-07-01T09:00:00+00:00")
+    run_snapshot(conn, [page_xml([item_xml("late", MOTOR, "29.99", start="2026-09-21T08:00:00.000Z")])], DAY1)
+    assert linked(conn, sid) is None  # 82 days later: outside the 60-day window
+    assert listings.link_listings(conn, window_days=90) == 1 and linked(conn, sid) == "late"
