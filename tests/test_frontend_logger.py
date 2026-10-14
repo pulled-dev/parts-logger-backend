@@ -146,3 +146,11 @@ def test_badge_reason_and_check_marker_rendered():
     assert "${suggestionHtml(p)}" in s
     assert "Check price" in s
     assert "/price/suggest?" in s
+
+
+def test_final_prices_recorded_via_capture_listener():
+    s = _src()
+    assert "'/price/suggestions/final'" in s
+    assert "keepalive: true" in s
+    # capture phase on document -> runs before the export handler clears `parts`
+    assert re.search(r"closest\('#export-btn'\)\) recordFinalPrices\(\);\n\}, true\);", s)

@@ -11,11 +11,11 @@ import hmac
 import os
 
 from fastapi import APIRouter, Header, Query
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 
 import db
-from pricing import ebay_orders, engine, history, market, store
+from pricing import ebay_orders, engine, feedback, history, market, store
 from pricing.normalise import normalise
 from pricing.sales_import import import_rows, sanitise_row
 from pricing.titles import engine_group, parse_model
@@ -57,7 +57,10 @@ def import_sold_history(body: ImportBody, x_admin_token: str | None = Header(def
         return _err(400, f"max {MAX_IMPORT_ROWS} rows per request")
     rows = [sanitise_row(r) for r in body.rows]
     with store.session() as conn:
-        return import_rows(conn, rows, body.source, dry_run=body.dry_run)
+        summary = import_rows(conn, rows, body.source, dry_run=body.dry_run)
+        if not body.dry_run:
+            summary["suggestions_linked"] = feedback.link_sales(conn)
+        return summary
 
 
 @router.post("/price/sync-orders")
@@ -69,9 +72,12 @@ async def sync_orders(dry_run: bool = False, x_admin_token: str | None = Header(
         return _err(503, "Fulfillment sync not configured: set EBAY_USER_REFRESH_TOKEN (see HANDOFF.md)")
     with store.session() as conn:
         try:
-            return await ebay_orders.sync_orders(conn, dry_run=dry_run)
+            summary = await ebay_orders.sync_orders(conn, dry_run=dry_run)
         except Exception as e:  # surface eBay failures as 502, never a silent 500
             return _err(502, f"order sync failed: {e}")
+        if not dry_run:
+            summary["suggestions_linked"] = feedback.link_sales(conn)
+        return summary
 
 
 @router.get("/price/part-types")
@@ -100,6 +106,7 @@ async def price_suggest(
     part_number: str = Query(..., description="Part number, any format"),
     vehicle_ref: str | None = Query(None),
     part_type: str | None = Query(None, description="e.g. the description from /lookup"),
+    log: bool = Query(True, description="record this suggestion in price_suggestions"),
 ):
     pn = normalise(part_number)
     if not pn:
@@ -107,4 +114,46 @@ async def price_suggest(
     car = car_from_vehicle_ref(vehicle_ref)
     with store.session() as conn:
         mkt = await market.get_market(conn, pn)
-        return engine.suggest(conn, pn, part_type=part_type, car=car, market=mkt)
+        result = engine.suggest(conn, pn, part_type=part_type, car=car, market=mkt)
+        result["suggestion_id"] = feedback.log_suggestion(conn, result, _clean_ref(vehicle_ref)) if log else None
+        return result
+
+
+def _clean_ref(vehicle_ref: str | None) -> str | None:
+    if not vehicle_ref:
+        return None
+    try:
+        return db.normalise_ref(vehicle_ref)
+    except ValueError:
+        return vehicle_ref.strip()[:40] or None
+
+
+class FinalPrice(BaseModel):
+    suggestion_id: int
+    final_price: float
+
+
+class FinalsBody(BaseModel):
+    items: list[FinalPrice]
+
+
+@router.post("/price/suggestions/final")
+def suggestions_final(body: FinalsBody):
+    """Called by the logger on CSV export with each card's final price."""
+    if len(body.items) > 1000:
+        return _err(400, "max 1000 items")
+    with store.session() as conn:
+        return feedback.record_finals(conn, [i.model_dump() for i in body.items])
+
+
+@router.get("/price/report")
+def price_report(format: str = Query("json", pattern="^(json|csv)$")):
+    """Accuracy by confidence level + most-overridden part types. format=csv
+    downloads one row per suggestion."""
+    with store.session() as conn:
+        if format == "csv":
+            return Response(
+                content=feedback.report_csv(conn), media_type="text/csv",
+                headers={"Content-Disposition": "attachment; filename=price-suggestions.csv"},
+            )
+        return feedback.report(conn)

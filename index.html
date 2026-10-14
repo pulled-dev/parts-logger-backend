@@ -1909,6 +1909,30 @@ function applySuggestion(id, s) {
   updateStats();
 }
 
+// ── Pricing feedback ─────────────────────────────────────────────────────────
+// On export, tell the pricing engine what price each card actually went out at
+// (so overrides can be measured). Registered as a document-level CAPTURE
+// listener so it runs before the export handler clears the list, without
+// touching the export code. Fire-and-forget: it can never block the export.
+function recordFinalPrices() {
+  if (!cfg.url) return;
+  const items = parts
+    .filter(p => p.engine && p.engine.suggestion_id != null && p.your_price != null)
+    .map(p => ({ suggestion_id: p.engine.suggestion_id, final_price: Number(p.your_price) }));
+  if (!items.length) return;
+  try {
+    fetch(cfg.url + '/price/suggestions/final', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items }),
+      keepalive: true,
+    }).catch(() => {});
+  } catch (e) { /* never block the export */ }
+}
+document.addEventListener('click', e => {
+  if (e.target && e.target.closest && e.target.closest('#export-btn')) recordFinalPrices();
+}, true);
+
 // ── Add part ─────────────────────────────────────────────────────────────────
 async function addPart() {
   const pn  = pnInput.value.trim().toUpperCase();
