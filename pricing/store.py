@@ -77,7 +77,9 @@ _SCHEMA = [
         sold_price REAL,
         days_to_sell INTEGER,
         mode TEXT,                      -- shadow | live (PRICING_MODE when served)
-        current_price REAL              -- current-method price the logger was shown first
+        current_price REAL,             -- current-method price the logger was shown first
+        duration_ms INTEGER,            -- /price/suggest response time
+        market_status TEXT              -- cache | live | timeout | error | unconfigured
     )
     """,
     "CREATE INDEX IF NOT EXISTS ix_sugg_pn ON price_suggestions (part_number_norm, timestamp)",
@@ -105,6 +107,8 @@ _MIGRATIONS = [
     ("sold_history", "transaction_id", "TEXT NOT NULL DEFAULT ''"),
     ("price_suggestions", "mode", "TEXT"),
     ("price_suggestions", "current_price", "REAL"),
+    ("price_suggestions", "duration_ms", "INTEGER"),
+    ("price_suggestions", "market_status", "TEXT"),
 ]
 
 

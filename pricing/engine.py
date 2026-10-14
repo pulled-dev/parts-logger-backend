@@ -168,7 +168,8 @@ def _breakerpro_exact_price(pn: str) -> float | None:
 # ── Main entry point ────────────────────────────────────────────────────
 
 def suggest(conn: sqlite3.Connection, part_number: str, *, part_type: str | None = None,
-            car: dict | None = None, market: dict | None = None, as_of: date | None = None) -> dict:
+            car: dict | None = None, market: dict | None = None, as_of: date | None = None,
+            market_pending: bool = False) -> dict:
     """Suggest a total (item + P&P) listing price.
 
     car:    {"model", "generation", "engine_group"} for the part-type fallback.
@@ -274,6 +275,8 @@ def suggest(conn: sqlite3.Connection, part_number: str, *, part_type: str | None
         if suggested < floor:
             suggested = floor
             reasons.append(f"raised to the {_gbp(floor)} minimum")
+    if market_pending:
+        reasons.append("live prices still loading")
     if conf == LOW:
         reasons.append("check price")
 

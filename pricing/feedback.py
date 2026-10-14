@@ -28,13 +28,14 @@ ENGINE_BAND_PCT = 5                # listed within ±5% of the engine = "at engi
 METHODS = (("current", "current_price"), ("engine", "suggested"), ("final", "final_price"))
 
 
-def log_suggestion(conn: sqlite3.Connection, result: dict, vehicle_ref: str | None, mode: str = "shadow") -> int:
+def log_suggestion(conn: sqlite3.Connection, result: dict, vehicle_ref: str | None, mode: str = "shadow",
+                   duration_ms: int | None = None, market_status: str | None = None) -> int:
     cur = conn.execute(
         "INSERT INTO price_suggestions (timestamp, part_number_norm, vehicle_ref, part_type, suggested, "
-        "confidence, source, reason, mode) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "confidence, source, reason, mode, duration_ms, market_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (datetime.now(timezone.utc).isoformat(timespec="seconds"), result["part_number"], vehicle_ref or None,
          result.get("part_type") or "", result["suggested_price"], result["confidence"], result["source"],
-         result["reason"], mode),
+         result["reason"], mode, duration_ms, market_status),
     )
     conn.commit()
     return cur.lastrowid
@@ -120,6 +121,24 @@ def _accuracy(rows, col: str, target: str = "sold_price") -> dict:
         "pct_within_15": round(100 * sum(e <= WITHIN_PCT for e in errs) / len(errs), 1),
         "median_bias_pct": round(statistics.median((p - t) / t * 100 for p, t in pairs), 1),
     }
+
+
+def percentile(values: list[float], pct: float) -> float | None:
+    """Nearest-rank percentile (pct in 0-100)."""
+    vals = sorted(v for v in values if v is not None)
+    if not vals:
+        return None
+    rank = max(1, -(-len(vals) * pct // 100))  # ceil(len * pct / 100)
+    return vals[int(rank) - 1]
+
+
+def response_times(rows) -> dict:
+    ms = [r["duration_ms"] for r in rows if r["duration_ms"] is not None]
+    statuses: dict[str, int] = {}
+    for r in rows:
+        if r["market_status"]:
+            statuses[r["market_status"]] = statuses.get(r["market_status"], 0) + 1
+    return {"n": len(ms), "median_ms": _median(ms), "p95_ms": percentile(ms, 95), "market_status": statuses}
 
 
 def _median(values):
@@ -224,6 +243,7 @@ def report(conn: sqlite3.Connection, top: int = 15, items: int = 200) -> dict:
     return {
         "total_suggestions": len(rows),
         "by_mode": by_mode,
+        "response_time": response_times(rows),
         "listing": listing,
         "after_sale": after_sale,
         "days_to_sell": days,

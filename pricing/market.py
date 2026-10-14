@@ -12,8 +12,10 @@ Snapshots are cached in market_snapshots for MARKET_CACHE_DAYS.
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
+import logging
 import os
 import sqlite3
 import statistics
@@ -23,7 +25,13 @@ from datetime import datetime, timedelta, timezone
 import httpx
 
 import pricing_config as cfg
+from pricing import store
 from pricing.normalise import base_number, extract_part_numbers, normalise, spaced
+
+log = logging.getLogger(__name__)
+
+# eBay app-token and Browse calls: connect 3s / read 5s.
+TIMEOUT = httpx.Timeout(5.0, connect=3.0)
 
 TOKEN_URL = "https://api.ebay.com/identity/v1/oauth2/token"
 SEARCH_URL = "https://api.ebay.com/buy/browse/v1/item_summary/search"
@@ -45,7 +53,7 @@ async def get_app_token(client: httpx.AsyncClient) -> str:
         TOKEN_URL,
         headers={"Authorization": f"Basic {creds}", "Content-Type": "application/x-www-form-urlencoded"},
         data={"grant_type": "client_credentials", "scope": "https://api.ebay.com/oauth/api_scope"},
-        timeout=10,
+        timeout=TIMEOUT,
     )
     if resp.status_code != 200:
         raise RuntimeError(f"eBay app token failed: HTTP {resp.status_code}")
@@ -76,7 +84,7 @@ async def search(client: httpx.AsyncClient, token: str, query: str) -> list[dict
         },
         params={"q": query, "category_ids": cfg.EBAY_CATEGORY_ID, "filter": search_filter(),
                 "limit": str(cfg.EBAY_SEARCH_LIMIT)},
-        timeout=10,
+        timeout=TIMEOUT,
     )
     if resp.status_code != 200:
         raise RuntimeError(f"Browse search failed: HTTP {resp.status_code}")
@@ -199,7 +207,7 @@ async def get_market(conn: sqlite3.Connection, part_number: str, client: httpx.A
     if not is_configured():
         return None
     own_client = client is None
-    client = client or httpx.AsyncClient()
+    client = client or httpx.AsyncClient(timeout=TIMEOUT)
     try:
         token = await get_app_token(client)
         query = pn
@@ -225,3 +233,101 @@ async def get_market(conn: sqlite3.Connection, part_number: str, client: httpx.A
     )
     conn.commit()
     return {k: stats[k] for k in ("count", "lq", "median", "min", "max")} | {"fetched_at": fetched_at, "cached": False}
+
+
+# ── Time budget + background refresh ─────────────────────────────────────
+# One background lookup per part number at a time. A request that runs out of
+# budget leaves the lookup running; it lands in market_snapshots for next time.
+
+_inflight: dict[str, asyncio.Task] = {}
+
+
+def client_factory() -> httpx.AsyncClient:
+    """Overridable in tests (fake slow clients)."""
+    return httpx.AsyncClient(timeout=TIMEOUT)
+
+
+async def _refresh(pn: str) -> dict | None:
+    try:
+        async with client_factory() as client:
+            with store.session() as conn:
+                return await get_market(conn, pn, client=client, force=True)
+    except Exception as e:  # never let a background lookup crash the app
+        log.warning("Background market lookup failed for %s: %s", pn, type(e).__name__)
+        return None
+
+
+def ensure_refresh(pn: str) -> asyncio.Task:
+    """The running lookup for this part number, or a new one."""
+    loop = asyncio.get_running_loop()
+    task = _inflight.get(pn)
+    if task is not None and not task.done() and task.get_loop() is loop:
+        return task
+    task = loop.create_task(_refresh(pn))
+    _inflight[pn] = task
+
+    def _done(t, pn=pn):
+        if _inflight.get(pn) is t:
+            del _inflight[pn]
+
+    task.add_done_callback(_done)
+    return task
+
+
+def inflight_count() -> int:
+    return sum(1 for t in _inflight.values() if not t.done())
+
+
+async def market_within_budget(conn: sqlite3.Connection, part_number: str,
+                               budget: float | None = None) -> tuple[dict | None, str]:
+    """(market stats or None, status). Status: cache | live | timeout | error | unconfigured."""
+    pn = normalise(part_number)
+    if not pn:
+        return None, "error"
+    hit = cached_snapshot(conn, pn)
+    if hit:
+        return hit, "cache"
+    if not is_configured():
+        return None, "unconfigured"
+    task = ensure_refresh(pn)
+    budget = cfg.MARKET_TIME_BUDGET_SECONDS if budget is None else budget
+    try:
+        result = await asyncio.wait_for(asyncio.shield(task), timeout=budget)
+    except asyncio.TimeoutError:
+        return None, "timeout"
+    return (result, "live") if result is not None else (None, "error")
+
+
+# ── Nightly pre-warm ─────────────────────────────────────────────────────
+
+async def prewarm(conn: sqlite3.Connection, max_lookups: int | None = None,
+                  now: datetime | None = None) -> dict:
+    """Refresh stale market snapshots for the part numbers we sell most.
+
+    Most-sold first; only where there's no snapshot younger than
+    MARKET_CACHE_DAYS; at most MARKET_PREWARM_MAX_PER_NIGHT lookups."""
+    if not is_configured():
+        msg = "Market pre-warm skipped: EBAY_APP_ID / EBAY_CERT_ID not set"
+        log.warning(msg)
+        print(msg)
+        return {"skipped": True, "reason": msg, "refreshed": 0}
+    cap = cfg.MARKET_PREWARM_MAX_PER_NIGHT if max_lookups is None else max_lookups
+    now = now or datetime.now(timezone.utc)
+    candidates = [r[0] for r in conn.execute(
+        "SELECT part_number_norm, COUNT(*) n FROM sold_history WHERE part_number_norm != '' "
+        "GROUP BY part_number_norm ORDER BY n DESC, part_number_norm"
+    )]
+    refreshed, fresh, failed = 0, 0, 0
+    for pn in candidates:
+        if refreshed + failed >= cap:
+            break
+        if cached_snapshot(conn, pn, now):
+            fresh += 1
+            continue
+        result = await ensure_refresh(pn)
+        if result is None:
+            failed += 1
+        else:
+            refreshed += 1
+    return {"skipped": False, "candidates": len(candidates), "refreshed": refreshed,
+            "already_fresh": fresh, "failed": failed, "cap": cap}

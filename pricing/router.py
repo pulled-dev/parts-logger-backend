@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hmac
 import os
+import time
 
 import pricing_config as cfg
 
@@ -123,15 +124,23 @@ async def price_suggest(
     pn = normalise(part_number)
     if not pn:
         return _err(400, "part_number is not a recognisable part number")
+    started = time.perf_counter()
     car = car_from_vehicle_ref(vehicle_ref)
     with store.session() as conn:
-        mkt = await market.get_market(conn, pn)
-        result = engine.suggest(conn, pn, part_type=part_type, car=car, market=mkt)
+        mkt, market_status = await market.market_within_budget(conn, pn)
+        result = engine.suggest(conn, pn, part_type=part_type, car=car, market=mkt,
+                                market_pending=market_status == "timeout")
         mode = pricing_mode()
+        duration_ms = int((time.perf_counter() - started) * 1000)
         result["mode"] = mode
+        result["market_status"] = market_status
+        result["duration_ms"] = duration_ms
         result["suggestion_id"] = (
-            feedback.log_suggestion(conn, result, _clean_ref(vehicle_ref), mode=mode) if log else None
+            feedback.log_suggestion(conn, result, _clean_ref(vehicle_ref), mode=mode,
+                                    duration_ms=duration_ms, market_status=market_status)
+            if log else None
         )
+        print(f"/price/suggest {pn} {duration_ms}ms market={market_status}")
         return result
 
 
@@ -176,3 +185,13 @@ def price_report(format: str = Query("json", pattern="^(json|csv)$")):
                 headers={"Content-Disposition": "attachment; filename=price-suggestions.csv"},
             )
         return feedback.report(conn)
+
+
+@router.post("/price/prewarm")
+async def price_prewarm(max_lookups: int | None = None, x_admin_token: str | None = Header(default=None)):
+    """Run the nightly market-cache pre-warm now (admin only)."""
+    denied = _check_admin(x_admin_token)
+    if denied:
+        return denied
+    with store.session() as conn:
+        return await market.prewarm(conn, max_lookups=max_lookups)

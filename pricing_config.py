@@ -23,6 +23,11 @@ MIN_MARKET_COMPS = 3             # need this many competitor listings to use the
 MARKET_DIVERGENCE_PCT = 25       # own vs market gap that triggers a nudge
 MARKET_NUDGE = 0.30              # how far to move toward the market when it diverges
 MARKET_CACHE_DAYS = 7            # reuse a part number's market snapshot for N days
+MARKET_TIME_BUDGET_SECONDS = 3   # /price/suggest waits at most this long for live eBay prices;
+                                 # after that it answers without them ("live prices still
+                                 # loading") and the lookup finishes in the background
+MARKET_PREWARM_MAX_PER_NIGHT = 300  # nightly cache refresh: at most this many part numbers
+MARKET_PREWARM_HOUR_UTC = 2      # when the nightly refresh runs (02:00 UTC)
 MARKET_HIGH_CONF_COMPS = 5       # >= this many comps with a tight spread -> High
 MARKET_TIGHT_SPREAD = 0.35       # (median - lower quartile) / median at or under this = tight
 MARKET_REQUIRE_PN_IN_TITLE = True  # drop listings whose title doesn't carry the part number
