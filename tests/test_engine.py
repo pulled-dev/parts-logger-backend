@@ -248,3 +248,9 @@ def test_reason_only_mentions_live_listings_when_market_checked(conn):
     r = suggest(conn, "9Z9 111 113", market={"count": 0, "lq": None, "median": None, "min": None, "max": None},
                 as_of=AS_OF)
     assert r["reason"].startswith("no sales or usable live listings")
+
+
+def test_part_type_resolution_does_not_peek(conn):
+    add_sales(conn, "Volkswagen Golf Mk7 WINDOW MOTOR (FRONT) 5Q0 959 802 A", [30], days_ago=0)
+    r = suggest(conn, "5G0 959 802 F", as_of=AS_OF)  # the only evidence is on as_of itself
+    assert r["part_type"] != "WINDOW MOTOR FRONT"

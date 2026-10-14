@@ -86,7 +86,7 @@ def _span(dates: list[str], as_of: date) -> str:
 
 # ── Part type resolution ────────────────────────────────────────────────
 
-def resolve_part_type(conn: sqlite3.Connection, pn: str, given: str | None) -> str:
+def resolve_part_type(conn: sqlite3.Connection, pn: str, given: str | None, before: str | None = None) -> str:
     """Part type key for the §4c index.
 
     Our own titles are what the index is keyed on, so the part type we've
@@ -104,8 +104,8 @@ def resolve_part_type(conn: sqlite3.Connection, pn: str, given: str | None) -> s
                 continue
             row = conn.execute(
                 f"SELECT part_type, COUNT(*) n FROM sold_history WHERE {sql} AND part_type != '' "
-                "GROUP BY part_type ORDER BY n DESC, part_type LIMIT 1",
-                (arg,),
+                "AND (? IS NULL OR sold_date < ?) GROUP BY part_type ORDER BY n DESC, part_type LIMIT 1",
+                (arg, before, before),
             ).fetchone()
             if row:
                 return row[0]
@@ -126,6 +126,18 @@ def _db_description(pn: str) -> str:
     except Exception:
         return ""
     return (hit or {}).get("description", "")
+
+
+def _breakerpro_exact_price(pn: str) -> float | None:
+    if not pn:
+        return None
+    try:
+        from vag_lookup import get_db
+        entry = get_db().get("exact", {}).get(pn)
+    except Exception:
+        return None
+    price = (entry or {}).get("breakerpro_price")
+    return float(price) if price else None
 
 
 def _breakerpro_group_price(pn: str) -> float | None:
@@ -157,7 +169,7 @@ def suggest(conn: sqlite3.Connection, part_number: str, *, part_type: str | None
     pn = normalise(part_number)
     base = base_number(pn) if pn else ""
     car = car or {}
-    ptype = resolve_part_type(conn, pn, part_type)
+    ptype = resolve_part_type(conn, pn, part_type, before)
 
     # 1. Own comps by part number.
     exact = history.own_sales(conn, part_number=pn, before=before, lookback_days=look) if pn else []
@@ -263,6 +275,12 @@ def _fallback(conn, pn, ptype, car, before, look, nothing):
     model = (car.get("model") or "").upper()
     gen = (car.get("generation") or "").upper()
     eng = (car.get("engine_group") or "").upper()
+
+    if cfg.USE_BREAKERPRO_EXACT:
+        bp_exact = _breakerpro_exact_price(pn)
+        if bp_exact:
+            return (bp_exact, "breakerpro_exact", LOW, "breakerpro_exact",
+                    f"{nothing} · our last BreakerPro price for this number ({_gbp(bp_exact)})")
 
     if ptype and model:
         level, rows = history.part_type_sales(

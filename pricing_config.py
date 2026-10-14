@@ -24,6 +24,11 @@ EBAY_USED_CONDITION_IDS = ("3000",)  # Used
 EBAY_SEARCH_LIMIT = 100
 
 # ── Fallbacks ───────────────────────────────────────────────────────────
+# Opt-in, NOT in the spec: when there are no own sales and no usable market,
+# try our last BreakerPro asking price for this exact number (vag_parts_db.json)
+# before the part-type rung. See docs/pricing-backtest.md for the evidence and
+# its caveat before turning this on.
+USE_BREAKERPRO_EXACT = False
 PART_TYPE_MIN_SALES = 2          # own sales of the same part type + car needed to use that rung
 PART_TYPE_MEDIUM_SALES = 5       # >= this many -> Medium confidence, else Low
 DEFAULT_PRICE = 24.99            # last resort (overall median sale is ~£25)
