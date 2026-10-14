@@ -79,7 +79,11 @@ _SCHEMA = [
         mode TEXT,                      -- shadow | live (PRICING_MODE when served)
         current_price REAL,             -- current-method price the logger was shown first
         duration_ms INTEGER,            -- /price/suggest response time
-        market_status TEXT              -- cache | live | timeout | error | unconfigured
+        market_status TEXT,             -- cache | live | timeout | error | unconfigured
+        engine_nwl INTEGER,             -- engine price was under NOT_WORTH_LISTING_BELOW
+        nwl_warned INTEGER,             -- logger was shown the "not worth listing" warning
+        nwl_price_shown REAL,           -- the price the warning was judged on
+        nwl_basis TEXT                  -- evidence shown with it, e.g. "our last 3 sales £5–£7"
     )
     """,
     "CREATE INDEX IF NOT EXISTS ix_sugg_pn ON price_suggestions (part_number_norm, timestamp)",
@@ -109,6 +113,10 @@ _MIGRATIONS = [
     ("price_suggestions", "current_price", "REAL"),
     ("price_suggestions", "duration_ms", "INTEGER"),
     ("price_suggestions", "market_status", "TEXT"),
+    ("price_suggestions", "engine_nwl", "INTEGER"),
+    ("price_suggestions", "nwl_warned", "INTEGER"),
+    ("price_suggestions", "nwl_price_shown", "REAL"),
+    ("price_suggestions", "nwl_basis", "TEXT"),
 ]
 
 

@@ -24,6 +24,7 @@ from lookup_router import router as lookup_router
 from pricing.router import router as pricing_router
 from pricing.store import init_pricing_db
 from pricing.router import pricing_mode
+import pricing_config as _pcfg
 from pricing import ebay_orders
 
 # ── CONFIG ───────────────────────────────────────────────────────
@@ -138,6 +139,7 @@ class HealthResponse(BaseModel):
     ebay_configured: bool
     claude_configured: bool
     pricing_mode: str = "shadow"
+    not_worth_listing_below: float = 8.0
 
 # ── MOCK DATA ────────────────────────────────────────────────────
 
@@ -349,6 +351,7 @@ async def health():
         ebay_configured=bool(EBAY_APP_ID and EBAY_CERT_ID),
         claude_configured=bool(ANTHROPIC_API_KEY),
         pricing_mode=pricing_mode(),
+        not_worth_listing_below=_pcfg.NOT_WORTH_LISTING_BELOW,
     )
 
 

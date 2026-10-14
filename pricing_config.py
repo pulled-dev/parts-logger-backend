@@ -72,11 +72,16 @@ PART_TYPE_MEDIUM_SALES = 5       # >= this many -> Medium confidence, else Low
 # the engine gives no price, Low / "Check price", and the logger keeps the
 # current-method price.
 
-# ── Rounding and floor ──────────────────────────────────────────────────
+# ── Rounding ────────────────────────────────────────────────────────────
 # "x99_then_5": nearest £x.99 under £50, nearest £5 minus 1p at £50+.
 # "none": round to the penny only.
 ROUNDING_RULE = "x99_then_5"
 ROUNDING_THRESHOLD = 50.0
-# Floor so nothing is suggested below what's worth photographing and listing.
-MIN_LIST_PRICE = 9.99
-MIN_LIST_PRICE_BY_TYPE: dict[str, float] = {}   # e.g. {"DOOR BARE": 79.99}
+
+# ── Not worth listing ───────────────────────────────────────────────────
+# Below this TOTAL price (GBP, including postage) eBay fees + VAT + free postage
+# + labour make the part a net loss: better to scrap it. A price under this is
+# never raised or changed. The logger just shows an amber "not worth listing,
+# consider scrap" warning, and can still list it. Change the number here and
+# redeploy; no other code changes are needed.
+NOT_WORTH_LISTING_BELOW = 8.00

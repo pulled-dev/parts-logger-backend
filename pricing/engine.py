@@ -28,7 +28,8 @@ Ladder
      pinned prices.
    Nothing is borrowed across models or generations (the old cross-model
    BreakerPro group average and "any model" medians were removed).
-Then rounding and the per-category floor.
+Then rounding. There is NO price floor: a low price is returned as-is and
+flagged not_worth_listing when under NOT_WORTH_LISTING_BELOW.
 """
 
 from __future__ import annotations
@@ -95,8 +96,27 @@ def is_variant_sensitive(part_type: str) -> bool:
     return any(has(p) for p in cfg.VARIANT_SENSITIVE_PART_TYPES)
 
 
-def floor_for(part_type: str) -> float:
-    return max(cfg.MIN_LIST_PRICE, cfg.MIN_LIST_PRICE_BY_TYPE.get(part_type, 0.0))
+def not_worth_listing(price: float | None) -> bool:
+    """Under NOT_WORTH_LISTING_BELOW (strictly). No price -> no warning."""
+    return price is not None and price < cfg.NOT_WORTH_LISTING_BELOW
+
+
+def _range(prices: list[float]) -> str:
+    lo, hi = min(prices), max(prices)
+    return _gbp(lo) if abs(hi - lo) < 0.005 else f"{_gbp(lo)}–{_gbp(hi)}"
+
+
+def _evidence_own(own: list[tuple[float, str]], match: str) -> str:
+    n = len(own)
+    what = "sale" if n == 1 else "sales"
+    base = " (index letter differs)" if match == "base" else ""
+    return f"our last {n} {what}{base} {_range([p for p, _ in own])}"
+
+
+def _evidence_market(market: dict) -> str:
+    if market.get("min") is None:
+        return f"{market['count']} live competitors"
+    return f"{market['count']} live competitors {_range([market['min'], market['max']])}"
 
 
 def _gbp(x: float) -> str:
@@ -222,6 +242,11 @@ def suggest(conn: sqlite3.Connection, part_number: str, *, part_type: str | None
                if mkt_ok and market.get("min") is not None else "")
 
     price = None
+    evidence: list[str] = []
+    if own:
+        evidence.append(_evidence_own(own, match))
+    if mkt_ok:
+        evidence.append(_evidence_market(market))
     if own and len(own) >= cfg.MIN_OWN_SALES:
         price, source = own_med, "own_sold"
         conf = HIGH if match == "exact" else MEDIUM
@@ -262,19 +287,19 @@ def suggest(conn: sqlite3.Connection, part_number: str, *, part_type: str | None
             reasons.append(f"{nothing} · {ptype.lower()} prices depend on the exact variant, so no price is "
                            f"suggested · {ref}")
         else:
-            price, source, conf, match, fb_reason = _fallback(conn, pn, ptype, car, before, look, nothing)
+            price, source, conf, match, fb_reason, fb_evidence = _fallback(conn, pn, ptype, car, before, look,
+                                                                           nothing)
             reasons.append(fb_reason)
+            if fb_evidence:
+                evidence.append(fb_evidence)
         if mkt_block:
             reasons.append(f"only {market['count']} live competitor{'s' if market['count'] != 1 else ''}")
 
     raw = price
-    suggested = None
-    if raw is not None:
-        suggested = round_price(raw)
-        floor = floor_for(ptype)
-        if suggested < floor:
-            suggested = floor
-            reasons.append(f"raised to the {_gbp(floor)} minimum")
+    suggested = None if raw is None else round_price(raw)  # never raised to a floor
+    nwl = not_worth_listing(suggested)
+    if nwl:
+        reasons.append(f"under {_gbp(cfg.NOT_WORTH_LISTING_BELOW)}: not worth listing, consider scrap")
     if market_pending:
         reasons.append("live prices still loading")
     if conf == LOW:
@@ -293,6 +318,10 @@ def suggest(conn: sqlite3.Connection, part_number: str, *, part_type: str | None
         "check_price": conf == LOW,
         "raw_price": None if raw is None else round(raw, 2),
         "group_range": group_range,
+        "not_worth_listing": nwl,
+        "not_worth_listing_below": cfg.NOT_WORTH_LISTING_BELOW,
+        # what the price is based on, e.g. "our last 3 sales £5–£7" (empty if no price)
+        "evidence": " + ".join(evidence) if suggested is not None else "",
     }
 
 
@@ -332,7 +361,8 @@ def _fallback(conn, pn, ptype, car, before, look, nothing):
         bp_exact = _breakerpro_exact_price(pn)
         if bp_exact:
             return (bp_exact, "breakerpro_exact", LOW, "breakerpro_exact",
-                    f"{nothing} · our last BreakerPro price for this number ({_gbp(bp_exact)})")
+                    f"{nothing} · our last BreakerPro price for this number ({_gbp(bp_exact)})",
+                    f"our BreakerPro price on file {_gbp(bp_exact)}")
 
     if ptype and model and gen:
         level, rows = history.part_type_sales(
@@ -343,7 +373,8 @@ def _fallback(conn, pn, ptype, car, before, look, nothing):
             car_label = _car_label(car, with_engine="engine" in level)
             conf = MEDIUM if len(rows) >= cfg.PART_TYPE_MEDIUM_SALES else LOW
             return (med, "part_type", conf, "part_type",
-                    f"{nothing} · {len(rows)} of our {car_label} {ptype.lower()} sales (median {_gbp(med)})")
+                    f"{nothing} · {len(rows)} of our {car_label} {ptype.lower()} sales (median {_gbp(med)})",
+                    f"our last {len(rows)} {car_label} {ptype.lower()} sales {_range([p for p, _ in rows])}")
 
     # No real evidence: no flat default. Give no price so the logger keeps the
     # current-method price, and say what was checked.
@@ -353,4 +384,4 @@ def _fallback(conn, pn, ptype, car, before, look, nothing):
         what = "no vehicle model/generation to compare against"
     else:
         what = "part type unknown"
-    return None, "no_evidence", LOW, "none", f"{nothing} · {what}, so no price is suggested"
+    return None, "no_evidence", LOW, "none", f"{nothing} · {what}, so no price is suggested", ""

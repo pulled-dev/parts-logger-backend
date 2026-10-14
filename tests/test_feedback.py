@@ -197,3 +197,50 @@ def test_migration_adds_columns_to_existing_table(tmp_path):
     assert {"mode", "current_price"} <= cols
     assert c.execute("SELECT COUNT(*) FROM price_suggestions").fetchone()[0] == 1
     c.close()
+
+
+# ── Not worth listing ──────────────────────────────────────────────────
+
+def test_engine_flag_logged_with_suggestion(client, conn):
+    for p, d in ((5, "2026-09-01"), (6, "2026-09-02"), (7, "2026-09-03")):
+        sale(conn, "Golf Mk7 BULB HOLDER 5Q0 945 999", p, d)
+    r = client.get("/price/suggest", params={"part_number": "5Q0945999"}).json()
+    assert r["not_worth_listing"] is True and r["not_worth_listing_below"] == 8.0
+    row = conn.execute("SELECT engine_nwl FROM price_suggestions WHERE id=?", (r["suggestion_id"],)).fetchone()
+    assert row[0] == 1
+
+
+def test_warning_endpoint_records_and_404s(client, conn):
+    sid = suggestion(conn, "1K0959653D", 5.99, mode="shadow")
+    r = client.post(f"/price/suggestions/{sid}/warning", json={"price_shown": 5.99, "basis": "our last 3 sales £5–£7"})
+    assert r.status_code == 200 and r.json() == {"recorded": True}
+    row = conn.execute("SELECT nwl_warned, nwl_price_shown, nwl_basis FROM price_suggestions WHERE id=?", (sid,)).fetchone()
+    assert tuple(row) == (1, 5.99, "our last 3 sales £5–£7")
+    assert client.post("/price/suggestions/99999/warning", json={"price_shown": 1}).status_code == 404
+
+
+def test_report_not_worth_listing_section(client, conn):
+    a = suggestion(conn, "1K0959653D", 5.99, mode="shadow")                                   # warned, listed, sold
+    b = suggestion(conn, "6Q0953503E", 4.99, mode="shadow", ts="2026-09-02T10:00:00+00:00")   # warned, not listed
+    c = suggestion(conn, "5Q0959802A", 29.99, mode="shadow")                                  # no warning
+    for sid, price in ((a, 5.99), (b, 4.99)):
+        client.post(f"/price/suggestions/{sid}/warning", json={"price_shown": price, "basis": "x"})
+    feedback.record_finals(conn, [{"suggestion_id": a, "final_price": 9.99, "current_price": 5.99},
+                                  {"suggestion_id": c, "final_price": 29.99, "current_price": 29.99}])
+    sale(conn, "SLIP RING 1K0 959 653 D", 9.5, "2026-09-08")
+    nwl = client.get("/price/report").json()["not_worth_listing"]
+    assert nwl["threshold"] == 8.0
+    assert nwl["warned"] == 2 and nwl["listed_anyway"] == 1 and nwl["not_listed"] == 1
+    assert nwl["listed_anyway_pct"] == 50.0
+    assert nwl["listed_anyway_sold"] == 1 and nwl["sold_median_price"] == 9.5 and nwl["sold_median_days"] == 7
+    assert nwl["sold_at_or_above_threshold"] == 1
+    rows = list(csv.DictReader(io.StringIO(client.get("/price/report", params={"format": "csv"}).text)))
+    warned = [r for r in rows if r["not_worth_listing_warned"] == "yes"]
+    assert len(warned) == 2 and {r["not_worth_listing_price_shown"] for r in warned} == {"5.99", "4.99"}
+
+
+def test_health_exposes_threshold(client, monkeypatch):
+    import pricing_config as pcfg
+    assert client.get("/health").json()["not_worth_listing_below"] == 8.0
+    monkeypatch.setattr(pcfg, "NOT_WORTH_LISTING_BELOW", 10.0)
+    assert client.get("/health").json()["not_worth_listing_below"] == 10.0

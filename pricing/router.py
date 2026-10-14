@@ -173,6 +173,20 @@ def suggestions_final(body: FinalsBody):
         return feedback.record_finals(conn, [i.model_dump() for i in body.items])
 
 
+class WarningBody(BaseModel):
+    price_shown: float
+    basis: str = ""
+
+
+@router.post("/price/suggestions/{suggestion_id}/warning")
+def suggestion_warning(suggestion_id: int, body: WarningBody):
+    """The logger showed the 'not worth listing' warning on this card."""
+    with store.session() as conn:
+        if not feedback.record_warning(conn, suggestion_id, body.price_shown, body.basis):
+            return _err(404, "unknown suggestion_id")
+        return {"recorded": True}
+
+
 @router.get("/price/report")
 def price_report(format: str = Query("json", pattern="^(json|csv)$")):
     """Current method vs engine vs final listed price (and vs the sold price

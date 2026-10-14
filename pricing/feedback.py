@@ -21,6 +21,8 @@ import sqlite3
 import statistics
 from datetime import date, datetime, timezone
 
+import pricing_config as cfg
+
 LINK_WINDOW_DAYS = 365
 WITHIN_PCT = 15
 SAME_PRICE_TOLERANCE = 0.005       # prices within half a penny are "the same"
@@ -32,13 +34,44 @@ def log_suggestion(conn: sqlite3.Connection, result: dict, vehicle_ref: str | No
                    duration_ms: int | None = None, market_status: str | None = None) -> int:
     cur = conn.execute(
         "INSERT INTO price_suggestions (timestamp, part_number_norm, vehicle_ref, part_type, suggested, "
-        "confidence, source, reason, mode, duration_ms, market_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "confidence, source, reason, mode, duration_ms, market_status, engine_nwl) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (datetime.now(timezone.utc).isoformat(timespec="seconds"), result["part_number"], vehicle_ref or None,
          result.get("part_type") or "", result["suggested_price"], result["confidence"], result["source"],
-         result["reason"], mode, duration_ms, market_status),
+         result["reason"], mode, duration_ms, market_status, int(bool(result.get("not_worth_listing")))),
     )
     conn.commit()
     return cur.lastrowid
+
+
+def record_warning(conn: sqlite3.Connection, suggestion_id: int, price_shown: float, basis: str = "") -> bool:
+    """The logger was shown the 'not worth listing' warning for this card."""
+    cur = conn.execute(
+        "UPDATE price_suggestions SET nwl_warned = 1, nwl_price_shown = ?, nwl_basis = ? WHERE id = ?",
+        (round(float(price_shown), 2), (basis or "")[:200], suggestion_id),
+    )
+    conn.commit()
+    return cur.rowcount > 0
+
+
+def not_worth_listing_report(rows, threshold: float) -> dict:
+    """Warnings shown, how many were listed anyway (exported with a final price),
+    and how those sold."""
+    warned = [r for r in rows if r["nwl_warned"]]
+    listed = [r for r in warned if r["final_price"] is not None]
+    sold = [r for r in listed if r["sold_price"] is not None]
+    return {
+        "threshold": threshold,
+        "warned": len(warned),
+        "listed_anyway": len(listed),
+        "not_listed": len(warned) - len(listed),
+        "listed_anyway_pct": round(100 * len(listed) / len(warned), 1) if warned else None,
+        "listed_anyway_sold": len(sold),
+        "sold_median_price": _median(r["sold_price"] for r in sold),
+        "sold_median_days": _median(r["days_to_sell"] for r in sold),
+        "sold_at_or_above_threshold": sum(r["sold_price"] >= threshold for r in sold),
+        "engine_flagged": sum(1 for r in rows if r["engine_nwl"]),
+    }
 
 
 def shown_price(row) -> float | None:
@@ -244,6 +277,7 @@ def report(conn: sqlite3.Connection, top: int = 15, items: int = 200) -> dict:
         "total_suggestions": len(rows),
         "by_mode": by_mode,
         "response_time": response_times(rows),
+        "not_worth_listing": not_worth_listing_report(rows, cfg.NOT_WORTH_LISTING_BELOW),
         "listing": listing,
         "after_sale": after_sale,
         "days_to_sell": days,
@@ -255,7 +289,8 @@ def report(conn: sqlite3.Connection, top: int = 15, items: int = 200) -> dict:
 
 CSV_COLUMNS = ["timestamp", "mode", "part_number", "vehicle_ref", "part_type", "confidence", "source",
                "current_price", "engine_price", "final_price", "overridden", "sold_price", "days_to_sell",
-               "current_abs_pct_error", "engine_abs_pct_error", "final_abs_pct_error"]
+               "current_abs_pct_error", "engine_abs_pct_error", "final_abs_pct_error",
+               "not_worth_listing_warned", "not_worth_listing_price_shown", "not_worth_listing_basis"]
 
 
 def _blank(v):
@@ -274,5 +309,6 @@ def report_csv(conn: sqlite3.Connection) -> str:
                     _blank(r["current_price"]), _blank(r["suggested"]), _blank(r["final_price"]),
                     "" if r["overridden"] is None else ("yes" if r["overridden"] else "no"),
                     _blank(r["sold_price"]), _blank(r["days_to_sell"]),
-                    *["" if e is None else round(e, 1) for e in errs]])
+                    *["" if e is None else round(e, 1) for e in errs],
+                    "yes" if r["nwl_warned"] else "", _blank(r["nwl_price_shown"]), r["nwl_basis"] or ""])
     return out.getvalue()

@@ -219,17 +219,21 @@ def test_thin_market_mentioned_in_fallback(conn):
 
 # ── Floor ───────────────────────────────────────────────────────────────
 
-def test_floor_applied(conn):
+def test_low_price_shown_as_is_and_flagged(conn):
     add_sales(conn, GOLF_WM, [3, 4, 5])
     r = suggest(conn, "5Q0959802A", as_of=AS_OF)
-    assert r["suggested_price"] == cfg.MIN_LIST_PRICE
-    assert "minimum" in r["reason"]
+    # No floor any more: shown as-is and flagged, never raised.
+    assert r["suggested_price"] == 3.99
+    assert r["not_worth_listing"] is True
+    assert "minimum" not in r["reason"] and "not worth listing" in r["reason"]
+    assert r["evidence"] == "our last 3 sales £3–£5"
 
 
-def test_floor_per_part_type(conn, monkeypatch):
-    monkeypatch.setitem(cfg.MIN_LIST_PRICE_BY_TYPE, "WINDOW MOTOR FRONT", 39.99)
+def test_no_price_floor_settings(conn):
+    assert not hasattr(cfg, "MIN_LIST_PRICE") and not hasattr(cfg, "MIN_LIST_PRICE_BY_TYPE")
     add_sales(conn, GOLF_WM, [30, 30, 30])
-    assert suggest(conn, "5Q0959802A", as_of=AS_OF)["suggested_price"] == 39.99
+    r = suggest(conn, "5Q0959802A", as_of=AS_OF)
+    assert r["suggested_price"] == 29.99 and r["not_worth_listing"] is False
 
 
 # ── Endpoint ────────────────────────────────────────────────────────────
@@ -342,3 +346,50 @@ def test_suggest_endpoint_no_evidence_shape(client):
     r = client.get("/price/suggest", params={"part_number": "9Z9111113"}).json()
     assert r["suggested_price"] is None and r["source"] == "no_evidence"
     assert r["confidence"] == "low" and r["check_price"] is True and r["suggestion_id"] is not None
+
+
+# ── Not worth listing ───────────────────────────────────────────────────
+
+@pytest.mark.parametrize("price,expected", [(7.99, True), (0.99, True), (8.00, False), (8.01, False),
+                                            (24.99, False), (None, False)])
+def test_not_worth_listing_threshold(price, expected):
+    assert cfg.NOT_WORTH_LISTING_BELOW == 8.00
+    assert engine.not_worth_listing(price) is expected
+
+
+@pytest.mark.parametrize("prices,expected", [([7.5, 7.5, 7.5], True), ([8, 8, 8], False), ([8.5, 8.5, 8.5], False)])
+def test_not_worth_listing_under_at_over_via_suggest(conn, monkeypatch, prices, expected):
+    monkeypatch.setattr(cfg, "ROUNDING_RULE", "none")  # so a price can sit exactly on £8.00
+    add_sales(conn, GOLF_WM, prices)
+    r = suggest(conn, "5Q0959802A", as_of=AS_OF)
+    assert r["suggested_price"] == prices[0]  # never raised
+    assert r["not_worth_listing"] is expected
+    assert r["not_worth_listing_below"] == 8.00
+
+
+def test_not_worth_listing_threshold_is_configurable(conn, monkeypatch):
+    add_sales(conn, GOLF_WM, [12, 12, 12])
+    assert suggest(conn, "5Q0959802A", as_of=AS_OF)["not_worth_listing"] is False
+    monkeypatch.setattr(cfg, "NOT_WORTH_LISTING_BELOW", 15.0)
+    r = suggest(conn, "5Q0959802A", as_of=AS_OF)
+    assert r["not_worth_listing"] is True and "under £15" in r["reason"]
+
+
+def test_no_price_means_no_warning(conn):
+    r = suggest(conn, "9Z9 111 113", as_of=AS_OF)
+    assert r["suggested_price"] is None and r["not_worth_listing"] is False and r["evidence"] == ""
+
+
+def test_evidence_strings(conn):
+    r = suggest(conn, "1K0959653D", market=mkt(5, 20, 24, 18, 30), as_of=AS_OF)
+    assert r["evidence"] == "5 live competitors £18–£30"
+    add_sales(conn, GOLF_WM, [5])
+    r = suggest(conn, "5Q0959802A", market=mkt(4, 6, 7, 5, 9), as_of=AS_OF)
+    assert r["evidence"] == "our last 1 sale £5 + 4 live competitors £5–£9"
+    for t in ("Volkswagen Golf Mk7 WINDOW MOTOR (FRONT) 5Q0 959 801 C", "Volkswagen Golf Mk7 WINDOW MOTOR (FRONT) 5Q0 959 803 C"):
+        add_sales(conn, t, [6.5])
+    r = suggest(conn, "5G0959999", part_type="WINDOW MOTOR FRONT", car={"model": "GOLF", "generation": "MK7"},
+                as_of=AS_OF)
+    # 3 = the two just added + the earlier £5 GOLF_WM sale (same car, same part type)
+    assert r["evidence"] == "our last 3 Golf MK7 window motor front sales £5–£6.50"
+    assert r["not_worth_listing"] is True
