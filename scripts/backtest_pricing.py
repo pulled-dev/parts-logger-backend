@@ -27,6 +27,14 @@ DOC = os.path.join(ROOT, "docs", "pricing-backtest.md")
 START, END = "<!-- AUTO:START -->", "<!-- AUTO:END -->"
 
 
+def _pct(v) -> str:
+    return "–" if v is None else f"{v}%"
+
+
+def _bias(v) -> str:
+    return "–" if v is None else f"{v:+.1f}%"
+
+
 def _m(x: dict) -> str:
     if not x or not x["n"]:
         return "– | –"
@@ -55,12 +63,12 @@ def render(s: dict, v: dict, end: date, days: int) -> str:
         f"| With a part number in the title (engine can be asked) | {s['with_part_number']} |",
         f"| No part number (body panels etc.; neither method applies) | {s['no_part_number']} |",
         f"| Old method had a replayable DB price | {s['old_has_price']} |",
-        f"| Engine deliberately gave **no price** (variant-sensitive, \"Check price\") | "
+        f"| Engine deliberately gave **no price** (variant-sensitive or no evidence; \"Check price\") | "
         f"{s['engine_no_price']['count']} |",
         f"| Both methods gave a price (head-to-head set) | {s['both_priced']} |",
         "",
         f"On the {s['engine_no_price']['count']} no-price sales the old method's DB price had MdAPE "
-        f"{s['engine_no_price']['old']['mdape']}% and {s['engine_no_price']['old']['within']}% within ±15% "
+        f"{_pct(s['engine_no_price']['old']['mdape'])} and {_pct(s['engine_no_price']['old']['within'])} within ±15% "
         f"(n={s['engine_no_price']['old']['n']}). Those sales are excluded from the head-to-head, not counted "
         "as wins or losses for either side.",
         "",
@@ -68,16 +76,16 @@ def render(s: dict, v: dict, end: date, days: int) -> str:
         "",
         "| Method | Sales | MdAPE | Within ±15% | Median bias |",
         "|---|---|---|---|---|",
-        f"| Old method (BreakerPro DB price) | {h['old']['n']} | {h['old']['mdape']}% | {h['old']['within']}% | "
-        f"{s['median_signed_pct']['old']:+.1f}% |",
-        f"| New engine (tightened fallback, no market data) | {h['new']['n']} | {h['new']['mdape']}% | {h['new']['within']}% | "
-        f"{s['median_signed_pct']['new']:+.1f}% |",
+        f"| Old method (BreakerPro DB price) | {h['old']['n']} | {_pct(h['old']['mdape'])} | "
+        f"{_pct(h['old']['within'])} | {_bias(s['median_signed_pct']['old'])} |",
+        f"| New engine (no market data) | {h['new']['n']} | {_pct(h['new']['mdape'])} | "
+        f"{_pct(h['new']['within'])} | {_bias(s['median_signed_pct']['new'])} |",
         "",
         f"Sale by sale, the new engine was closer on **{s['new_wins']}** sales, the old method on "
         f"**{s['old_wins']}**, and they tied on {s['ties']}.",
         "",
-        f"New engine on every sale with a part number ({s['new_all']['n']}): MdAPE "
-        f"{s['new_all']['mdape']}%, within ±15% {s['new_all']['within']}%.",
+        f"New engine on every sale with a part number where it gave a price ({s['new_all']['n']}): MdAPE "
+        f"{_pct(s['new_all']['mdape'])}, within ±15% {_pct(s['new_all']['within'])}.",
         "",
         "### Where the engine wins and loses",
         "",
@@ -117,8 +125,9 @@ def render(s: dict, v: dict, end: date, days: int) -> str:
     vh = v["head_to_head"]
     out += ["", "### Diagnostic: opt-in `USE_BREAKERPRO_EXACT` rung (off by default)", "",
             "| Method | Sales | MdAPE | Within ±15% |", "|---|---|---|---|",
-            f"| Old method | {vh['old']['n']} | {vh['old']['mdape']}% | {vh['old']['within']}% |",
-            f"| Engine + BreakerPro exact rung | {vh['new']['n']} | {vh['new']['mdape']}% | {vh['new']['within']}% |",
+            f"| Old method | {vh['old']['n']} | {_pct(vh['old']['mdape'])} | {_pct(vh['old']['within'])} |",
+            f"| Engine + BreakerPro exact rung | {vh['new']['n']} | {_pct(vh['new']['mdape'])} | "
+            f"{_pct(vh['new']['within'])} |",
             "", "Quarter by quarter with the rung on:", "",
             "| Quarter | Sales | Old MdAPE | Old ±15% | New MdAPE | New ±15% |", "|---|---|---|---|---|---|"]
     for q, d in v["by_quarter"].items():

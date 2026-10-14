@@ -157,8 +157,10 @@ def summarise(rows: list[dict]) -> dict:
     s["head_to_head_fallback"] = {"old": metrics([r["old_err"] for r in fb]),
                                   "new": metrics([r["new_err"] for r in fb])}
     s["median_signed_pct"] = {
-        "new": round(statistics.median((r["new"] - r["actual"]) / r["actual"] * 100 for r in both), 1) if both else None,
-        "old": round(statistics.median((r["old"] - r["actual"]) / r["actual"] * 100 for r in both), 1) if both else None,
+        "new": round(statistics.median([(r["new"] - r["actual"]) / r["actual"] * 100 for r in both]), 1)
+        if both else None,
+        "old": round(statistics.median([(r["old"] - r["actual"]) / r["actual"] * 100 for r in both]), 1)
+        if both else None,
     }
     periods = defaultdict(list)
     for r in both:

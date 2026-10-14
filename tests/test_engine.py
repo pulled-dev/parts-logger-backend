@@ -167,8 +167,8 @@ def test_no_cross_model_breakerpro_group_average(conn):
     # 723523 (accelerator pedal) has an all-models avg_price (9.99) in
     # vag_parts_db.json. That cross-model average must never be used as a price.
     r = suggest(conn, "9Z9 723 523 X", as_of=AS_OF)
-    assert r["source"] == "category_default" and r["confidence"] == "low"
-    assert r["suggested_price"] == cfg.DEFAULT_PRICE
+    assert r["source"] == "no_evidence" and r["confidence"] == "low"
+    assert r["suggested_price"] is None and r["raw_price"] is None
     assert "BreakerPro" not in r["reason"]
 
 
@@ -183,8 +183,9 @@ def test_no_cross_model_part_type_borrowing(conn):
     add_sales(conn, "Audi A3 8V WASHER BOTTLE", [14, 16, 18])
     r = suggest(conn, "9Z9 111 112", part_type="Washer Bottle", car={"model": "POLO", "generation": "6R"},
                 as_of=AS_OF)
-    assert r["source"] == "category_default" and r["raw_price"] == cfg.DEFAULT_PRICE
+    assert r["source"] == "no_evidence" and r["suggested_price"] is None
     assert "any model" not in r["reason"]
+    assert "fewer than 2 Polo 6R washer bottle sales, so no price is suggested" in r["reason"]
 
 
 def test_no_cross_generation_part_type_borrowing(conn):
@@ -192,20 +193,23 @@ def test_no_cross_generation_part_type_borrowing(conn):
     add_sales(conn, "Volkswagen Golf Mk6 WINDOW MOTOR (FRONT) 5K0 959 803 C", [30])
     r = suggest(conn, "5G0959999", part_type="WINDOW MOTOR FRONT", car={"model": "GOLF", "generation": "MK7"},
                 as_of=AS_OF)
-    assert r["source"] == "category_default"  # Mk6 sales never price a Mk7
+    assert r["source"] == "no_evidence" and r["suggested_price"] is None  # Mk6 sales never price a Mk7
 
 
 def test_part_type_needs_generation(conn):
     add_sales(conn, "Volkswagen Golf Mk7 WINDOW MOTOR (FRONT) 5Q0 959 801 C", [20])
     add_sales(conn, "Volkswagen Golf Mk7 WINDOW MOTOR (FRONT) 5Q0 959 803 C", [30])
     r = suggest(conn, "5G0959999", part_type="WINDOW MOTOR FRONT", car={"model": "GOLF"}, as_of=AS_OF)
-    assert r["source"] == "category_default"
+    assert r["source"] == "no_evidence" and r["suggested_price"] is None
+    assert "no vehicle model/generation" in r["reason"]
 
 
-def test_general_default(conn):
+def test_no_flat_default_without_evidence(conn):
     r = suggest(conn, "9Z9 111 113", as_of=AS_OF)
-    assert r["source"] == "category_default" and r["suggested_price"] == cfg.DEFAULT_PRICE
-    assert r["confidence"] == "low"
+    assert r["source"] == "no_evidence" and r["suggested_price"] is None and r["raw_price"] is None
+    assert r["confidence"] == "low" and r["check_price"] is True
+    assert r["reason"].endswith("check price")
+    assert not hasattr(cfg, "DEFAULT_PRICE")  # the flat default is gone, not just unused
 
 
 def test_thin_market_mentioned_in_fallback(conn):
@@ -321,7 +325,7 @@ def test_variant_sensitive_still_priced_from_market(conn):
 
 
 def test_variant_list_is_configurable(conn, monkeypatch):
-    assert suggest(conn, "9Z9 111 112", part_type="Parcel Shelf", as_of=AS_OF)["suggested_price"] is not None
+    assert suggest(conn, "9Z9 111 112", part_type="Parcel Shelf", as_of=AS_OF)["source"] == "no_evidence"
     monkeypatch.setattr(cfg, "VARIANT_SENSITIVE_PART_TYPES", cfg.VARIANT_SENSITIVE_PART_TYPES + ("PARCEL SHELF",))
     r = suggest(conn, "9Z9 111 112", part_type="Parcel Shelf", as_of=AS_OF)
     assert r["suggested_price"] is None and r["source"] == "variant_check"
@@ -330,3 +334,11 @@ def test_variant_list_is_configurable(conn, monkeypatch):
 def test_suggest_endpoint_no_price_shape(client):
     r = client.get("/price/suggest", params={"part_number": "5G1941999B", "part_type": "Headlight"}).json()
     assert r["suggested_price"] is None and r["confidence"] == "low" and "group_range" in r
+
+
+def test_suggest_endpoint_no_evidence_shape(client):
+    # What the live logger receives when there's no real evidence: no price,
+    # so it keeps the current-method price and shows Low / Check price.
+    r = client.get("/price/suggest", params={"part_number": "9Z9111113"}).json()
+    assert r["suggested_price"] is None and r["source"] == "no_evidence"
+    assert r["confidence"] == "low" and r["check_price"] is True and r["suggestion_id"] is not None

@@ -46,7 +46,9 @@ def test_sale_never_sees_itself(conn):
     rows = backtest.run(conn, date(2026, 10, 14))
     r = rows[0]
     assert r["new_source"] != "own_sold"
-    assert r["new"] < 100  # nothing about the £500 sale leaked into its own suggestion
+    # Nothing about the £500 sale leaked into its own suggestion: with no
+    # earlier evidence at all the engine gives no price.
+    assert r["new_source"] == "no_evidence" and r["new"] is None
 
 
 def test_only_earlier_sales_used(conn):
@@ -83,9 +85,11 @@ def test_summary_head_to_head(conn):
     for d in ("2026-01-10", "2026-02-10", "2026-03-10", "2026-04-10"):
         sale(conn, PEDAL, 30, d)
     s = backtest.summarise(backtest.run(conn, date(2026, 10, 14)))
-    assert s["old_has_price"] == 4 and s["both_priced"] == 4
-    assert s["head_to_head"]["old"]["n"] == 4
-    assert s["new_wins"] + s["old_wins"] + s["ties"] == 4
+    # The first sale has no earlier evidence, so the engine gives no price for it.
+    assert s["old_has_price"] == 4 and s["both_priced"] == 3
+    assert s["engine_no_price"]["count"] == 1
+    assert s["head_to_head"]["old"]["n"] == 3
+    assert s["new_wins"] + s["old_wins"] + s["ties"] == 3
     assert set(s["by_quarter"]) == {"2026 Q1", "2026 Q2"}
 
 
