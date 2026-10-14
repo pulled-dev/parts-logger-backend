@@ -21,6 +21,11 @@ from claude_prompt import build_identification_prompt
 from db import init_db
 from vehicles_router import router as vehicles_router
 from lookup_router import router as lookup_router
+from pricing.router import router as pricing_router
+from pricing.store import init_pricing_db
+from pricing.router import pricing_mode
+import pricing_config as _pcfg
+from pricing import ebay_orders
 
 # ── CONFIG ───────────────────────────────────────────────────────
 EBAY_APP_ID = os.environ.get("EBAY_APP_ID", "")
@@ -30,10 +35,63 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 # Toggle mock mode when no keys are set
 USE_MOCK = not (EBAY_APP_ID and EBAY_CERT_ID)
 
+async def _daily_order_sync():
+    """Opt-in (PRICING_DAILY_SYNC=1): pull new eBay orders once a day."""
+    from pricing.store import session
+    while True:
+        try:
+            with session() as conn:
+                summary = await ebay_orders.sync_orders(conn)
+            if summary.get("skipped"):
+                print(summary["reason"])
+            else:
+                print(f"Daily order sync: {summary['inserted']} new sales")
+        except Exception as e:
+            print(f"Daily order sync failed: {type(e).__name__}: {e}")
+        await asyncio.sleep(24 * 3600)
+
+
+async def _nightly_prewarm():
+    """Refresh stale market snapshots once a night (MARKET_PREWARM_HOUR_UTC)."""
+    import pricing_config as pcfg
+    from datetime import timedelta
+    from pricing import market
+    from pricing.store import session
+    while True:
+        now = datetime.now(timezone.utc)
+        run_at = now.replace(hour=pcfg.MARKET_PREWARM_HOUR_UTC, minute=0, second=0, microsecond=0)
+        if run_at <= now:
+            run_at += timedelta(days=1)
+        await asyncio.sleep((run_at - now).total_seconds())
+        try:
+            with session() as conn:
+                summary = await market.prewarm(conn)
+            print(f"Nightly market pre-warm: {summary}")
+        except Exception as e:
+            print(f"Nightly market pre-warm failed: {type(e).__name__}: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    init_pricing_db()
+    task = None
+    if os.environ.get("PRICING_DAILY_SYNC") == "1":
+        if ebay_orders.is_configured():
+            task = asyncio.create_task(_daily_order_sync())
+        else:
+            print("Daily order sync not started: missing " + ", ".join(ebay_orders.missing_env()))
+    prewarm_task = None
+    if os.environ.get("PRICING_PREWARM", "1") != "0":
+        from pricing import market as _market
+        if _market.is_configured():
+            prewarm_task = asyncio.create_task(_nightly_prewarm())
+        else:
+            print("Nightly market pre-warm not started: EBAY_APP_ID / EBAY_CERT_ID not set")
     yield
+    for t in (task, prewarm_task):
+        if t:
+            t.cancel()
 
 
 app = FastAPI(title="Pulled Apart Parts Logger API", lifespan=lifespan)
@@ -49,6 +107,7 @@ app.add_middleware(
 
 app.include_router(vehicles_router)
 app.include_router(lookup_router)
+app.include_router(pricing_router)
 
 # ── MODELS ───────────────────────────────────────────────────────
 
@@ -79,6 +138,8 @@ class HealthResponse(BaseModel):
     mode: str
     ebay_configured: bool
     claude_configured: bool
+    pricing_mode: str = "shadow"
+    not_worth_listing_below: float = 8.0
 
 # ── MOCK DATA ────────────────────────────────────────────────────
 
@@ -289,6 +350,8 @@ async def health():
         mode="mock" if USE_MOCK else "live",
         ebay_configured=bool(EBAY_APP_ID and EBAY_CERT_ID),
         claude_configured=bool(ANTHROPIC_API_KEY),
+        pricing_mode=pricing_mode(),
+        not_worth_listing_below=_pcfg.NOT_WORTH_LISTING_BELOW,
     )
 
 

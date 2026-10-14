@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GetOrdersResponse xmlns="urn:ebay:apis:eBLBaseComponents">
+  <Timestamp>2026-10-14T12:00:00.000Z</Timestamp>
+  <Ack>Success</Ack>
+  <Version>1199</Version>
+  <PaginationResult><TotalNumberOfPages>2</TotalNumberOfPages><TotalNumberOfEntries>5</TotalNumberOfEntries></PaginationResult>
+  <HasMoreOrders>true</HasMoreOrders>
+  <OrderArray>
+    <Order>
+      <OrderID>31-00001-00001</OrderID>
+      <CheckoutStatus><eBayPaymentStatus>NoPaymentFailure</eBayPaymentStatus><Status>Complete</Status></CheckoutStatus>
+      <OrderStatus>Completed</OrderStatus>
+      <CancelStatus>NotApplicable</CancelStatus>
+      <CreatedTime>2026-10-10T09:00:00.000Z</CreatedTime>
+      <PaidTime>2026-10-10T09:05:00.000Z</PaidTime>
+      <BuyerUserID>PII_SENTINEL_userid</BuyerUserID>
+      <ShippingAddress>
+        <Name>PII_SENTINEL_name</Name>
+        <Street1>PII_SENTINEL_street</Street1>
+        <CityName>PII_SENTINEL_city</CityName>
+        <PostalCode>PII_SENTINEL_pc</PostalCode>
+        <Country>GB</Country>
+        <Phone>PII_SENTINEL_phone</Phone>
+      </ShippingAddress>
+      <ShippingServiceSelected><ShippingService>UK_RoyalMailSecondClassStandard</ShippingService>
+        <ShippingServiceCost currencyID="GBP">0.00</ShippingServiceCost></ShippingServiceSelected>
+      <Total currencyID="GBP">0.00</Total>
+      <TransactionArray>
+        <Transaction>
+          <Buyer><Email>pii.sentinel@example.invalid</Email><UserFirstName>PII_SENTINEL_first</UserFirstName><UserLastName>PII_SENTINEL_last</UserLastName></Buyer>
+          <ShippingDetails><SellingManagerSalesRecordNumber>8001</SellingManagerSalesRecordNumber></ShippingDetails>
+          <CreatedDate>2026-10-10T09:00:00.000Z</CreatedDate>
+          <Item><ItemID>400000000001</ItemID><Title>Volkswagen Golf Mk7 WINDOW MOTOR (FRONT DRIVER) 5Q0 959 802 A</Title></Item>
+          <QuantityPurchased>1</QuantityPurchased>
+          <TransactionID>9000000001</TransactionID>
+          <TransactionPrice currencyID="GBP">29.99</TransactionPrice>
+        </Transaction>
+      </TransactionArray>
+    </Order>
+    <Order>
+      <OrderID>31-00002-00002</OrderID>
+      <CheckoutStatus><eBayPaymentStatus>NoPaymentFailure</eBayPaymentStatus><Status>Complete</Status></CheckoutStatus>
+      <OrderStatus>Completed</OrderStatus>
+      <CancelStatus>NotApplicable</CancelStatus>
+      <CreatedTime>2026-10-10T09:00:00.000Z</CreatedTime>
+      <PaidTime>2026-10-10T09:05:00.000Z</PaidTime>
+      <BuyerUserID>PII_SENTINEL_userid</BuyerUserID>
+      <ShippingAddress>
+        <Name>PII_SENTINEL_name</Name>
+        <Street1>PII_SENTINEL_street</Street1>
+        <CityName>PII_SENTINEL_city</CityName>
+        <PostalCode>PII_SENTINEL_pc</PostalCode>
+        <Country>GB</Country>
+        <Phone>PII_SENTINEL_phone</Phone>
+      </ShippingAddress>
+      <ShippingServiceSelected><ShippingService>UK_RoyalMailSecondClassStandard</ShippingService>
+        <ShippingServiceCost currencyID="GBP">6.99</ShippingServiceCost></ShippingServiceSelected>
+      <Total currencyID="GBP">0.00</Total>
+      <TransactionArray>
+        <Transaction>
+          <Buyer><Email>pii.sentinel@example.invalid</Email><UserFirstName>PII_SENTINEL_first</UserFirstName><UserLastName>PII_SENTINEL_last</UserLastName></Buyer>
+          <ShippingDetails><SellingManagerSalesRecordNumber>8002</SellingManagerSalesRecordNumber></ShippingDetails>
+          <CreatedDate>2026-10-10T09:00:00.000Z</CreatedDate>
+          <Item><ItemID>400000000002</ItemID><Title>Seat Ibiza 6J WIPER MOTOR (FRONT) 6J2 955 119</Title></Item>
+          <QuantityPurchased>2</QuantityPurchased>
+          <TransactionID>9000000002</TransactionID>
+          <TransactionPrice currencyID="GBP">40.00</TransactionPrice>
+        </Transaction>
+        <Transaction>
+          <Buyer><Email>pii.sentinel@example.invalid</Email><UserFirstName>PII_SENTINEL_first</UserFirstName><UserLastName>PII_SENTINEL_last</UserLastName></Buyer>
+          <ShippingDetails><SellingManagerSalesRecordNumber>8003</SellingManagerSalesRecordNumber></ShippingDetails>
+          <CreatedDate>2026-10-10T09:00:00.000Z</CreatedDate>
+          <Item><ItemID>400000000003</ItemID><Title>Seat Ibiza 6J BONNET RELEASE CABLE 6J1 823 535</Title></Item>
+          <QuantityPurchased>1</QuantityPurchased>
+          <TransactionID>9000000003</TransactionID>
+          <TransactionPrice currencyID="GBP">10.00</TransactionPrice>
+        </Transaction>
+      </TransactionArray>
+    </Order>
+  </OrderArray>
+  <PageNumber>1</PageNumber>
+</GetOrdersResponse>

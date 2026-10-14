@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GetOrdersResponse xmlns="urn:ebay:apis:eBLBaseComponents">
+  <Timestamp>2026-10-14T12:00:00.000Z</Timestamp>
+  <Ack>Success</Ack>
+  <Version>1199</Version>
+  <PaginationResult><TotalNumberOfPages>2</TotalNumberOfPages><TotalNumberOfEntries>5</TotalNumberOfEntries></PaginationResult>
+  <HasMoreOrders>false</HasMoreOrders>
+  <OrderArray>
+    <Order>
+      <OrderID>31-00003-00003</OrderID>
+      <CheckoutStatus><eBayPaymentStatus>NoPaymentFailure</eBayPaymentStatus><Status>Complete</Status></CheckoutStatus>
+      <OrderStatus>Completed</OrderStatus>
+      <CancelStatus>CancelComplete</CancelStatus>
+      <CreatedTime>2026-10-10T09:00:00.000Z</CreatedTime>
+      <PaidTime>2026-10-10T09:05:00.000Z</PaidTime>
+      <BuyerUserID>PII_SENTINEL_userid</BuyerUserID>
+      <ShippingAddress>
+        <Name>PII_SENTINEL_name</Name>
+        <Street1>PII_SENTINEL_street</Street1>
+        <CityName>PII_SENTINEL_city</CityName>
+        <PostalCode>PII_SENTINEL_pc</PostalCode>
+        <Country>GB</Country>
+        <Phone>PII_SENTINEL_phone</Phone>
+      </ShippingAddress>
+      <ShippingServiceSelected><ShippingService>UK_RoyalMailSecondClassStandard</ShippingService>
+        <ShippingServiceCost currencyID="GBP">0.00</ShippingServiceCost></ShippingServiceSelected>
+      <Total currencyID="GBP">0.00</Total>
+      <TransactionArray>
+        <Transaction>
+          <Buyer><Email>pii.sentinel@example.invalid</Email><UserFirstName>PII_SENTINEL_first</UserFirstName><UserLastName>PII_SENTINEL_last</UserLastName></Buyer>
+          <ShippingDetails><SellingManagerSalesRecordNumber>8004</SellingManagerSalesRecordNumber></ShippingDetails>
+          <CreatedDate>2026-10-10T09:00:00.000Z</CreatedDate>
+          <Item><ItemID>400000000004</ItemID><Title>Skoda Fabia 5J HEADLIGHT (DRIVER) 5J1 941 016</Title></Item>
+          <QuantityPurchased>1</QuantityPurchased>
+          <TransactionID>9000000004</TransactionID>
+          <TransactionPrice currencyID="GBP">45.00</TransactionPrice>
+        </Transaction>
+      </TransactionArray>
+    </Order>
+    <Order>
+      <OrderID>31-00004-00004</OrderID>
+      <CheckoutStatus><eBayPaymentStatus>NoPaymentFailure</eBayPaymentStatus><Status>Complete</Status></CheckoutStatus>
+      <OrderStatus>Active</OrderStatus>
+      <CancelStatus>NotApplicable</CancelStatus>
+      <CreatedTime>2026-10-10T09:00:00.000Z</CreatedTime>
+      
+      <BuyerUserID>PII_SENTINEL_userid</BuyerUserID>
+      <ShippingAddress>
+        <Name>PII_SENTINEL_name</Name>
+        <Street1>PII_SENTINEL_street</Street1>
+        <CityName>PII_SENTINEL_city</CityName>
+        <PostalCode>PII_SENTINEL_pc</PostalCode>
+        <Country>GB</Country>
+        <Phone>PII_SENTINEL_phone</Phone>
+      </ShippingAddress>
+      <ShippingServiceSelected><ShippingService>UK_RoyalMailSecondClassStandard</ShippingService>
+        <ShippingServiceCost currencyID="GBP">0.00</ShippingServiceCost></ShippingServiceSelected>
+      <Total currencyID="GBP">0.00</Total>
+      <TransactionArray>
+        <Transaction>
+          <Buyer><Email>pii.sentinel@example.invalid</Email><UserFirstName>PII_SENTINEL_first</UserFirstName><UserLastName>PII_SENTINEL_last</UserLastName></Buyer>
+          <ShippingDetails><SellingManagerSalesRecordNumber>8005</SellingManagerSalesRecordNumber></ShippingDetails>
+          <CreatedDate>2026-10-10T09:00:00.000Z</CreatedDate>
+          <Item><ItemID>400000000005</ItemID><Title>VW Polo 6R SPEEDO CLOCKS 6R0 920 860 A</Title></Item>
+          <QuantityPurchased>1</QuantityPurchased>
+          <TransactionID>9000000005</TransactionID>
+          <TransactionPrice currencyID="GBP">35.00</TransactionPrice>
+        </Transaction>
+      </TransactionArray>
+    </Order>
+    <Order>
+      <OrderID>31-00005-00005</OrderID>
+      <CheckoutStatus><eBayPaymentStatus>NoPaymentFailure</eBayPaymentStatus><Status>Complete</Status></CheckoutStatus>
+      <OrderStatus>Completed</OrderStatus>
+      <CancelStatus>NotApplicable</CancelStatus>
+      <CreatedTime>2026-10-10T09:00:00.000Z</CreatedTime>
+      <PaidTime>2026-10-10T09:05:00.000Z</PaidTime>
+      <BuyerUserID>PII_SENTINEL_userid</BuyerUserID>
+      <ShippingAddress>
+        <Name>PII_SENTINEL_name</Name>
+        <Street1>PII_SENTINEL_street</Street1>
+        <CityName>PII_SENTINEL_city</CityName>
+        <PostalCode>PII_SENTINEL_pc</PostalCode>
+        <Country>GB</Country>
+        <Phone>PII_SENTINEL_phone</Phone>
+      </ShippingAddress>
+      <ShippingServiceSelected><ShippingService>UK_RoyalMailSecondClassStandard</ShippingService>
+        <ShippingServiceCost currencyID="GBP">0.00</ShippingServiceCost></ShippingServiceSelected>
+      <Total currencyID="GBP">0.00</Total>
+      <TransactionArray>
+        <Transaction>
+          <Buyer><Email>pii.sentinel@example.invalid</Email><UserFirstName>PII_SENTINEL_first</UserFirstName><UserLastName>PII_SENTINEL_last</UserLastName></Buyer>
+          <ShippingDetails><SellingManagerSalesRecordNumber>8006</SellingManagerSalesRecordNumber></ShippingDetails>
+          <CreatedDate>2026-10-10T09:00:00.000Z</CreatedDate>
+          <Item><ItemID>400000000006</ItemID><Title>Audi A3 8V ENGINE ECU 04L 907 309 R</Title></Item>
+          <QuantityPurchased>1</QuantityPurchased>
+          <TransactionID>9000000006</TransactionID>
+          <TransactionPrice currencyID="GBP">89.99</TransactionPrice><ActualShippingCost currencyID="GBP">4.50</ActualShippingCost>
+        </Transaction>
+      </TransactionArray>
+    </Order>
+  </OrderArray>
+  <PageNumber>2</PageNumber>
+</GetOrdersResponse>

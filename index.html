@@ -440,6 +440,37 @@
     }
     .yp-hint { font-family: var(--mono); font-size: 11px; color: var(--text-muted); }
 
+    /* Pricing engine: confidence badge + one-line reason under the price */
+    .ps-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      width: 100%;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .ps-reason { line-height: 1.35; overflow-wrap: anywhere; min-width: 0; flex: 1 1 180px; }
+    .ps-check  { color: #ef4444; font-weight: 700; white-space: nowrap; }
+    .ps-muted  { color: var(--text-muted); font-style: italic; }
+
+    /* "Not worth listing" warning (amber). Warning only: never blocks or changes the price. */
+    .nwl-warn {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(245,158,11,0.12);
+      border: 1px solid rgba(245,158,11,0.45);
+      color: #f59e0b;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+    .nwl-basis { font-weight: 400; color: var(--text-secondary); overflow-wrap: anywhere; }
+
     .partno-row {
       display: flex;
       align-items: center;
@@ -1798,6 +1829,8 @@ async function checkStatus() {
     if (!r.ok) throw new Error();
     const d = await r.json();
     setMode(d.mode === 'live' ? 'live' : 'demo');
+    window.PA_PRICING_MODE = d.pricing_mode === 'live' ? 'live' : 'shadow';
+    if (typeof d.not_worth_listing_below === 'number') window.PA_NWL_BELOW = d.not_worth_listing_below;
   } catch {
     setMode('error');
   }
@@ -1810,6 +1843,11 @@ function setMode(mode) {
 
 // ── Paint codes (cached on init for body-panel mode) ─────────────────────────
 window.PA_PAINT_CODES = [];
+// Pricing engine mode (PRICING_MODE on the server). 'shadow' = the screen looks
+// and behaves exactly as before; the engine only runs and logs in the background.
+window.PA_PRICING_MODE = 'shadow';
+// "Not worth listing" threshold (NOT_WORTH_LISTING_BELOW on the server, total incl. postage).
+window.PA_NWL_BELOW = 8;
 async function loadPaintCodes() {
   try {
     const r = await fetch(cfg.url + '/paint-codes', { signal: AbortSignal.timeout(8000) });
@@ -1838,6 +1876,163 @@ async function lookup(pn) {
   return r.json();
 }
 
+// ── Pricing engine (non-blocking) ────────────────────────────────────────────
+// Runs alongside /lookup. If it fails or is slow, the card keeps the old
+// pre-filled price and logging carries on as before.
+// Shadow mode: nothing on screen changes (no price change, no badge, no
+// loading text); the suggestion id is only kept so the final price can be
+// reported on export. Live mode: price, badge and reason are shown.
+function engineLive(p) {
+  return !!(p.engine && p.engine.mode === 'live');
+}
+
+async function fetchSuggestion(pn, ref) {
+  const qs = new URLSearchParams({ part_number: pn });
+  if (ref) qs.set('vehicle_ref', ref);
+  const r = await fetch(cfg.url + '/price/suggest?' + qs.toString(), { signal: AbortSignal.timeout(12000) });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+// ── Not worth listing ─────────────────────────────────────────────────────────
+// Judged on the price the logger is actually SHOWN: the engine price in live
+// mode (when it gave one), otherwise the current-method pre-fill. Shown in both
+// shadow and live mode. Warning only: never blocks logging, never changes the price.
+function gbpShort(v) {
+  const n = Number(v);
+  return '&pound;' + (Math.abs(n - Math.round(n)) < 0.005 ? String(Math.round(n)) : n.toFixed(2));
+}
+
+function shownPrice(p) {
+  if (engineLive(p) && p.engine.state === 'ok' && p.engine.price != null) {
+    return { price: Number(p.engine.price), basis: p.engine.evidence || 'pricing engine' };
+  }
+  if (p.current_price != null) return { price: Number(p.current_price), basis: p.current_basis || 'current price' };
+  return null;
+}
+
+function nwlWarned(p) {
+  const s = shownPrice(p);
+  return !!(s && s.price < window.PA_NWL_BELOW);
+}
+
+function nwlHtml(p) {
+  if (!nwlWarned(p)) return '';
+  const s = shownPrice(p);
+  return `<div class="nwl-warn">&#9888; Under ${gbpShort(window.PA_NWL_BELOW)} &mdash; not worth listing, consider scrap` +
+         `<span class="nwl-basis">Based on: ${esc(s.basis)} (${gbpShort(s.price)} shown)</span></div>`;
+}
+
+// Tell the server the warning was shown (once per card). Fire-and-forget.
+function logWarning(p) {
+  if (p.nwl_logged || !cfg.url || !p.engine || p.engine.suggestion_id == null || !nwlWarned(p)) return;
+  const s = shownPrice(p);
+  p.nwl_logged = true;
+  try {
+    fetch(cfg.url + '/price/suggestions/' + p.engine.suggestion_id + '/warning', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ price_shown: s.price, basis: s.basis }),
+      keepalive: true,
+    }).catch(() => {});
+  } catch (e) { /* never block logging */ }
+}
+
+// Where the current-method pre-fill came from, in words.
+function currentBasis(d) {
+  if (d.breakerpro_price != null) return 'BreakerPro price on file';
+  if (d.suggested_price != null) return 'eBay listings (' + (d.total_listings || 0) + ', average less 12.5%)';
+  if (d.avg_price != null) return 'eBay listings average';
+  return '';
+}
+
+function suggestionHtml(p) {
+  const e = p.engine;
+  if (!e || !engineLive(p)) return '';
+  if (e.state === 'loading') return '<div class="ps-line"><span class="ps-muted">Pricing&hellip;</span></div>';
+  if (e.state !== 'ok') return '<div class="ps-line"><span class="ps-muted">Price engine unavailable &mdash; using old estimate</span></div>';
+  const reason = String(e.reason || '')
+    .replace(/ · check price$/, '')
+    .replace(/ · under £[\d.]+: not worth listing, consider scrap/, '');
+  const conf = ['high', 'medium', 'low'].includes(e.confidence) ? e.confidence : 'none';
+  const badgeHtml = `<span class="confidence-badge ${conf}">PRICE &middot; ${conf.toUpperCase()}</span>`;
+  return `<div class="ps-line">${badgeHtml}<span class="ps-reason">${esc(reason)}</span>` +
+         (e.confidence === 'low' ? '<span class="ps-check">&#9888; Check price</span>' : '') + '</div>';
+}
+
+// Patch one card in place (no full re-render) so a logger typing in another
+// card never loses focus when a suggestion lands.
+function updateCardSuggestion(p) {
+  const card = partsList.querySelector(`[data-id="${p.id}"]`);
+  if (!card) return;
+  const row = card.querySelector('.your-price-row');
+  const old = row && row.querySelector('.ps-line');
+  if (old) old.remove();
+  if (row) row.insertAdjacentHTML('beforeend', suggestionHtml(p));
+  const oldWarn = row && row.querySelector('.nwl-warn');
+  if (oldWarn) oldWarn.remove();
+  if (row) row.insertAdjacentHTML('beforeend', nwlHtml(p));
+  const hint = row && row.querySelector('.yp-hint');
+  if (hint && engineLive(p) && p.engine.state === 'ok') hint.remove();
+  const inp = card.querySelector('[data-yp]');
+  if (inp && document.activeElement !== inp) {
+    inp.value = p.your_price != null ? Number(p.your_price).toFixed(2) : '';
+  }
+}
+
+function applySuggestion(id, s) {
+  const p = parts.find(x => x.id === id);
+  if (!p) return;
+  const mode = (s && s.mode === 'live') ? 'live'
+             : (s && s.mode) ? 'shadow'
+             : (p.engine && p.engine.mode) || window.PA_PRICING_MODE;
+  if (s && s.confidence) {
+    // suggested_price can be null on purpose (variant-sensitive part, no exact
+    // match): show the Low badge + reason and leave the current price alone.
+    p.engine = {
+      state: 'ok', mode, price: s.suggested_price, confidence: s.confidence,
+      reason: s.reason, source: s.source, suggestion_id: s.suggestion_id != null ? s.suggestion_id : null,
+      evidence: s.evidence || '',
+    };
+    if (mode === 'live' && !p.price_touched && s.suggested_price != null) p.your_price = s.suggested_price;
+  } else {
+    p.engine = { state: 'failed', mode };
+  }
+  logWarning(p);  // both modes; judged on the price shown
+  saveParts();
+  if (mode !== 'live') return;  // shadow: leave the screen exactly as it is
+  updateCardSuggestion(p);
+  updateStats();
+}
+
+// ── Pricing feedback ─────────────────────────────────────────────────────────
+// On export, tell the pricing engine what price each card actually went out at
+// (so overrides can be measured). Registered as a document-level CAPTURE
+// listener so it runs before the export handler clears the list, without
+// touching the export code. Fire-and-forget: it can never block the export.
+function recordFinalPrices() {
+  if (!cfg.url) return;
+  const items = parts
+    .filter(p => p.engine && p.engine.suggestion_id != null && p.your_price != null)
+    .map(p => ({
+      suggestion_id: p.engine.suggestion_id,
+      final_price: Number(p.your_price),
+      current_price: p.current_price != null ? Number(p.current_price) : null,
+    }));
+  if (!items.length) return;
+  try {
+    fetch(cfg.url + '/price/suggestions/final', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items }),
+      keepalive: true,
+    }).catch(() => {});
+  } catch (e) { /* never block the export */ }
+}
+document.addEventListener('click', e => {
+  if (e.target && e.target.closest && e.target.closest('#export-btn')) recordFinalPrices();
+}, true);
+
 // ── Add part ─────────────────────────────────────────────────────────────────
 async function addPart() {
   const pn  = pnInput.value.trim().toUpperCase();
@@ -1847,6 +2042,9 @@ async function addPart() {
   addBtn.disabled = true;
   addBtn.classList.add('loading');
   addLabel.textContent = 'Looking up...';
+
+  // Start pricing in parallel; never let it throw into the logging flow.
+  const suggestP = fetchSuggestion(pn, ref).catch(() => null);
 
   try {
     const d = await lookup(pn);
@@ -1871,13 +2069,19 @@ async function addPart() {
       vehicle_ref:     ref,
       your_price:      prefill,
       part_note:       '',
+      engine:          { state: 'loading', mode: window.PA_PRICING_MODE },
+      current_price:   prefill,
+      current_basis:   currentBasis(d),
+      price_touched:   false,
     });
+    const newId = parts[0].id;
     pnInput.value = '';
     saveParts();
     render();
     updateStats();
     pnInput.focus();
     setMode(cfg.demo ? 'demo' : 'live');
+    suggestP.then(s => applySuggestion(newId, s));
   } catch (err) {
     toast('⚠ ' + err.message);
     setMode('error');
@@ -2032,7 +2236,9 @@ function render() {
       <div class="your-price-row">
         <span class="yp-label">Your price</span>
         <input type="text" class="yp-input" data-yp="${p.id}" placeholder="£0.00" value="${esc(ypVal)}">
-        ${hasPricing ? `<span class="yp-hint">Suggested: ${fmt(p.suggested_price)}</span>` : ''}
+        ${hasPricing && !(engineLive(p) && p.engine.state === 'ok') ? `<span class="yp-hint">Suggested: ${fmt(p.suggested_price)}</span>` : ''}
+        ${suggestionHtml(p)}
+        ${nwlHtml(p)}
       </div>
       <div class="partno-row">
         <span class="yp-label">Part No. / Notes</span>
@@ -2063,6 +2269,7 @@ partsList.addEventListener('input', e => {
   if (!p) return;
   const raw = inp.value.replace(/[^\d.]/g, '');
   p.your_price = raw ? parseFloat(raw) : null;
+  p.price_touched = true;  // a late suggestion must never overwrite the logger's price
   saveParts();
   updateStats();
 });

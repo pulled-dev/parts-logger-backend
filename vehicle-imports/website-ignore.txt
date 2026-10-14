@@ -1,0 +1,8 @@
+# Pulled Apart — Website Ignore List
+#
+# One ref per line. These vehicles will NOT be added to the website
+# even if they have CSV data and photos. Use this for vehicles that
+# are in BreakerPro but should not appear on pulledapart.co.uk
+# (e.g. sold before being listed, wrong photos, etc).
+#
+# Lines starting with # are comments.
