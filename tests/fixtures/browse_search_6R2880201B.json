@@ -1,0 +1,470 @@
+{
+ "href": "recorded fixture",
+ "total": 15,
+ "limit": 100,
+ "itemSummaries": [
+  {
+   "itemId": "v1|110000000001|0",
+   "title": "VW Polo 6R Driver Airbag 6R2 880 201 B",
+   "price": {
+    "value": "45.00",
+    "currency": "GBP"
+   },
+   "conditionId": "3000",
+   "condition": "Used",
+   "seller": {
+    "username": "breaker_uk_1",
+    "feedbackPercentage": "99.8",
+    "feedbackScore": 1500
+   },
+   "itemLocation": {
+    "postalCode": "WV1***",
+    "country": "GB"
+   },
+   "buyingOptions": [
+    "FIXED_PRICE"
+   ],
+   "shippingOptions": [
+    {
+     "shippingCostType": "FIXED",
+     "shippingCost": {
+      "value": "0.00",
+      "currency": "GBP"
+     }
+    }
+   ]
+  },
+  {
+   "itemId": "v1|110000000002|0",
+   "title": "Volkswagen Polo 6R 2009-2014 Steering Wheel Air Bag 6R2880201B",
+   "price": {
+    "value": "39.99",
+    "currency": "GBP"
+   },
+   "conditionId": "3000",
+   "condition": "Used",
+   "seller": {
+    "username": "breaker_uk_2",
+    "feedbackPercentage": "99.8",
+    "feedbackScore": 1500
+   },
+   "itemLocation": {
+    "postalCode": "WV1***",
+    "country": "GB"
+   },
+   "buyingOptions": [
+    "FIXED_PRICE"
+   ],
+   "shippingOptions": [
+    {
+     "shippingCostType": "FIXED",
+     "shippingCost": {
+      "value": "6.99",
+      "currency": "GBP"
+     }
+    }
+   ]
+  },
+  {
+   "itemId": "v1|110000000003|0",
+   "title": "VW Polo 6R Driver Airbag 6R2 880 201 B",
+   "price": {
+    "value": "49.99",
+    "currency": "GBP"
+   },
+   "conditionId": "3000",
+   "condition": "Used",
+   "seller": {
+    "username": "breaker_uk_3",
+    "feedbackPercentage": "99.8",
+    "feedbackScore": 1500
+   },
+   "itemLocation": {
+    "postalCode": "WV1***",
+    "country": "GB"
+   },
+   "buyingOptions": [
+    "FIXED_PRICE"
+   ],
+   "shippingOptions": [
+    {
+     "shippingCostType": "FIXED",
+     "shippingCost": {
+      "value": "0.00",
+      "currency": "GBP"
+     }
+    },
+    {
+     "shippingCostType": "FIXED",
+     "shippingCost": {
+      "value": "9.99",
+      "currency": "GBP"
+     }
+    }
+   ]
+  },
+  {
+   "itemId": "v1|110000000004|0",
+   "title": "VW Polo 6R Driver Airbag 6R2 880 201 B",
+   "price": {
+    "value": "42.00",
+    "currency": "GBP"
+   },
+   "conditionId": "3000",
+   "condition": "Used",
+   "seller": {
+    "username": "breaker_uk_4",
+    "feedbackPercentage": "99.8",
+    "feedbackScore": 1500
+   },
+   "itemLocation": {
+    "postalCode": "WV1***",
+    "country": "GB"
+   },
+   "buyingOptions": [
+    "FIXED_PRICE"
+   ],
+   "shippingOptions": [
+    {
+     "shippingCostType": "FIXED",
+     "shippingCost": {
+      "value": "4.99",
+      "currency": "GBP"
+     }
+    }
+   ]
+  },
+  {
+   "itemId": "v1|110000000005|0",
+   "title": "POLO 6R AIRBAG 6R2 880 201 B BLACK",
+   "price": {
+    "value": "55.00",
+    "currency": "GBP"
+   },
+   "conditionId": "3000",
+   "condition": "Used",
+   "seller": {
+    "username": "breaker_uk_5",
+    "feedbackPercentage": "99.8",
+    "feedbackScore": 1500
+   },
+   "itemLocation": {
+    "postalCode": "WV1***",
+    "country": "GB"
+   },
+   "buyingOptions": [
+    "FIXED_PRICE"
+   ],
+   "shippingOptions": [
+    {
+     "shippingCostType": "FIXED",
+     "shippingCost": {
+      "value": "0.00",
+      "currency": "GBP"
+     }
+    }
+   ]
+  },
+  {
+   "itemId": "v1|110000000006|0",
+   "title": "VW Polo 6R Driver Airbag 6R2 880 201 B",
+   "price": {
+    "value": "47.50",
+    "currency": "GBP"
+   },
+   "conditionId": "3000",
+   "condition": "Used",
+   "seller": {
+    "username": "breaker_uk_6",
+    "feedbackPercentage": "99.8",
+    "feedbackScore": 1500
+   },
+   "itemLocation": {
+    "postalCode": "WV1***",
+    "country": "GB"
+   },
+   "buyingOptions": [
+    "FIXED_PRICE"
+   ]
+  },
+  {
+   "itemId": "v1|110000000007|0",
+   "title": "6R2 880 201 B polo driver airbag",
+   "price": {
+    "value": "44.00",
+    "currency": "GBP"
+   },
+   "conditionId": "3000",
+   "condition": "Used",
+   "seller": {
+    "username": "breaker_uk_7",
+    "feedbackPercentage": "99.8",
+    "feedbackScore": 1500
+   },
+   "itemLocation": {
+    "postalCode": "WV1***",
+    "country": "GB"
+   },
+   "buyingOptions": [
+    "FIXED_PRICE"
+   ],
+   "shippingOptions": [
+    {
+     "shippingCostType": "FIXED",
+     "shippingCost": {
+      "value": "3.50",
+      "currency": "GBP"
+     }
+    }
+   ]
+  },
+  {
+   "itemId": "v1|110000000008|0",
+   "title": "VW Polo 6R Driver Airbag 6R2 880 201 B",
+   "price": {
+    "value": "499.00",
+    "currency": "GBP"
+   },
+   "conditionId": "3000",
+   "condition": "Used",
+   "seller": {
+    "username": "breaker_uk_8",
+    "feedbackPercentage": "99.8",
+    "feedbackScore": 1500
+   },
+   "itemLocation": {
+    "postalCode": "WV1***",
+    "country": "GB"
+   },
+   "buyingOptions": [
+    "FIXED_PRICE"
+   ],
+   "shippingOptions": [
+    {
+     "shippingCostType": "FIXED",
+     "shippingCost": {
+      "value": "0.00",
+      "currency": "GBP"
+     }
+    }
+   ]
+  },
+  {
+   "itemId": "v1|110000000009|0",
+   "title": "VW Polo 6R Driver Airbag 6R2 880 201 B",
+   "price": {
+    "value": "35.00",
+    "currency": "GBP"
+   },
+   "conditionId": "3000",
+   "condition": "Used",
+   "seller": {
+    "username": "pulled_apart_ltd",
+    "feedbackPercentage": "99.8",
+    "feedbackScore": 1500
+   },
+   "itemLocation": {
+    "postalCode": "WV1***",
+    "country": "GB"
+   },
+   "buyingOptions": [
+    "FIXED_PRICE"
+   ],
+   "shippingOptions": [
+    {
+     "shippingCostType": "FIXED",
+     "shippingCost": {
+      "value": "0.00",
+      "currency": "GBP"
+     }
+    }
+   ]
+  },
+  {
+   "itemId": "v1|110000000010|0",
+   "title": "VW Polo 6R Driver Airbag 6R2 880 201 B",
+   "price": {
+    "value": "30.00",
+    "currency": "GBP"
+   },
+   "conditionId": "3000",
+   "condition": "Used",
+   "seller": {
+    "username": "SinglesOrSets",
+    "feedbackPercentage": "99.8",
+    "feedbackScore": 1500
+   },
+   "itemLocation": {
+    "postalCode": "WV1***",
+    "country": "GB"
+   },
+   "buyingOptions": [
+    "FIXED_PRICE"
+   ],
+   "shippingOptions": [
+    {
+     "shippingCostType": "FIXED",
+     "shippingCost": {
+      "value": "0.00",
+      "currency": "GBP"
+     }
+    }
+   ]
+  },
+  {
+   "itemId": "v1|110000000011|0",
+   "title": "VW Polo 6R Driver Airbag 6R2 880 201 B",
+   "price": {
+    "value": "89.99",
+    "currency": "GBP"
+   },
+   "conditionId": "1000",
+   "condition": "New",
+   "seller": {
+    "username": "breaker_uk_11",
+    "feedbackPercentage": "99.8",
+    "feedbackScore": 1500
+   },
+   "itemLocation": {
+    "postalCode": "WV1***",
+    "country": "GB"
+   },
+   "buyingOptions": [
+    "FIXED_PRICE"
+   ],
+   "shippingOptions": [
+    {
+     "shippingCostType": "FIXED",
+     "shippingCost": {
+      "value": "0.00",
+      "currency": "GBP"
+     }
+    }
+   ]
+  },
+  {
+   "itemId": "v1|110000000012|0",
+   "title": "VW Polo 6R Driver Airbag 6R2 880 201 B",
+   "price": {
+    "value": "25.00",
+    "currency": "GBP"
+   },
+   "conditionId": "3000",
+   "condition": "Used",
+   "seller": {
+    "username": "breaker_uk_12",
+    "feedbackPercentage": "99.8",
+    "feedbackScore": 1500
+   },
+   "itemLocation": {
+    "postalCode": "WV1***",
+    "country": "LT"
+   },
+   "buyingOptions": [
+    "FIXED_PRICE"
+   ],
+   "shippingOptions": [
+    {
+     "shippingCostType": "FIXED",
+     "shippingCost": {
+      "value": "15.00",
+      "currency": "GBP"
+     }
+    }
+   ]
+  },
+  {
+   "itemId": "v1|110000000013|0",
+   "title": "VW Polo 6R Driver Airbag 6R2 880 201 B",
+   "price": {
+    "value": "20.00",
+    "currency": "GBP"
+   },
+   "conditionId": "3000",
+   "condition": "Used",
+   "seller": {
+    "username": "breaker_uk_13",
+    "feedbackPercentage": "99.8",
+    "feedbackScore": 1500
+   },
+   "itemLocation": {
+    "postalCode": "WV1***",
+    "country": "GB"
+   },
+   "buyingOptions": [
+    "AUCTION"
+   ],
+   "shippingOptions": [
+    {
+     "shippingCostType": "FIXED",
+     "shippingCost": {
+      "value": "5.00",
+      "currency": "GBP"
+     }
+    }
+   ]
+  },
+  {
+   "itemId": "v1|110000000014|0",
+   "title": "VW Polo 6R steering wheel cover trim",
+   "price": {
+    "value": "12.00",
+    "currency": "GBP"
+   },
+   "conditionId": "3000",
+   "condition": "Used",
+   "seller": {
+    "username": "breaker_uk_14",
+    "feedbackPercentage": "99.8",
+    "feedbackScore": 1500
+   },
+   "itemLocation": {
+    "postalCode": "WV1***",
+    "country": "GB"
+   },
+   "buyingOptions": [
+    "FIXED_PRICE"
+   ],
+   "shippingOptions": [
+    {
+     "shippingCostType": "FIXED",
+     "shippingCost": {
+      "value": "2.00",
+      "currency": "GBP"
+     }
+    }
+   ]
+  },
+  {
+   "itemId": "v1|110000000015|0",
+   "title": "VW Polo 6R Driver Airbag 6R2 880 201 B",
+   "price": {
+    "value": "40.00",
+    "currency": "EUR"
+   },
+   "conditionId": "3000",
+   "condition": "Used",
+   "seller": {
+    "username": "breaker_uk_15",
+    "feedbackPercentage": "99.8",
+    "feedbackScore": 1500
+   },
+   "itemLocation": {
+    "postalCode": "WV1***",
+    "country": "GB"
+   },
+   "buyingOptions": [
+    "FIXED_PRICE"
+   ],
+   "shippingOptions": [
+    {
+     "shippingCostType": "FIXED",
+     "shippingCost": {
+      "value": "0.00",
+      "currency": "GBP"
+     }
+    }
+   ]
+  }
+ ]
+}
