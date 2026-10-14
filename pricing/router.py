@@ -10,12 +10,15 @@ from __future__ import annotations
 import hmac
 import os
 
-from fastapi import APIRouter, Header
+from fastapi import APIRouter, Header, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from pricing import ebay_orders, history, store
+import db
+from pricing import ebay_orders, engine, history, market, store
+from pricing.normalise import normalise
 from pricing.sales_import import import_rows, sanitise_row
+from pricing.titles import engine_group, parse_model
 
 router = APIRouter()
 
@@ -76,3 +79,32 @@ def part_types(min_sales: int = 3, limit: int = 200):
     """The own-sales part-type index (part type x model x generation [x engine])."""
     with store.session() as conn:
         return history.part_type_index(conn, min_sales=min_sales)[:limit]
+
+
+def car_from_vehicle_ref(vehicle_ref: str | None) -> dict:
+    """{model, generation, engine_group} from the vehicles table ({} if unknown)."""
+    if not vehicle_ref:
+        return {}
+    try:
+        v = db.get_vehicle(vehicle_ref)
+    except ValueError:
+        return {}
+    if not v:
+        return {}
+    _, model, gen = parse_model(f"{v.get('make') or ''} {v.get('model') or ''}")
+    return {"model": model, "generation": gen, "engine_group": engine_group(v.get("engine_code"))}
+
+
+@router.get("/price/suggest")
+async def price_suggest(
+    part_number: str = Query(..., description="Part number, any format"),
+    vehicle_ref: str | None = Query(None),
+    part_type: str | None = Query(None, description="e.g. the description from /lookup"),
+):
+    pn = normalise(part_number)
+    if not pn:
+        return _err(400, "part_number is not a recognisable part number")
+    car = car_from_vehicle_ref(vehicle_ref)
+    with store.session() as conn:
+        mkt = await market.get_market(conn, pn)
+        return engine.suggest(conn, pn, part_type=part_type, car=car, market=mkt)
