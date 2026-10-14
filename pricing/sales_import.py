@@ -37,6 +37,7 @@ ALLOWED_COLUMNS: dict[str, tuple[str, ...]] = {
     "total_price": ("total price",),
     "sale_date": ("sale date",),
     "dispatched_date": ("dispatched on date",),
+    "transaction_id": ("transaction id",),
 }
 CANONICAL_FIELDS = tuple(ALLOWED_COLUMNS)
 _HEADER_LOOKUP = {name: canon for canon, names in ALLOWED_COLUMNS.items() for name in names}
@@ -172,6 +173,7 @@ def build_record(row: dict, source: str, now: str | None = None) -> tuple[dict |
         "item_number": row["item_number"],
         "sales_record_number": row["sales_record_number"],
         "dispatched_date": dispatched.isoformat() if dispatched else None,
+        "transaction_id": row["transaction_id"],
         "imported_at": now or datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
     return record, ""
@@ -181,7 +183,7 @@ _INSERT_COLS = (
     "part_number_norm", "base_number", "price", "shipping", "item_price", "sold_date",
     "channel", "source", "vehicle_ref", "raw_title", "part_type", "model", "generation",
     "engine_group", "order_number", "item_number", "sales_record_number",
-    "dispatched_date", "imported_at",
+    "dispatched_date", "imported_at", "transaction_id",
 )
 
 
@@ -209,10 +211,15 @@ def import_rows(conn: sqlite3.Connection, rows: list[dict], source: str, dry_run
             summary["skip_reasons"][why] = summary["skip_reasons"].get(why, 0) + 1
             continue
         k = _key(rec)
-        exists = k in seen or conn.execute(
+        tk = ("txn", rec["item_number"], rec["transaction_id"]) if rec["transaction_id"] else None
+        exists = k in seen or (tk is not None and tk in seen) or conn.execute(
             "SELECT 1 FROM sold_history WHERE order_number=? AND item_number=? AND sales_record_number=?", k
-        ).fetchone() is not None
+        ).fetchone() is not None or (tk is not None and conn.execute(
+            "SELECT 1 FROM sold_history WHERE item_number=? AND transaction_id=?", tk[1:]
+        ).fetchone() is not None)
         seen.add(k)
+        if tk:
+            seen.add(tk)
         if exists:
             summary["duplicates"] += 1
             continue

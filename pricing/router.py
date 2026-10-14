@@ -77,11 +77,14 @@ async def sync_orders(dry_run: bool = False, x_admin_token: str | None = Header(
     denied = _check_admin(x_admin_token)
     if denied:
         return denied
-    if not ebay_orders.is_configured():
-        return _err(503, "Fulfillment sync not configured: set EBAY_USER_REFRESH_TOKEN (see HANDOFF.md)")
+    missing = ebay_orders.missing_env()
+    if missing:
+        return _err(503, f"order sync not configured: missing {', '.join(missing)} (see HANDOFF.md)")
     with store.session() as conn:
         try:
             summary = await ebay_orders.sync_orders(conn, dry_run=dry_run)
+        except ebay_orders.AuthError as e:
+            return _err(502, f"order sync failed: {e}. Check EBAY_AUTH_TOKEN (renewed in the message bot?)")
         except Exception as e:  # surface eBay failures as 502, never a silent 500
             return _err(502, f"order sync failed: {e}")
         if not dry_run:

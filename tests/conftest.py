@@ -33,8 +33,8 @@ def no_network(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def clean_env(monkeypatch):
-    for var in ("EBAY_APP_ID", "EBAY_CERT_ID", "EBAY_USER_REFRESH_TOKEN", "PRICING_ADMIN_TOKEN",
-                "PRICING_DAILY_SYNC"):
+    for var in ("EBAY_APP_ID", "EBAY_CERT_ID", "EBAY_DEV_ID", "EBAY_AUTH_TOKEN", "EBAY_SITE_ID",
+                "EBAY_USER_REFRESH_TOKEN", "PRICING_ADMIN_TOKEN", "PRICING_DAILY_SYNC", "PRICING_MODE"):
         monkeypatch.delenv(var, raising=False)
 
 

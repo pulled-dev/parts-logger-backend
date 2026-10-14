@@ -41,7 +41,10 @@ async def _daily_order_sync():
         try:
             with session() as conn:
                 summary = await ebay_orders.sync_orders(conn)
-            print(f"Daily order sync: {summary['inserted']} new sales")
+            if summary.get("skipped"):
+                print(summary["reason"])
+            else:
+                print(f"Daily order sync: {summary['inserted']} new sales")
         except Exception as e:
             print(f"Daily order sync failed: {type(e).__name__}: {e}")
         await asyncio.sleep(24 * 3600)
@@ -52,8 +55,11 @@ async def lifespan(app: FastAPI):
     init_db()
     init_pricing_db()
     task = None
-    if os.environ.get("PRICING_DAILY_SYNC") == "1" and ebay_orders.is_configured():
-        task = asyncio.create_task(_daily_order_sync())
+    if os.environ.get("PRICING_DAILY_SYNC") == "1":
+        if ebay_orders.is_configured():
+            task = asyncio.create_task(_daily_order_sync())
+        else:
+            print("Daily order sync not started: missing " + ", ".join(ebay_orders.missing_env()))
     yield
     if task:
         task.cancel()

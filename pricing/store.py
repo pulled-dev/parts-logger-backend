@@ -29,7 +29,7 @@ _SCHEMA = [
         item_price REAL,
         sold_date TEXT NOT NULL,        -- ISO yyyy-mm-dd
         channel TEXT NOT NULL DEFAULT 'ebay',
-        source TEXT NOT NULL,           -- csv_clean | csv_raw | fulfillment_api
+        source TEXT NOT NULL,           -- csv_clean | csv_raw | trading_api
         vehicle_ref TEXT,
         raw_title TEXT NOT NULL DEFAULT '',
         part_type TEXT NOT NULL DEFAULT '',
@@ -41,6 +41,7 @@ _SCHEMA = [
         sales_record_number TEXT NOT NULL DEFAULT '',
         dispatched_date TEXT,
         imported_at TEXT NOT NULL,
+        transaction_id TEXT NOT NULL DEFAULT '',   -- eBay transaction ID (Trading API / raw report)
         UNIQUE (order_number, item_number, sales_record_number)
     )
     """,
@@ -101,6 +102,7 @@ def session():
 
 # Columns added after a table was first created: (table, column, type).
 _MIGRATIONS = [
+    ("sold_history", "transaction_id", "TEXT NOT NULL DEFAULT ''"),
     ("price_suggestions", "mode", "TEXT"),
     ("price_suggestions", "current_price", "REAL"),
 ]
