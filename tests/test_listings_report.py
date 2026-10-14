@@ -9,7 +9,7 @@ Scenario (today = 31 Dec 2026):
      Listed 3 Sep at 15, raised to 22 on 10 Oct (toward the engine), still
      listed: 119 days unsold, 10% above the engine.
   C  1K0905851   engine 60, no export. Listed 5 Sep at 59.99, gone after
-     20 Sep with no sale -> ended unsold.
+     20 Sep with no sale -> ended without an eBay sale.
   D  6R0905851B  logger exported 44.99, never seen on eBay.
   U1 1K0951605C  a listing with no suggestion: sold at its listed price.
 """
@@ -78,7 +78,7 @@ def scenario(conn):
 
 def test_listing_history_outcomes(scenario):
     h = listings.listing_history(scenario, TODAY)
-    assert {k: v["outcome"] for k, v in h.items()} == {"A1": "sold", "B1": "active", "C1": "ended_unsold",
+    assert {k: v["outcome"] for k, v in h.items()} == {"A1": "sold", "B1": "active", "C1": "ended_without_ebay_sale",
                                                         "U1": "sold"}
     assert h["B1"]["days_listed"] == 119 and h["C1"]["days_listed"] == 15 and h["A1"]["days_to_sell"] == 10
 
@@ -98,7 +98,7 @@ def test_report_uses_real_listed_price(scenario):
 def test_report_ebay_listings_section(scenario):
     e = feedback.report(scenario, today=TODAY)["ebay_listings"]
     assert e["snapshots"]["runs"] == 3 and e["snapshots"]["last"]["run_date"] == "2026-12-31"
-    assert e["tracked_listings"] == {"total": 4, "active": 1, "sold": 2, "ended_unsold": 1, "with_price_change": 1}
+    assert e["tracked_listings"] == {"total": 4, "active": 1, "sold": 2, "ended_without_ebay_sale": 1, "with_price_change": 1}
     assert e["linked_suggestions"] == 3
 
     vs = e["vs_sold_price"]
@@ -125,7 +125,7 @@ def test_report_ebay_listings_section(scenario):
     assert st["at_engine"]["sold_within_60d_pct"] == 0.0        # C
     assert st["no_engine_price"]["listings"] == 0
 
-    assert e["unsold_over_60_days"] == {"count": 1, "still_listed": 1, "ended": 0, "with_engine_price": 1,
+    assert e["unsold_over_60_days"] == {"count": 1, "still_listed": 1, "ended_without_ebay_sale": 0, "with_engine_price": 1,
                                         "median_pct_vs_engine": 10.0, "above_engine": 1, "at_engine": 0,
                                         "below_engine": 0}
     assert e["best_offer"] == {"sold": 2, "sold_below_listed": 1, "sold_below_listed_pct": 50.0,
@@ -155,4 +155,5 @@ def test_report_endpoint_with_no_listings(client):
     e = client.get("/price/report").json()["ebay_listings"]
     assert e["tracked_listings"]["total"] == 0 and e["linked_suggestions"] == 0
     assert e["snapshots"] == {"runs": 0, "last": None}
+    assert "Ended without an eBay sale" in e["note"] and "over the counter or to trade" in e["note"]
     assert e["best_offer"]["median_discount_pct"] is None

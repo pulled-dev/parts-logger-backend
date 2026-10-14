@@ -264,7 +264,7 @@ def test_dry_run_writes_nothing(configured, conn):
     assert conn.execute("SELECT COUNT(*) FROM listing_snapshot_runs").fetchone()[0] == 0
 
 
-# ── History: price changes, days listed, sold / ended unsold ────────────
+# ── History: price changes, days listed, sold / ended without an eBay sale ─
 
 from pricing.sales_import import import_rows  # noqa: E402
 
@@ -304,13 +304,13 @@ def test_title_only_change_is_not_a_price_change(configured, conn):
     assert len(rows(conn, "111")) == 2
 
 
-def test_ended_unsold_vs_sold(configured, conn):
+def test_ended_without_ebay_sale_vs_sold(configured, conn):
     start = "2026-09-25T10:00:00.000Z"
     both = [item_xml("111", MOTOR, "29.99", start=start), item_xml("222", PULL, "19.99", start=start)]
     three_days(conn, both, both, [])  # both gone on day 3
     sale(conn, "222", PULL, 17.00, "2026-10-02", postage="0")  # 222 sold (Best Offer below 19.99)
     h = listings.listing_history(conn, today=DAY3.date())
-    assert h["111"]["outcome"] == "ended_unsold" and h["111"]["sold_price"] is None
+    assert h["111"]["outcome"] == "ended_without_ebay_sale" and h["111"]["sold_price"] is None
     assert h["111"]["days_listed"] == 7  # 25 Sep -> last seen 2 Oct
     s = h["222"]
     assert s["outcome"] == "sold" and s["sold_price"] == 17.0 and s["sold_date"] == "2026-10-02"
@@ -319,7 +319,7 @@ def test_ended_unsold_vs_sold(configured, conn):
 
 def test_sale_imported_late_turns_ended_into_sold(configured, conn):
     three_days(conn, [item_xml("111", MOTOR, "29.99")], [], [])
-    assert listings.listing_history(conn)["111"]["outcome"] == "ended_unsold"
+    assert listings.listing_history(conn)["111"]["outcome"] == "ended_without_ebay_sale"
     sale(conn, "111", MOTOR, 29.99, "2026-10-01")
     assert listings.listing_history(conn)["111"]["outcome"] == "sold"
 
@@ -330,7 +330,7 @@ def test_sale_of_same_item_before_listing_start_is_ignored(configured, conn):
     sale(conn, "111", MOTOR, 29.99, "2026-09-01")
     run_snapshot(conn, [page_xml([item_xml("111", MOTOR, "29.99", start="2026-09-20T10:00:00.000Z")])], DAY1)
     run_snapshot(conn, [page_xml([])], DAY2)
-    assert listings.listing_history(conn)["111"]["outcome"] == "ended_unsold"
+    assert listings.listing_history(conn)["111"]["outcome"] == "ended_without_ebay_sale"
 
 
 def test_sold_price_compared_at_the_price_in_force_on_sale_day(configured, conn):
