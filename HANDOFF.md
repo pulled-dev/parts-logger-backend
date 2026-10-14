@@ -39,9 +39,14 @@ engine** for a price. It works through these sources in order:
    days so we stay well inside eBay's limits.
 3. **Fallbacks** when neither exists: our sales of the same kind of part on the
    **same model AND generation** (e.g. "Golf Mk7 · window motor", never just
-   "Golf"), then a default. Nothing is borrowed from other models or
-   generations. The old all-models BreakerPro group average is no longer used.
-4. **Variant-sensitive parts never get a fallback price.** These are
+   "Golf"). Nothing is borrowed from other models or generations. The old
+   all-models BreakerPro group average is no longer used.
+4. **No evidence, no price.** If none of the above has anything, the engine
+   gives **no price** (there's no flat default any more): just Low and
+   "Check price". In live mode the logger then **keeps the current-method
+   price** for that part. The engine only replaces a price when it has real
+   evidence.
+5. **Variant-sensitive parts never get a fallback price.** These are
    headlights, tail lights, airbag modules, ECUs/control modules, clusters,
    steering wheels and infotainment/sat-nav. Their price depends on the exact
    variant, so with no sales of that exact number and no live competitors,
@@ -83,47 +88,52 @@ Behind the scenes:
 ## 2. Headline backtest result: honest version
 
 I replayed the last 12 months of sales. For each sale I asked what the engine
-*would* have suggested using only sales before that day, and compared it with
-what the current method would have pre-filled. Re-run with the tightened
-fallback, on the same 1,975 sales where both gave a price:
+*would* have suggested using only sales before that day. I compared three
+things on the same 2,165 sales that the current method could price:
 
-| | Typical miss (median error) | Priced within ±15% |
-|---|---|---|
-| Current method | 20.0% | 39.8% |
-| Engine before tightening | 21.4% | 36.5% |
-| **Engine now (tightened)** | **24.2%** | **32.9%** |
+| | Typical miss (median error) | Priced within ±15% | Leans |
+|---|---|---|---|
+| Current method (today's pre-fill) | 20.0% | 40.5% | 12% too low |
+| Engine alone (gives a price on 1,160 of them) | 20.0% | 39.6% | neither way |
+| **Hybrid**: engine where it has evidence, otherwise today's price (= what live mode does) | **18.9%** | **40.9%** | neither way |
 
-**The engine is still not better than the current method on past data, and the
-tightening made its numbers worse.** I haven't changed any settings to improve
-them. Why, briefly (full detail in `docs/pricing-backtest.md`):
+**Hybrid comes out slightly ahead of the current method, but it's a small
+margin and not consistent: it's better in some quarters and worse in others.**
+I haven't changed any settings to get these numbers. Briefly (full detail in
+`docs/pricing-backtest.md`):
 
-- **The tightening removed a better-than-nothing guess.** 808 sales used to be
-  priced by borrowing from other models. Under the new rule there's usually no
-  same model + generation group, so they now get the flat £24.99 default.
-  That's the main reason the number went down.
-- **The variant-sensitive rule did its job.** On the 200 headlights, tail
-  lights, clusters, ECUs and so on, the old fallback missed by a median 30%.
-  Now they get no price and a "Check price" instead. They're not counted in
-  the table above.
-- **Where we've sold the part before, the engine still matches or beats the
-  current method.** Door locks, bonnet release handles/cables and window
-  regulators come out clearly better.
-- **The current method's score is flattered.** Its prices came from a March
-  2026 BreakerPro stock export. For older sales, that file often holds *the
-  very item's own price*, so it "knew the answer".
-- **The engine's competitor-price leg couldn't be tested,** because eBay has
-  no record of past asking prices.
-- **The current method under-prices by about 12% on a typical sale.** The
-  engine doesn't lean either way.
+- **The clearest benefit is that it stops under-pricing.** The current method
+  typically prices 12% below what the part actually sold for; Hybrid doesn't.
+- **Where the engine has evidence (mostly parts we've sold before), it's a
+  little better than today's price:** 20.0% vs 20.8% typical miss, closer on
+  532 sales vs 509. Medium-confidence parts gain the most.
+- **Where it has no evidence (about half of parts), it now says nothing,** so
+  Hybrid is just today's price there. That's by design.
+- **Quarter by quarter it's mixed:**
+  - Better in late 2025 and spring 2026.
+  - About even in summer 2026.
+  - Worse in early 2026 and the first two weeks of October.
+- **Today's price score is flattered.** It comes from a March 2026 BreakerPro
+  stock export that often holds *the very item's own price*, so it "knew the
+  answer" on older sales. Hybrid inherits that on the sales where it falls
+  back to today's price.
+- **The competitor-price leg couldn't be tested,** because eBay has no record
+  of past asking prices. Live, it would let the engine price more parts.
 
-**My recommendation:** merge and run in **shadow** mode, with the eBay keys set
-so the competitor leg works. After 4–6 weeks, check `/price/report`, which
-compares current method vs engine vs what loggers actually listed at, then vs
-what sold and how fast. Only switch to `live` if the engine is clearly ahead
-there. One more option for you to consider: when the engine has nothing better
-than the flat default, it could give **no price** (like variant-sensitive
-parts) instead of £24.99. I haven't made that change. `USE_BREAKERPRO_EXACT`
-stays **off**.
+How we got here today:
+
+| Version | Engine vs current |
+|---|---|
+| First build | 21.9% vs 20.0% |
+| Tightened fallback | 24.2% vs 20.0%. The flat £24.99 default was doing most of the work. |
+| Now (no flat default, measured as Hybrid) | **18.9% vs 20.0%** |
+
+**My recommendation:** merge and run in **shadow** mode with the eBay keys set.
+After 4–6 weeks, check `/price/report` (current method vs engine vs what
+loggers actually listed at, then vs what sold and how fast). Switching to
+`live` is now low-risk, because live only changes a price when the engine has
+evidence. But the backtest gain is too small to call it proven: let the report
+decide. `USE_BREAKERPRO_EXACT` stays **off**.
 
 ## 3. Blockers and things I couldn't check
 

@@ -46,6 +46,18 @@ def _row(label: str, d: dict) -> str:
     return f"| {label} | {n} | {_m(d['old'])} | {_m(d['new'])} |"
 
 
+def _three_rows(t: dict) -> list[str]:
+    labels = (("current", "Current method (BreakerPro DB price)"), ("engine", "Engine (where it gives a price)"),
+              ("hybrid", "**Hybrid**"))
+    return [f"| {label} | {t[k]['n']} | {_pct(t[k]['mdape'])} | {_pct(t[k]['within'])} | {_bias(t[k]['bias'])} |"
+            for k, label in labels]
+
+
+def _conf_row(level: str, t: dict) -> str:
+    return (f"| {level.title()} | {t['sales']} | {_m(t['current'])} | {t['engine']['n']} | {_m(t['engine'])} "
+            f"| {_m(t['hybrid'])} |")
+
+
 def render(s: dict, v: dict, end: date, days: int) -> str:
     h = s["head_to_head"]
     out = [
@@ -86,6 +98,37 @@ def render(s: dict, v: dict, end: date, days: int) -> str:
         "",
         f"New engine on every sale with a part number where it gave a price ({s['new_all']['n']}): MdAPE "
         f"{_pct(s['new_all']['mdape'])}, within ±15% {_pct(s['new_all']['within'])}.",
+        "",
+        "### Current method vs engine vs Hybrid",
+        "",
+        "Hybrid = engine price where the engine gives one, current-method price where it doesn't (what the "
+        "logger shows in live mode). Judged on every sale the current method could price, so all three lines "
+        "cover the same sales; the engine line only counts the sales it priced.",
+        "",
+        "| Method | Sales priced | MdAPE | Within ±15% | Median bias |",
+        "|---|---|---|---|---|",
+        *_three_rows(s["three_way"]),
+        "",
+        f"Hybrid took the engine's price on {s['three_way']['hybrid_from_engine']} of these sales and the "
+        f"current method's on {s['three_way']['hybrid_from_current']}. On the "
+        f"{s['hybrid_where_current_has_no_price']['sales']} sales where the current method had no price, Hybrid "
+        f"(= engine) priced {s['hybrid_where_current_has_no_price']['hybrid_priced']} "
+        f"({_m(s['hybrid_where_current_has_no_price']['hybrid']).replace(' | ', ' MdAPE, ')} within ±15%).",
+        "",
+        "By engine confidence (same sales for all three lines within each level):",
+        "",
+        "| Confidence | Sales | Current MdAPE | Current ±15% | Engine priced | Engine MdAPE | Engine ±15% "
+        "| Hybrid MdAPE | Hybrid ±15% |",
+        "|---|---|---|---|---|---|---|---|---|",
+        *[_conf_row(k, d) for k, d in s["three_way_by_confidence"].items()],
+        "",
+        "By quarter (leakage check: the current method's DB is most often the sold item's own price in "
+        "2025 Q4 / 2026 Q1, see 'Over time' below):",
+        "",
+        "| Quarter | Sales | Current MdAPE | Current ±15% | Engine priced | Engine MdAPE | Engine ±15% "
+        "| Hybrid MdAPE | Hybrid ±15% |",
+        "|---|---|---|---|---|---|---|---|---|",
+        *[_conf_row(q, d).replace(f"| {q.title()} |", f"| {q} |", 1) for q, d in s["three_way_by_quarter"].items()],
         "",
         "### Where the engine wins and loses",
         "",
@@ -176,8 +219,9 @@ def main(argv=None) -> int:
     with open(args.doc, "w", encoding="utf-8", newline="\n") as fh:
         fh.write(doc)
     h = s["head_to_head"]
-    print(f"Old MdAPE {h['old']['mdape']}% / ±15% {h['old']['within']}%  vs  "
-          f"new MdAPE {h['new']['mdape']}% / ±15% {h['new']['within']}%  (n={h['new']['n']})")
+    t = s["three_way"]
+    for k in ("current", "engine", "hybrid"):
+        print(f"{k:8} n={t[k]['n']:5} MdAPE {t[k]['mdape']}%  within15 {t[k]['within']}%  bias {t[k]['bias']}")
     print(f"Wrote {args.doc}")
     return 0
 

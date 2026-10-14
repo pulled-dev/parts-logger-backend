@@ -116,3 +116,69 @@ def test_engine_no_price_reported_separately(conn):
     assert s["engine_no_price"]["count"] == 1 and s["engine_no_price"]["old"]["n"] == 1
     assert s["both_priced"] == 0 and s["head_to_head"]["new"]["n"] == 0
     assert s["new_wins"] + s["old_wins"] + s["ties"] == 0
+
+
+# ── Hybrid: engine where it gives a price, current method otherwise ────
+
+def test_hybrid_takes_engine_else_current(conn):
+    for d in ("2026-01-10", "2026-02-10", "2026-03-10", "2026-04-10"):
+        sale(conn, PEDAL, 30, d)
+    rows = sorted(backtest.run(conn, date(2026, 10, 14)), key=lambda r: r["sold_date"])
+    first, later = rows[0], rows[1:]
+    # First sale: no earlier evidence -> engine gives nothing -> current method (9.99).
+    assert first["new"] is None and first["hybrid"] == 9.99 and first["hybrid_from"] == "current"
+    assert first["hybrid_err"] == pytest.approx(abs(9.99 - 30) / 30 * 100)
+    for r in later:
+        assert r["new"] is not None and r["hybrid"] == r["new"] and r["hybrid_from"] == "engine"
+        assert r["hybrid_err"] == r["new_err"]
+
+
+def test_three_way_same_sales_and_by_confidence(conn):
+    for d in ("2026-01-10", "2026-02-10", "2026-03-10", "2026-04-10", "2026-05-10"):
+        sale(conn, PEDAL, 30, d)
+    s = backtest.summarise(backtest.run(conn, date(2026, 10, 14)))
+    t = s["three_way"]
+    assert t["sales"] == 5
+    assert t["current"]["n"] == 5 and t["hybrid"]["n"] == 5 and t["engine"]["n"] == 4
+    assert t["hybrid_from_engine"] == 4 and t["hybrid_from_current"] == 1
+    # current method says 9.99 every time vs a 30.00 sale: 66.7% low
+    assert t["current"]["mdape"] == 66.7 and t["current"]["bias"] == -66.7
+    # Hybrid on the first sale uses the current price, so its median sits with the engine's
+    assert t["hybrid"]["mdape"] <= t["current"]["mdape"]
+    by = s["three_way_by_confidence"]
+    assert set(by) == {"high", "medium", "low"}
+    assert sum(b["sales"] for b in by.values()) == 5
+    assert by["low"]["engine"]["n"] == 0 and by["low"]["hybrid"]["n"] == by["low"]["sales"]
+
+
+def test_hybrid_where_current_method_has_no_price(conn):
+    title = "Volkswagen Golf Mk7 WINDOW MOTOR (FRONT) 9Z9 111 111"  # no exact or group entry in the DB
+    for d in ("2026-01-10", "2026-02-10", "2026-03-10", "2026-04-10"):
+        sale(conn, title, 40, d)
+    s = backtest.summarise(backtest.run(conn, date(2026, 10, 14)))
+    h = s["hybrid_where_current_has_no_price"]
+    assert h["sales"] == 4 and h["hybrid_priced"] == 3  # engine priced the last three
+    assert s["three_way"]["sales"] == 0
+
+
+def test_report_has_hybrid_section(tmp_path):
+    path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "scripts", "backtest_pricing.py")
+    spec = importlib.util.spec_from_file_location("backtest_pricing_h", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    doc = tmp_path / "bt.md"
+    assert mod.main(["--csv", fixture_path("orders_clean_synthetic.csv"), "--doc", str(doc)]) == 0
+    text = doc.read_text(encoding="utf-8")
+    assert "### Current method vs engine vs Hybrid" in text
+    assert "| **Hybrid** |" in text and "| Engine priced |" in text
+    for level in ("| High |", "| Medium |", "| Low |"):
+        assert level in text
+
+
+def test_three_way_by_quarter(conn):
+    for d in ("2026-01-10", "2026-02-10", "2026-04-10", "2026-05-10"):
+        sale(conn, PEDAL, 30, d)
+    q = backtest.summarise(backtest.run(conn, date(2026, 10, 14)))["three_way_by_quarter"]
+    assert set(q) == {"2026 Q1", "2026 Q2"}
+    assert q["2026 Q1"]["sales"] == 2 and q["2026 Q1"]["engine"]["n"] == 1  # first sale: no evidence
+    assert q["2026 Q2"]["hybrid_from_engine"] == 2

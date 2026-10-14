@@ -12,6 +12,10 @@ method had no DB price are reported as "old method: no replayable price".
 
 There's no historical competitor data either, so the engine runs WITHOUT its
 market leg here. That understates the engine for parts with no own history.
+
+Hybrid = the engine price where the engine gives one, otherwise the current
+method's price. That is what the logger shows in live mode (the engine only
+replaces the pre-fill when it has evidence).
 """
 
 from __future__ import annotations
@@ -41,6 +45,26 @@ def abs_pct_err(pred: float | None, actual: float) -> float | None:
     if pred is None or not actual:
         return None
     return abs(pred - actual) / actual * 100
+
+
+def bias(rows: list[dict], key: str) -> float | None:
+    """Median signed % error (negative = priced below what it sold for)."""
+    vals = [(r[key] - r["actual"]) / r["actual"] * 100 for r in rows if r.get(key) is not None and r["actual"]]
+    return round(statistics.median(vals), 1) if vals else None
+
+
+def three_way(rows: list[dict]) -> dict:
+    """Current method vs engine vs hybrid on the same rows."""
+    out = {}
+    for name, key, err in (("current", "old", "old_err"), ("engine", "new", "new_err"),
+                           ("hybrid", "hybrid", "hybrid_err")):
+        m = metrics([r[err] for r in rows])
+        m["bias"] = bias(rows, key)
+        out[name] = m
+    out["sales"] = len(rows)
+    out["hybrid_from_engine"] = sum(r["hybrid_from"] == "engine" for r in rows)
+    out["hybrid_from_current"] = sum(r["hybrid_from"] == "current" for r in rows)
+    return out
 
 
 def metrics(errors: list[float]) -> dict:
@@ -98,7 +122,10 @@ def _run(conn: sqlite3.Connection, end: date, days: int) -> list[dict]:
             "new_err": abs_pct_err(res["suggested_price"], s["price"]),
             "old_err": abs_pct_err(old, s["price"]),
             "old_err_item": abs_pct_err(old, s["item_price"]),
+            "hybrid": res["suggested_price"] if res["suggested_price"] is not None else old,
+            "hybrid_from": "engine" if res["suggested_price"] is not None else ("current" if old is not None else ""),
         })
+        row["hybrid_err"] = abs_pct_err(row["hybrid"], s["price"])
         out.append(row)
     return out
 
@@ -175,6 +202,25 @@ def summarise(rows: list[dict]) -> dict:
             "old_exact_equals_item_pct": round(100 * sum(
                 r["old_kind"] == "exact" and abs(r["old"] - r["item_price"]) < 0.01 for r in g) / len(g), 1)}
         for q, g in s["by_quarter"].items()
+    }
+    # Hybrid: compared on every sale the current method could price, so all
+    # three lines are judged on the same sales (the engine line covers only the
+    # ones it priced; its n says how many).
+    base = [r for r in priced if r["old"] is not None]
+    s["three_way"] = three_way(base)
+    s["three_way_by_confidence"] = {
+        level: three_way([r for r in base if r["new_conf"] == level]) for level in ("high", "medium", "low")
+    }
+    quarters: dict[str, list] = {}
+    for r in base:
+        y, mth = r["sold_date"][:7].split("-")
+        quarters.setdefault(f"{y} Q{(int(mth) - 1) // 3 + 1}", []).append(r)
+    s["three_way_by_quarter"] = {q: three_way(g) for q, g in sorted(quarters.items())}
+    no_current = [r for r in priced if r["old"] is None]
+    s["hybrid_where_current_has_no_price"] = {
+        "sales": len(no_current),
+        "hybrid_priced": sum(r["hybrid"] is not None for r in no_current),
+        "hybrid": metrics([r["hybrid_err"] for r in no_current]),
     }
     free = [r for r in both if r["shipping"] == 0]
     s["head_to_head_free_postage"] = {"old": metrics([r["old_err"] for r in free]),
