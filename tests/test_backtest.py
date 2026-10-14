@@ -20,7 +20,10 @@ def sale(conn, title, price, day, postage=0):
                 "csv_clean")
 
 
-# 6C0907379N has an exact entry (24.99) in vag_parts_db.json; 9Z9... has none.
+# 8K1723523 (accelerator pedal) has an exact entry (9.99) in vag_parts_db.json
+# and is NOT variant-sensitive, so the engine always returns a price for it.
+PEDAL = "Audi Q5 8R ACCELERATOR PEDAL 8K1 723 523"
+# 6C0907379N (ABS pump/modulator/control unit) IS variant-sensitive.
 ABS = "Seat Ibiza 6J ABS PUMP 6C0 907 379 N"
 
 
@@ -39,7 +42,7 @@ def test_old_method_replay():
 
 
 def test_sale_never_sees_itself(conn):
-    sale(conn, ABS, 500, "2026-05-01")  # the only sale of this number
+    sale(conn, PEDAL, 500, "2026-05-01")  # the only sale of this number
     rows = backtest.run(conn, date(2026, 10, 14))
     r = rows[0]
     assert r["new_source"] != "own_sold"
@@ -48,18 +51,18 @@ def test_sale_never_sees_itself(conn):
 
 def test_only_earlier_sales_used(conn):
     for d in ("2026-01-10", "2026-02-10", "2026-03-10"):
-        sale(conn, ABS, 30, d)
-    sale(conn, ABS, 60, "2026-04-10")
-    sale(conn, ABS, 999, "2026-04-10")  # same day as the sale under test: invisible to it
+        sale(conn, PEDAL, 30, d)
+    sale(conn, PEDAL, 60, "2026-04-10")
+    sale(conn, PEDAL, 999, "2026-04-10")  # same day as the sale under test: invisible to it
     rows = {r["actual"]: r for r in backtest.run(conn, date(2026, 10, 14))}
     r = rows[60.0]
     assert r["new_source"] == "own_sold" and r["new"] == 29.99
     assert r["new_err"] == pytest.approx(abs(29.99 - 60) / 60 * 100)
-    assert r["old"] == 24.99 and r["old_kind"] == "exact"
+    assert r["old"] == 9.99 and r["old_kind"] == "exact"
 
 
 def test_window_and_skips(conn):
-    sale(conn, ABS, 30, "2025-01-01")  # outside a 365-day window ending 2026-10-14
+    sale(conn, PEDAL, 30, "2025-01-01")  # outside a 365-day window ending 2026-10-14
     sale(conn, "Volkswagen Polo 6R WASHER BOTTLE", 15, "2026-06-01")
     rows = backtest.run(conn, date(2026, 10, 14))
     assert len(rows) == 1 and rows[0]["skipped"] == "no part number"
@@ -68,9 +71,9 @@ def test_window_and_skips(conn):
 
 
 def test_breakerpro_exact_flag_restored(conn):
-    sale(conn, ABS, 30, "2026-06-01")
+    sale(conn, PEDAL, 30, "2026-06-01")
     on = backtest.run(conn, date(2026, 10, 14), breakerpro_exact=True)[0]
-    assert on["new_source"] == "breakerpro_exact" and on["new"] == 24.99
+    assert on["new_source"] == "breakerpro_exact" and on["new"] == 9.99
     assert cfg.USE_BREAKERPRO_EXACT is False
     off = backtest.run(conn, date(2026, 10, 14))[0]
     assert off["new_source"] != "breakerpro_exact"
@@ -78,9 +81,9 @@ def test_breakerpro_exact_flag_restored(conn):
 
 def test_summary_head_to_head(conn):
     for d in ("2026-01-10", "2026-02-10", "2026-03-10", "2026-04-10"):
-        sale(conn, ABS, 30, d)
+        sale(conn, PEDAL, 30, d)
     s = backtest.summarise(backtest.run(conn, date(2026, 10, 14)))
-    assert s["old_has_price"] == 4
+    assert s["old_has_price"] == 4 and s["both_priced"] == 4
     assert s["head_to_head"]["old"]["n"] == 4
     assert s["new_wins"] + s["old_wins"] + s["ties"] == 4
     assert set(s["by_quarter"]) == {"2026 Q1", "2026 Q2"}
@@ -97,3 +100,15 @@ def test_cli_writes_report_and_keeps_narrative(tmp_path):
     text = doc.read_text(encoding="utf-8")
     assert text.startswith("# My notes\n\nkeep me") and text.rstrip().endswith("tail")
     assert "### Headline: head-to-head on the same sales" in text and "old<!--" not in text
+
+
+def test_engine_no_price_reported_separately(conn):
+    # Only sale of a variant-sensitive part: engine gives no price, old method does.
+    sale(conn, ABS, 80, "2026-05-01")
+    rows = backtest.run(conn, date(2026, 10, 14))
+    assert rows[0]["new"] is None and rows[0]["new_source"] == "variant_check"
+    assert rows[0]["new_err"] is None
+    s = backtest.summarise(rows)
+    assert s["engine_no_price"]["count"] == 1 and s["engine_no_price"]["old"]["n"] == 1
+    assert s["both_priced"] == 0 and s["head_to_head"]["new"]["n"] == 0
+    assert s["new_wins"] + s["old_wins"] + s["ties"] == 0

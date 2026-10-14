@@ -43,18 +43,15 @@ def own_sales(conn: sqlite3.Connection, *, part_number: str = "", base: str = ""
 
 
 def part_type_levels(part_type: str, model: str, generation: str, engine_group: str) -> list[tuple[str, dict]]:
-    """Most specific grouping first. Engine group is only used where it matters."""
-    if not part_type:
+    """Most specific grouping first. Every level matches model AND generation:
+    no borrowing across models or generations. Engine group narrows further
+    only where it matters."""
+    if not (part_type and model and generation):
         return []
     levels = []
-    if model and generation and engine_group and engine_relevant(part_type):
+    if engine_group and engine_relevant(part_type):
         levels.append(("model+gen+engine", {"model": model, "generation": generation, "engine_group": engine_group}))
-    if model and engine_group and engine_relevant(part_type):
-        levels.append(("model+engine", {"model": model, "engine_group": engine_group}))
-    if model and generation:
-        levels.append(("model+gen", {"model": model, "generation": generation}))
-    if model:
-        levels.append(("model", {"model": model}))
+    levels.append(("model+gen", {"model": model, "generation": generation}))
     return levels
 
 
@@ -76,17 +73,6 @@ def part_type_sales(conn: sqlite3.Connection, part_type: str, model: str = "", g
     return "", []
 
 
-def part_type_any_model(conn: sqlite3.Connection, part_type: str, *, before: str | None = None,
-                        lookback_days: int | None = None) -> list[tuple[float, str]]:
-    """Own sales of this part type on any car (category-default rung)."""
-    if not part_type:
-        return []
-    extra, params = _window(before, lookback_days)
-    rows = conn.execute(
-        f"SELECT price, sold_date FROM sold_history WHERE part_type = ?{extra}",
-        [part_type, *params],
-    ).fetchall()
-    return [(r[0], r[1]) for r in rows]
 
 
 def part_type_index(conn: sqlite3.Connection, min_sales: int = 1) -> list[dict]:

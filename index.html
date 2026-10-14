@@ -1895,12 +1895,14 @@ function updateCardSuggestion(p) {
 function applySuggestion(id, s) {
   const p = parts.find(x => x.id === id);
   if (!p) return;
-  if (s && s.suggested_price != null) {
+  if (s && s.confidence) {
+    // suggested_price can be null on purpose (variant-sensitive part, no exact
+    // match): show the Low badge + reason and leave the current price alone.
     p.engine = {
       state: 'ok', price: s.suggested_price, confidence: s.confidence,
       reason: s.reason, source: s.source, suggestion_id: s.suggestion_id != null ? s.suggestion_id : null,
     };
-    if (!p.price_touched) p.your_price = s.suggested_price;
+    if (!p.price_touched && s.suggested_price != null) p.your_price = s.suggested_price;
   } else {
     p.engine = { state: 'failed' };
   }

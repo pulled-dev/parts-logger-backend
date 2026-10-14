@@ -163,10 +163,13 @@ def test_part_type_fallback_low_with_two(conn):
     assert r["reason"].endswith("check price")
 
 
-def test_breakerpro_group_fallback(conn):
-    # 907379 (ABS pump) has an avg_price in vag_parts_db.json.
-    r = suggest(conn, "9Z9 907 379 X", as_of=AS_OF)
-    assert r["source"] == "breakerpro_group" and r["confidence"] == "low"
+def test_no_cross_model_breakerpro_group_average(conn):
+    # 723523 (accelerator pedal) has an all-models avg_price (9.99) in
+    # vag_parts_db.json. That cross-model average must never be used as a price.
+    r = suggest(conn, "9Z9 723 523 X", as_of=AS_OF)
+    assert r["source"] == "category_default" and r["confidence"] == "low"
+    assert r["suggested_price"] == cfg.DEFAULT_PRICE
+    assert "BreakerPro" not in r["reason"]
 
 
 def test_category_default_from_config(conn, monkeypatch):
@@ -175,10 +178,28 @@ def test_category_default_from_config(conn, monkeypatch):
     assert r["source"] == "category_default" and r["suggested_price"] == 74.99
 
 
-def test_category_default_any_model_median(conn):
+def test_no_cross_model_part_type_borrowing(conn):
+    # Plenty of A3 8V washer-bottle sales must not price a Polo 6R washer bottle.
     add_sales(conn, "Audi A3 8V WASHER BOTTLE", [14, 16, 18])
-    r = suggest(conn, "9Z9 111 112", part_type="Washer Bottle", car={"model": "POLO"}, as_of=AS_OF)
-    assert r["source"] == "category_default" and r["raw_price"] == 16
+    r = suggest(conn, "9Z9 111 112", part_type="Washer Bottle", car={"model": "POLO", "generation": "6R"},
+                as_of=AS_OF)
+    assert r["source"] == "category_default" and r["raw_price"] == cfg.DEFAULT_PRICE
+    assert "any model" not in r["reason"]
+
+
+def test_no_cross_generation_part_type_borrowing(conn):
+    add_sales(conn, "Volkswagen Golf Mk6 WINDOW MOTOR (FRONT) 5K0 959 801 C", [20])
+    add_sales(conn, "Volkswagen Golf Mk6 WINDOW MOTOR (FRONT) 5K0 959 803 C", [30])
+    r = suggest(conn, "5G0959999", part_type="WINDOW MOTOR FRONT", car={"model": "GOLF", "generation": "MK7"},
+                as_of=AS_OF)
+    assert r["source"] == "category_default"  # Mk6 sales never price a Mk7
+
+
+def test_part_type_needs_generation(conn):
+    add_sales(conn, "Volkswagen Golf Mk7 WINDOW MOTOR (FRONT) 5Q0 959 801 C", [20])
+    add_sales(conn, "Volkswagen Golf Mk7 WINDOW MOTOR (FRONT) 5Q0 959 803 C", [30])
+    r = suggest(conn, "5G0959999", part_type="WINDOW MOTOR FRONT", car={"model": "GOLF"}, as_of=AS_OF)
+    assert r["source"] == "category_default"
 
 
 def test_general_default(conn):
@@ -254,3 +275,58 @@ def test_part_type_resolution_does_not_peek(conn):
     add_sales(conn, "Volkswagen Golf Mk7 WINDOW MOTOR (FRONT) 5Q0 959 802 A", [30], days_ago=0)
     r = suggest(conn, "5G0 959 802 F", as_of=AS_OF)  # the only evidence is on as_of itself
     assert r["part_type"] != "WINDOW MOTOR FRONT"
+
+
+# ── Variant-sensitive categories ────────────────────────────────────────
+
+@pytest.mark.parametrize("ptype,expected", [
+    ("HEADLIGHT", True), ("REAR LIGHT ON BODY", True), ("AIRBAG MODULE", True), ("ENGINE ECU", True),
+    ("CENTRAL CONTROL UNIT", True), ("SPEEDO CLUSTER", True), ("STEERING WHEEL", True),
+    ("INFOTAINMENT SCREEN", True), ("SAT NAV UNIT", True),
+    ("HEADLIGHT SWITCH", False), ("STEERING WHEEL TRIM", False), ("REAR LIGHT BULB HOLDER", False),
+    ("WINDOW MOTOR FRONT", False), ("AIRBAG SQUIB/SLIP RING", False), ("", False),
+])
+def test_is_variant_sensitive(ptype, expected):
+    assert engine.is_variant_sensitive(ptype) is expected
+
+
+def test_variant_sensitive_fallback_gives_no_price_only_range(conn):
+    add_sales(conn, "Volkswagen Golf Mk7 HEADLIGHT (DRIVER SIDE) 5G1 941 006", [80])
+    add_sales(conn, "Volkswagen Golf Mk7 HEADLIGHT (PASSENGER SIDE) 5G1 941 005", [150])
+    add_sales(conn, "Volkswagen Golf Mk6 HEADLIGHT (PASSENGER SIDE) 5K1 941 005", [40])  # other gen: excluded
+    r = suggest(conn, "5G1 941 999 B", part_type="Headlight", car={"model": "GOLF", "generation": "MK7"},
+                as_of=AS_OF)
+    assert r["suggested_price"] is None and r["raw_price"] is None
+    assert r["confidence"] == "low" and r["check_price"] is True and r["source"] == "variant_check"
+    assert r["group_range"] == {"count": 2, "min": 80.0, "max": 150.0, "median": 115.0, "group": "Golf MK7 HEADLIGHT"}
+    assert "reference only" in r["reason"] and r["reason"].endswith("check price")
+
+
+def test_variant_sensitive_without_group(conn):
+    r = suggest(conn, "5G1 941 999 B", part_type="Headlight", car={"model": "GOLF", "generation": "MK7"},
+                as_of=AS_OF)
+    assert r["suggested_price"] is None and r["group_range"] is None
+    assert "no Golf MK7 headlight sales to compare against" in r["reason"]
+
+
+def test_variant_sensitive_still_priced_from_exact_sales(conn):
+    add_sales(conn, "Volkswagen Golf Mk7 HEADLIGHT (DRIVER SIDE) 5G1 941 006", [80, 85, 90])
+    r = suggest(conn, "5G1 941 006", as_of=AS_OF)
+    assert r["source"] == "own_sold" and r["suggested_price"] == 84.99
+
+
+def test_variant_sensitive_still_priced_from_market(conn):
+    r = suggest(conn, "5G1 941 999 B", part_type="Headlight", market=mkt(6, 90, 100), as_of=AS_OF)
+    assert r["source"] == "market" and r["suggested_price"] is not None
+
+
+def test_variant_list_is_configurable(conn, monkeypatch):
+    assert suggest(conn, "9Z9 111 112", part_type="Parcel Shelf", as_of=AS_OF)["suggested_price"] is not None
+    monkeypatch.setattr(cfg, "VARIANT_SENSITIVE_PART_TYPES", cfg.VARIANT_SENSITIVE_PART_TYPES + ("PARCEL SHELF",))
+    r = suggest(conn, "9Z9 111 112", part_type="Parcel Shelf", as_of=AS_OF)
+    assert r["suggested_price"] is None and r["source"] == "variant_check"
+
+
+def test_suggest_endpoint_no_price_shape(client):
+    r = client.get("/price/suggest", params={"part_number": "5G1941999B", "part_type": "Headlight"}).json()
+    assert r["suggested_price"] is None and r["confidence"] == "low" and "group_range" in r

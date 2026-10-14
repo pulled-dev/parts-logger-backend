@@ -29,7 +29,29 @@ EBAY_SEARCH_LIMIT = 100
 # before the part-type rung. See docs/pricing-backtest.md for the evidence and
 # its caveat before turning this on.
 USE_BREAKERPRO_EXACT = False
-PART_TYPE_MIN_SALES = 2          # own sales of the same part type + car needed to use that rung
+PART_TYPE_MIN_SALES = 2          # own sales of the same part type + model + generation needed to use that rung
+# Part-type groups always match model AND generation (e.g. Golf Mk7, never just
+# Golf). No borrowing from other models or generations.
+
+# Variant-sensitive categories: price depends on the exact variant (xenon vs
+# halogen, coding, trim...), so with no exact part-number match the engine gives
+# NO price. It returns Low / "Check price" and the same-car group's price range
+# for reference only. A part type counts as variant-sensitive if it contains any
+# phrase below as whole words, unless it also contains an EXCLUDE word
+# (so "HEADLIGHT SWITCH" or "STEERING WHEEL TRIM" are not caught).
+VARIANT_SENSITIVE_PART_TYPES = (
+    "HEADLIGHT", "HEADLAMP",
+    "REAR LIGHT", "TAIL LIGHT", "TAILLIGHT",
+    "AIRBAG MODULE", "AIRBAG CONTROL MODULE", "SRS MODULE",
+    "ECU", "CONTROL MODULE", "CONTROL UNIT",
+    "SPEEDO CLUSTER", "INSTRUMENT CLUSTER", "SPEEDO", "CLOCKS",
+    "STEERING WHEEL",
+    "INFOTAINMENT", "SAT NAV", "SATNAV", "NAVIGATION", "HEAD UNIT", "RADIO",
+)
+VARIANT_SENSITIVE_EXCLUDE = (
+    "SWITCH", "BULB", "HOLDER", "BRACKET", "COVER", "TRIM", "CAP", "WIRING", "LOOM",
+    "CABLE", "BUTTON", "SURROUND", "WASHER",
+)
 PART_TYPE_MEDIUM_SALES = 5       # >= this many -> Medium confidence, else Low
 DEFAULT_PRICE = 24.99            # last resort (overall median sale is ~£25)
 # Pin a default for specific part types, e.g. {"ENGINE": 349.99, "GEARBOX": 199.99}.

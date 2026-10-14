@@ -74,8 +74,9 @@ def test_own_sales_exact_base_and_before(seeded):
 def test_part_type_levels_most_specific_first(seeded):
     level, rows = part_type_sales(seeded, "WINDOW MOTOR FRONT", "GOLF", "MK7", min_sales=2)
     assert level == "model+gen" and sorted(p for p, _ in rows) == [30, 32, 34]
-    level, rows = part_type_sales(seeded, "WINDOW MOTOR FRONT", "GOLF", "MK5", min_sales=1)
-    assert level == "model" and len(rows) == 4
+    # No model-only level: a Mk5 never borrows Mk6/Mk7 sales.
+    assert part_type_sales(seeded, "WINDOW MOTOR FRONT", "GOLF", "MK5", min_sales=1) == ("", [])
+    assert part_type_sales(seeded, "WINDOW MOTOR FRONT", "GOLF", "", min_sales=1) == ("", [])
     # Engine group only used for engine-relevant part types.
     level, rows = part_type_sales(seeded, "ENGINE ECU", "GOLF", "MK7", "CLH", min_sales=1)
     assert level == "model+gen+engine" and [p for p, _ in rows] == [90]

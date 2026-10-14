@@ -105,12 +105,19 @@ def _run(conn: sqlite3.Connection, end: date, days: int) -> list[dict]:
 
 def summarise(rows: list[dict]) -> dict:
     priced = [r for r in rows if "skipped" not in r]
-    both = [r for r in priced if r["old"] is not None]
+    # The engine deliberately gives no price for variant-sensitive parts with no
+    # exact match ("Check price"). Head-to-head = sales where BOTH gave a price;
+    # the no-price sales are reported separately so they can't hide.
+    no_price = [r for r in priced if r["new"] is None]
+    both = [r for r in priced if r["old"] is not None and r["new"] is not None]
     s = {
         "sales_in_window": len(rows),
         "with_part_number": len(priced),
         "no_part_number": len(rows) - len(priced),
-        "old_has_price": len(both),
+        "old_has_price": sum(r["old"] is not None for r in priced),
+        "engine_no_price": {"count": len(no_price),
+                            "old": metrics([r["old_err"] for r in no_price if r["old"] is not None])},
+        "both_priced": len(both),
         "head_to_head": {"old": metrics([r["old_err"] for r in both]),
                          "new": metrics([r["new_err"] for r in both])},
         "new_all": metrics([r["new_err"] for r in priced]),

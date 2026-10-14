@@ -137,7 +137,7 @@ def test_pricing_call_is_parallel_and_cannot_throw():
 
 def test_suggestion_respects_manual_price():
     s = _src()
-    assert "if (!p.price_touched) p.your_price = s.suggested_price;" in s
+    assert "if (!p.price_touched && s.suggested_price != null) p.your_price = s.suggested_price;" in s
     assert "p.price_touched = true;" in s
 
 

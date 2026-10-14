@@ -17,14 +17,21 @@ Ladder
                                   this case; a real sale of this exact part beats
                                   any fallback.
      own 0 + market usable     -> market midpoint.
-3. Fallbacks: own sales of the same part type on the same car (§4c), then the
-   BreakerPro 6-digit group average, then the category default.
+3. Fallbacks (no exact-number sales, no usable market):
+     variant-sensitive part types (headlights, ECUs, clusters... see
+     VARIANT_SENSITIVE_PART_TYPES) -> NO price: Low / "Check price" with the
+     same-car group range for reference only.
+     otherwise -> own sales of the same part type on the same model AND
+     generation (§4c), then the configured category default.
+   Nothing is borrowed across models or generations (the old cross-model
+   BreakerPro group average and "any model" medians were removed).
 Then rounding and the per-category floor.
 """
 
 from __future__ import annotations
 
 import math
+import re
 import sqlite3
 import statistics
 from datetime import date, timedelta
@@ -68,6 +75,21 @@ def round_price(x: float) -> float:
     if x + 0.01 < cfg.ROUNDING_THRESHOLD:
         return round(max(1, math.floor(x + 0.51)) - 0.01, 2)
     return round(max(1, math.floor((x + 0.01) / 5 + 0.5)) * 5 - 0.01, 2)
+
+
+def is_variant_sensitive(part_type: str) -> bool:
+    """True if the part type contains a VARIANT_SENSITIVE_PART_TYPES phrase as
+    whole words and no VARIANT_SENSITIVE_EXCLUDE word."""
+    if not part_type:
+        return False
+    pt = part_type.upper()
+
+    def has(word: str) -> bool:
+        return re.search(r"(?<![A-Z0-9])" + re.escape(word.upper()) + r"(?![A-Z0-9])", pt) is not None
+
+    if any(has(w) for w in cfg.VARIANT_SENSITIVE_EXCLUDE):
+        return False
+    return any(has(p) for p in cfg.VARIANT_SENSITIVE_PART_TYPES)
 
 
 def floor_for(part_type: str) -> float:
@@ -137,19 +159,6 @@ def _breakerpro_exact_price(pn: str) -> float | None:
     except Exception:
         return None
     price = (entry or {}).get("breakerpro_price")
-    return float(price) if price else None
-
-
-def _breakerpro_group_price(pn: str) -> float | None:
-    grp = middle_group(pn)
-    if not grp:
-        return None
-    try:
-        from vag_lookup import get_db
-        entry = get_db().get("groups", {}).get(grp)
-    except Exception:
-        return None
-    price = (entry or {}).get("avg_price")
     return float(price) if price else None
 
 
@@ -239,20 +248,29 @@ def suggest(conn: sqlite3.Connection, part_number: str, *, part_type: str | None
         match = "market"
 
     # 3. Fallbacks.
+    group_range = None
     if price is None:
         nothing = ("no sales of this number" if market is None
                    else "no sales or usable live listings for this number")
-        price, source, conf, match, fb_reason = _fallback(conn, pn, ptype, car, before, look, nothing)
-        reasons.append(fb_reason)
+        if is_variant_sensitive(ptype):
+            source, conf, match = "variant_check", LOW, "none"
+            group_range, ref = _group_range(conn, ptype, car, before, look)
+            reasons.append(f"{nothing} · {ptype.lower()} prices depend on the exact variant, so no price is "
+                           f"suggested · {ref}")
+        else:
+            price, source, conf, match, fb_reason = _fallback(conn, pn, ptype, car, before, look, nothing)
+            reasons.append(fb_reason)
         if mkt_block:
             reasons.append(f"only {market['count']} live competitor{'s' if market['count'] != 1 else ''}")
 
     raw = price
-    suggested = round_price(raw)
-    floor = floor_for(ptype)
-    if suggested < floor:
-        suggested = floor
-        reasons.append(f"raised to the {_gbp(floor)} minimum")
+    suggested = None
+    if raw is not None:
+        suggested = round_price(raw)
+        floor = floor_for(ptype)
+        if suggested < floor:
+            suggested = floor
+            reasons.append(f"raised to the {_gbp(floor)} minimum")
     if conf == LOW:
         reasons.append("check price")
 
@@ -267,8 +285,36 @@ def suggest(conn: sqlite3.Connection, part_number: str, *, part_type: str | None
         "part_number": pn,
         "part_type": ptype,
         "check_price": conf == LOW,
-        "raw_price": round(raw, 2),
+        "raw_price": None if raw is None else round(raw, 2),
+        "group_range": group_range,
     }
+
+
+def _car_label(car: dict, with_engine: bool = False) -> str:
+    parts = [(car.get("model") or "").title(), (car.get("generation") or "").upper()]
+    if with_engine:
+        parts.append((car.get("engine_group") or "").upper())
+    return " ".join(x for x in parts if x)
+
+
+def _group_range(conn, ptype, car, before, look) -> tuple[dict | None, str]:
+    """Same model + generation range for a variant-sensitive part, for
+    reference only (never used as a price)."""
+    model = (car.get("model") or "").upper()
+    gen = (car.get("generation") or "").upper()
+    eng = (car.get("engine_group") or "").upper()
+    if not (model and gen):
+        return None, "no vehicle model/generation to compare against"
+    level, rows = history.part_type_sales(conn, ptype, model, gen, eng, min_sales=1, before=before,
+                                          lookback_days=look)
+    if not rows:
+        return None, f"no {_car_label(car)} {ptype.lower()} sales to compare against"
+    prices = [p for p, _ in rows]
+    label = _car_label(car, with_engine="engine" in level)
+    rng = {"count": len(prices), "min": min(prices), "max": max(prices),
+           "median": round(statistics.median(prices), 2), "group": f"{label} {ptype}"}
+    return rng, (f"{label} {ptype.lower()} sold {_gbp(rng['min'])}–{_gbp(rng['max'])} "
+                 f"({len(prices)} sale{'s' if len(prices) != 1 else ''}, reference only)")
 
 
 def _fallback(conn, pn, ptype, car, before, look, nothing):
@@ -282,30 +328,19 @@ def _fallback(conn, pn, ptype, car, before, look, nothing):
             return (bp_exact, "breakerpro_exact", LOW, "breakerpro_exact",
                     f"{nothing} · our last BreakerPro price for this number ({_gbp(bp_exact)})")
 
-    if ptype and model:
+    if ptype and model and gen:
         level, rows = history.part_type_sales(
             conn, ptype, model, gen, eng, min_sales=cfg.PART_TYPE_MIN_SALES, before=before, lookback_days=look,
         )
         if rows:
             med = statistics.median(p for p, _ in rows)
-            car_label = " ".join(x for x in (model.title(), gen, eng if "engine" in level else "") if x)
+            car_label = _car_label(car, with_engine="engine" in level)
             conf = MEDIUM if len(rows) >= cfg.PART_TYPE_MEDIUM_SALES else LOW
             return (med, "part_type", conf, "part_type",
                     f"{nothing} · {len(rows)} of our {car_label} {ptype.lower()} sales (median {_gbp(med)})")
 
-    bp = _breakerpro_group_price(pn)
-    if bp:
-        return (bp, "breakerpro_group", LOW, "group",
-                f"{nothing} · BreakerPro average for this part group, all models ({_gbp(bp)})")
-
     if ptype and ptype in cfg.CATEGORY_DEFAULTS:
         v = cfg.CATEGORY_DEFAULTS[ptype]
         return v, "category_default", LOW, "none", f"{nothing} · {ptype.lower()} default ({_gbp(v)})"
-    if ptype:
-        rows = history.part_type_any_model(conn, ptype, before=before, lookback_days=look)
-        if len(rows) >= cfg.PART_TYPE_MIN_SALES:
-            med = statistics.median(p for p, _ in rows)
-            return (med, "category_default", LOW, "none",
-                    f"{nothing} · {len(rows)} of our {ptype.lower()} sales, any model (median {_gbp(med)})")
     return (cfg.DEFAULT_PRICE, "category_default", LOW, "none",
             f"{nothing} · general default ({_gbp(cfg.DEFAULT_PRICE)})")
