@@ -440,7 +440,46 @@ nightly):
 Invoke-RestMethod -Method Post -Uri https://web-production-7a1f0.up.railway.app/price/prewarm -Headers @{ "X-Admin-Token" = $env:PRICING_ADMIN_TOKEN }
 ```
 
-## 6. Where things are (for a developer)
+## 6. Part names: corrections that stick, and an export log
+
+**What was wrong.** When a logger corrected a part name, the correction was
+saved in `vag_parts_db.json` inside the app's own folder. Railway resets that
+folder on every deploy, so every correction (and every name the AI had
+learned) was wiped, and the next scan of that part number brought back the
+AI's name. An edit was also only saved when the box lost focus, so it could
+be lost if the list redrew while someone was typing.
+
+**What happens now.**
+- Part names, AI-learned names and corrections live in the database on the
+  Railway volume, next to the vehicles and pricing data. `vag_parts_db.json`
+  is copied in **once**, on the first boot. After that a deploy never
+  overwrites anything with the git copy. To load a rebuilt
+  `vag_parts_db.json` later, you'd need a small one-off import. Just
+  redeploying won't do it.
+- A logger's correction is stored by part number. The next time that part
+  number is scanned it comes back with the corrected name and a green
+  **Corrected** tag. It can still be edited, and the latest correction wins.
+  The original AI or database name is kept alongside for audit.
+- Edits are saved on every keystroke, on Android and iPhone alike. If the
+  phone is offline, the correction waits and is sent later.
+- Every CSV export is also sent to the server: part number, AI name, final
+  name, edited or not, vehicle ref and time. If that fails, the export still
+  downloads as normal and the record is sent next time.
+- The AI often adds a side to parts that don't have one, like "Headlight
+  Switch Passenger Side". For anything that isn't a sided part type, the side
+  is removed. The list of sided types is in `part_names_config.py`; edit it
+  and redeploy. Names from our own database, and names a logger typed in, are
+  never changed.
+
+**Checking it.**
+- `GET /db-stats` shows `corrected_entries`, `learned_entries` and
+  `seeded_at`. `seeded_at` should stay the same after a deploy.
+- `GET /parts/edit-report` lists exported rows that went out with the AI name
+  even though a logger had already corrected that part number. It gives
+  counts and up to 20 examples, and changes nothing. It can only check
+  exports made after this version went live.
+
+## 7. Where things are (for a developer)
 
 - `PRICING-ENGINE-SPEC.md`: the brief. `docs/pricing-recon.md`: how the old
   price worked, plus every place the build differs from the spec and why.
@@ -459,5 +498,10 @@ Invoke-RestMethod -Method Post -Uri https://web-production-7a1f0.up.railway.app/
   `SELL_THROUGH_DAYS`, `UNSOLD_LONG_DAYS`.
 - Order sync: Trading API `GetOrders` with `EBAY_AUTH_TOKEN` (IAF header),
   last 90 days only. Nightly pre-warm: `PRICING_PREWARM=0` turns it off.
-- Tests: `python -m pytest` (needs Node.js for the CSV and shadow/live
-  checks). They never call eBay.
+- Part names: `part_names.py` (tables `part_names`, `part_names_meta`,
+  `part_corrections`, `part_correction_log`, `export_log`; one-time seed;
+  side guard), `part_names_config.py` (sided part types), `vag_lookup.py`
+  (lookup order: correction, exact, group, learned). Endpoints `POST
+  /db-correct`, `POST /parts/exports`, `GET /parts/edit-report`.
+- Tests: `python -m pytest` (needs Node.js for the CSV, shadow/live and
+  description-edit checks). They never call eBay or Claude.

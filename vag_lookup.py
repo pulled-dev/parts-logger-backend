@@ -4,41 +4,54 @@ VAG Part Number Lookup Module
 Provides database-first part identification with exact match, middle-group match,
 and side designation logic. Falls back to None when part is not in database,
 signalling the caller to use Claude as fallback.
+
+The database lives in SQLite on the Railway volume (see part_names.py), not in
+vag_parts_db.json: that file is only the one-time seed, so a redeploy can't wipe
+learned entries or the loggers' corrections. A logger's correction always wins.
 """
 
-import json
-import os
 import re
 from datetime import datetime, timezone
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "vag_parts_db.json")
+import db as _vehicles_db
+import part_names
+
+SEED_PATH = part_names.SEED_PATH
+DB_PATH = SEED_PATH  # legacy name for the seed file
 _db = None
+_db_path = None  # the SQLite file _db was loaded from
 
 
 # ── Database I/O ─────────────────────────────────────────────────────────────
 
 def _load_db() -> dict:
-    global _db
-    with open(DB_PATH, "r", encoding="utf-8") as f:
-        _db = json.load(f)
+    global _db, _db_path
+    with part_names.session() as conn:
+        part_names.init(conn)
+        _db = part_names.load_all(conn)
+    _db_path = _vehicles_db.DB_PATH
     return _db
 
 
 def get_db() -> dict:
-    if _db is None:
+    if _db is None or _db_path != _vehicles_db.DB_PATH:
         _load_db()
     return _db
 
 
 def reload_db() -> dict:
-    """Reload database from disk — call after auto-learning adds new entries."""
+    """Reload the database from SQLite."""
     return _load_db()
 
 
 def save_db(db: dict):
-    """Write the database back to disk."""
-    with open(DB_PATH, "w", encoding="utf-8") as f:
-        json.dump(db, f, indent=2, ensure_ascii=False)
+    """Write every exact/groups/learned entry back to SQLite (never to the
+    git seed file)."""
+    with part_names.session() as conn:
+        part_names.init(conn)
+        for section in part_names.SECTIONS:
+            for key, entry in (db.get(section) or {}).items():
+                part_names.put_entry(conn, section, key, entry)
 
 
 # ── Normalisation ─────────────────────────────────────────────────────────────
@@ -135,22 +148,8 @@ def determine_side(part_number: str, group_code: str, base_description: str) -> 
 
 # ── Lookup ────────────────────────────────────────────────────────────────────
 
-def lookup_part(raw: str) -> dict | None:
-    """
-    Look up a part number in the database.
-
-    Lookup order:
-      1. Exact match  -> confidence 'high'
-      2. Middle-group -> confidence 'medium', side designation appended
-      3. Learned      -> confidence 'medium'
-      4. None         -> caller should fall back to Claude
-
-    Returns dict with keys: description, source, confidence,
-                             breakerpro_price, vehicle
-    """
-    db  = get_db()
-    pn  = normalise(raw)
-
+def _lookup_uncorrected(db: dict, pn: str) -> dict | None:
+    """What the database / AI says for this part number, ignoring corrections."""
     # 1. Exact match
     if pn in db.get("exact", {}):
         entry = db["exact"][pn]
@@ -177,11 +176,11 @@ def lookup_part(raw: str) -> dict | None:
             "vehicle":         None,
         }
 
-    # 3. Learned match
+    # 3. Learned match (an AI answer): no side unless the part really has one
     if pn in db.get("learned", {}):
         entry = db["learned"][pn]
         return {
-            "description":     entry["description"],
+            "description":     part_names.guard_ai_side(entry["description"]),
             "source":          "learned",
             "confidence":      "medium",
             "breakerpro_price": None,
@@ -191,21 +190,85 @@ def lookup_part(raw: str) -> dict | None:
     return None
 
 
+def lookup_part(raw: str) -> dict | None:
+    """
+    Look up a part number in the database.
+
+    Lookup order:
+      0. Logger's correction -> source 'corrected', always wins
+      1. Exact match  -> confidence 'high'
+      2. Middle-group -> confidence 'medium', side designation appended
+      3. Learned      -> confidence 'medium'
+      4. None         -> caller should fall back to Claude
+
+    Returns dict with keys: description, source, confidence,
+                             breakerpro_price, vehicle,
+                             ai_description (the name before any correction),
+                             corrected, corrected_at
+    """
+    db  = get_db()
+    pn  = normalise(raw)
+
+    base = _lookup_uncorrected(db, pn)
+    corr = db.get("corrections", {}).get(pn)
+    if corr:
+        return {
+            "description":      corr["description"],
+            "source":           "corrected",
+            "confidence":       "high",
+            "breakerpro_price": (base or {}).get("breakerpro_price"),
+            "vehicle":          (base or {}).get("vehicle"),
+            "ai_description":   corr.get("ai_description") or (base or {}).get("description"),
+            "corrected":        True,
+            "corrected_at":     corr.get("corrected_at"),
+        }
+    if base:
+        base.update(ai_description=base["description"], corrected=False, corrected_at=None)
+    return base
+
+
+def lookup_uncorrected(raw: str) -> dict | None:
+    """The database / AI answer for a part number, ignoring any correction."""
+    return _lookup_uncorrected(get_db(), normalise(raw))
+
+
+# ── Corrections ───────────────────────────────────────────────────────────────
+
+def save_correction(part_number: str, description: str, ai_description: str | None = None,
+                    price: float | None = None) -> dict | None:
+    """Store a logger's correction (latest wins) and apply it straight away.
+    The AI value is what the database / AI says without corrections; the
+    page's copy is only used when we have no answer of our own."""
+    pn = normalise(part_number)
+    base = lookup_uncorrected(pn)
+    ai = (base or {}).get("description") or ai_description
+    with part_names.session() as conn:
+        part_names.init(conn)
+        row = part_names.save_correction(conn, pn, description, ai, price)
+    corrections = get_db().setdefault("corrections", {})
+    if row:
+        corrections[pn] = row
+    else:
+        corrections.pop(pn, None)
+    return row
+
+
 # ── Auto-learning ─────────────────────────────────────────────────────────────
 
-def save_learned(part_number: str, description: str):
+def save_learned(part_number: str, description: str, raw_description: str | None = None):
     """
     Persist a Claude-identified part to the 'learned' section of the database.
-    Called automatically after every successful Claude fallback.
+    Called automatically after every successful Claude fallback. raw_description
+    is Claude's exact answer (before the side guard), kept for audit.
     """
-    db = get_db()
     pn = normalise(part_number)
-
-    db.setdefault("learned", {})[pn] = {
+    entry = {
         "description": description,
         "learned_at":  datetime.now(timezone.utc).isoformat(),
     }
-    db.setdefault("_meta", {})["total_learned_entries"] = len(db["learned"])
-
-    save_db(db)
-    reload_db()
+    if raw_description and raw_description != description:
+        entry["ai_raw_description"] = raw_description
+    with part_names.session() as conn:
+        part_names.init(conn)
+        part_names.put_entry(conn, "learned", pn, entry)
+    get_db().setdefault("learned", {})[pn] = entry

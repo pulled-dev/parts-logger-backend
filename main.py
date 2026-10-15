@@ -16,7 +16,8 @@ from pydantic import BaseModel
 from typing import Optional
 import anthropic
 
-from vag_lookup import lookup_part as db_lookup, save_learned, reload_db, get_db, save_db
+from vag_lookup import lookup_part as db_lookup, save_learned, reload_db, get_db, save_correction
+import part_names
 from claude_prompt import build_identification_prompt
 from db import init_db
 from vehicles_router import router as vehicles_router
@@ -88,6 +89,7 @@ async def _nightly_prewarm():
 async def lifespan(app: FastAPI):
     init_db()
     init_pricing_db()
+    reload_db()  # part names: seeds from vag_parts_db.json on the very first boot only
     task = None
     if os.environ.get("PRICING_DAILY_SYNC") == "1":
         if ebay_orders.is_configured():
@@ -140,11 +142,27 @@ class LookupResponse(BaseModel):
     confidence: str = "none"  # high/medium/low/none
     source: str = "none"
     breakerpro_price: float | None = None  # historical price from BreakerPro database
+    ai_description: str | None = None  # the AI / database name, before any logger correction
+    corrected: bool = False            # description is a logger's stored correction
 
 class CorrectionRequest(BaseModel):
     part_number: str
     corrected_description: str
     price: Optional[float] = None
+    ai_description: Optional[str] = None  # what the card showed before the edit
+
+class ExportRow(BaseModel):
+    part_number: str = ""
+    ai_description: Optional[str] = None
+    final_description: str = ""
+    edited: bool = False
+    correction_applied: bool = False
+    vehicle_ref: str = ""
+
+class ExportBody(BaseModel):
+    export_id: str
+    exported_at: str
+    rows: list[ExportRow]
 
 class HealthResponse(BaseModel):
     status: str
@@ -440,6 +458,8 @@ async def lookup_part(req: LookupRequest):
                 description=description,
                 source=source,
                 breakerpro_price=breakerpro_price,
+                ai_description=db_result.get("ai_description"),
+                corrected=bool(db_result.get("corrected")),
                 **pricing,
             )
 
@@ -448,7 +468,9 @@ async def lookup_part(req: LookupRequest):
         claude_task = identify_with_claude(clean)
         ebay_task   = _ebay_pricing(client, clean, "")
 
-        claude_desc, (pricing, ebay_suffix) = await asyncio.gather(claude_task, ebay_task)
+        claude_raw, (pricing, ebay_suffix) = await asyncio.gather(claude_task, ebay_task)
+        # No "Passenger Side" on a part that has no side (part_names_config.py)
+        claude_desc = part_names.guard_ai_side(claude_raw)
 
         # If eBay by part number found nothing but Claude succeeded, try description search
         if not pricing["avg_price"] and claude_desc:
@@ -457,7 +479,7 @@ async def lookup_part(req: LookupRequest):
         # Auto-save to learned section for future lookups
         if claude_desc and claude_desc.lower() != "unknown part":
             try:
-                save_learned(clean, claude_desc)
+                save_learned(clean, claude_desc, raw_description=claude_raw)
                 print(f"Learned: {clean} -> {claude_desc}")
             except Exception as e:
                 print(f"Failed to save learned entry for {clean}: {e}")
@@ -469,6 +491,7 @@ async def lookup_part(req: LookupRequest):
             part_number=clean,
             description=description,
             source=source,
+            ai_description=description,
             **pricing,
         )
 
@@ -497,13 +520,16 @@ async def db_stats():
         "exact_entries":   len(db.get("exact", {})),
         "group_entries":   len(db.get("groups", {})),
         "learned_entries": len(db.get("learned", {})),
+        "corrected_entries": len(db.get("corrections", {})),
         "last_updated":    db.get("_meta", {}).get("last_updated", "unknown"),
+        "storage":         "sqlite",
+        "seeded_at":       db.get("_meta", {}).get("seeded_at"),
     }
 
 
 @app.post("/db-reload")
 async def db_reload():
-    """Reload the database from disk (useful after manual edits to vag_parts_db.json)."""
+    """Reload the part-name database from SQLite (vag_parts_db.json is only the first-boot seed)."""
     reload_db()
     return {"status": "reloaded"}
 
@@ -512,36 +538,50 @@ async def db_reload():
 async def db_correct(req: CorrectionRequest):
     """
     User corrected a description in the frontend.
-    Saves as an exact match — user corrections are the highest authority.
-    Promotes the entry out of 'learned' if it was there.
+    Stored by part number on the Railway volume (part_names.py), so it survives
+    redeploys. The logger's name always wins on the next lookup; the latest
+    correction wins; the AI / database name is kept alongside for audit.
     """
     clean = req.part_number.strip().upper().replace(" ", "")
+    desc = (req.corrected_description or "").strip()
     if not clean:
         raise HTTPException(status_code=400, detail="part_number is required")
+    if not desc:
+        raise HTTPException(status_code=400, detail="corrected_description is required")
 
-    db = get_db()
-
-    db.setdefault("exact", {})[clean] = {
-        "description":     req.corrected_description,
-        "breakerpro_price": req.price,
-        "vehicle":         None,
-        "corrected":       True,
-        "corrected_at":    datetime.now(timezone.utc).isoformat(),
-    }
-
-    # Remove from learned if present — it's now verified
-    if clean in db.get("learned", {}):
-        del db["learned"][clean]
-
-    db.setdefault("_meta", {})["total_exact_entries"] = len(db["exact"])
-    save_db(db)
-    reload_db()
+    row = save_correction(clean, desc, ai_description=req.ai_description, price=req.price)
 
     return {
-        "status":      "saved",
-        "part_number": clean,
-        "description": req.corrected_description,
+        "status":         "saved" if row else "reverted",
+        "part_number":    clean,
+        "description":    desc,
+        "ai_description": (row or {}).get("ai_description"),
+        "corrected_at":   (row or {}).get("corrected_at"),
     }
+
+
+@app.post("/parts/exports")
+async def parts_exports(body: ExportBody):
+    """The logger page sends every CSV export here (part number, AI name, final
+    name, edited or not, vehicle ref). The page retries until this succeeds, so
+    a resend of the same export_id is ignored."""
+    if not body.export_id.strip():
+        raise HTTPException(status_code=400, detail="export_id is required")
+    if len(body.rows) > 2000:
+        raise HTTPException(status_code=400, detail="max 2000 rows per export")
+    with part_names.session() as conn:
+        part_names.init(conn)
+        return part_names.record_export(conn, body.export_id.strip()[:80], body.exported_at[:40],
+                                        [r.model_dump() for r in body.rows])
+
+
+@app.get("/parts/edit-report")
+async def parts_edit_report(sample: int = 20):
+    """Read-only: exported rows where a logger had corrected the part number
+    before the export, but the CSV still carried the AI name."""
+    with part_names.session() as conn:
+        part_names.init(conn)
+        return part_names.edit_report(conn, sample_size=max(0, min(sample, 200)))
 
 
 if __name__ == "__main__":
