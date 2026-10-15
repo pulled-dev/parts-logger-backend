@@ -321,6 +321,7 @@
     .tag-mock     { background: rgba(156,163,175,0.1);  color: #9ca3af; border: 1px solid rgba(156,163,175,0.2); }
     .tag-database { background: rgba(34,197,94,0.12);   color: #22c55e; border: 1px solid rgba(34,197,94,0.25); }
     .tag-learned  { background: rgba(234,179,8,0.12);   color: #fbbf24; border: 1px solid rgba(234,179,8,0.25); }
+    .tag-corrected { background: rgba(20,184,166,0.12); color: #2dd4bf; border: 1px solid rgba(20,184,166,0.3); }
 
     /* Editable description */
     .card-desc {
@@ -2033,6 +2034,80 @@ document.addEventListener('click', e => {
   if (e.target && e.target.closest && e.target.closest('#export-btn')) recordFinalPrices();
 }, true);
 
+// ── Export log ───────────────────────────────────────────────────────────────
+// Every CSV export is also sent to the server (part number, AI name, final
+// name, edited or not, vehicle ref, time) so name problems can be checked
+// later. A document-level CAPTURE listener reads the list before the export
+// handler clears it, without touching the export code. The batch is queued in
+// localStorage first; if the POST fails it is retried on the next page load,
+// export or reconnect. It can never block or break the export.
+const EXPORT_QUEUE_KEY = 'pulledapart_export_queue';
+
+// Same Part Description the CSV export writes for this card.
+function exportDescription(p) {
+  const typed = (p.part_note || p.part_number || '').trim();
+  return p.paint ? p.description + (typed ? ' — ' + typed : '') : p.description;
+}
+
+function exportRow(p) {
+  const ai = p.ai_description != null ? p.ai_description : (p.part_number ? p.description : null);
+  return {
+    part_number:        p.part_number || '',
+    ai_description:     ai,
+    final_description:  exportDescription(p),
+    edited:             ai != null && p.description !== ai,
+    correction_applied: !!p.corrected,
+    vehicle_ref:        p.vehicle_ref || '',
+  };
+}
+
+function recordExport() {
+  try {
+    if (!parts.length) return;
+    const at = new Date().toISOString();
+    const q = readQueue(EXPORT_QUEUE_KEY, []);
+    q.push({ export_id: at + '-' + Math.random().toString(36).slice(2, 8), exported_at: at,
+             rows: parts.map(exportRow) });
+    writeQueue(EXPORT_QUEUE_KEY, q.slice(-50));  // never let a long outage fill the phone
+    flushExports();
+  } catch (e) { /* never block the export */ }
+}
+document.addEventListener('click', e => {
+  if (e.target && e.target.closest && e.target.closest('#export-btn')) recordExport();
+}, true);
+
+let exportsBusy = false;
+async function flushExports() {
+  if (!cfg.url || exportsBusy) return;
+  exportsBusy = true;
+  try {
+    for (const batch of readQueue(EXPORT_QUEUE_KEY, [])) {
+      try {
+        const r = await fetch(cfg.url + '/parts/exports', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(batch),
+          keepalive: true,
+        });
+        if (!r.ok) continue;
+        writeQueue(EXPORT_QUEUE_KEY, readQueue(EXPORT_QUEUE_KEY, []).filter(b => b.export_id !== batch.export_id));
+      } catch (e) {
+        console.warn('export log failed, will retry:', e);
+      }
+    }
+  } finally {
+    exportsBusy = false;
+  }
+}
+
+function flushQueues() {
+  try { flushCorrections(); flushExports(); } catch (e) { /* never block logging */ }
+}
+window.addEventListener('online', flushQueues);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') flushQueues();
+});
+
 // ── Add part ─────────────────────────────────────────────────────────────────
 async function addPart() {
   const pn  = pnInput.value.trim().toUpperCase();
@@ -2057,6 +2132,8 @@ async function addPart() {
       id:              Date.now(),
       part_number:     d.part_number,
       description:     d.description,
+      ai_description:  d.ai_description != null ? d.ai_description : d.description,
+      corrected:       !!d.corrected,
       avg_price:       d.avg_price,
       median_price:    d.median_price,
       low_price:       d.low_price,
@@ -2082,6 +2159,7 @@ async function addPart() {
     pnInput.focus();
     setMode(cfg.demo ? 'demo' : 'live');
     suggestP.then(s => applySuggestion(newId, s));
+    flushQueues();  // anything still waiting from earlier (offline, closed tab)
   } catch (err) {
     toast('⚠ ' + err.message);
     setMode('error');
@@ -2114,6 +2192,7 @@ function sourceTags(src) {
   const primary = src.split('+')[0];
   if (primary === 'database') t.push('<span class="tag tag-database">DB</span>');
   else if (primary === 'learned') t.push('<span class="tag tag-learned">AI</span>');
+  else if (primary === 'corrected') t.push('<span class="tag tag-corrected">Corrected</span>');
   else if (src.includes('claude')) t.push('<span class="tag tag-claude">AI</span>');
   if (src.includes('ebay'))   t.push('<span class="tag tag-ebay">eBay</span>');
   if (src === 'mock')         t.push('<span class="tag tag-mock">Demo</span>');
@@ -2125,25 +2204,90 @@ function confidenceBadge(conf) {
   return `<span class="confidence-badge ${conf}">${conf.toUpperCase()}</span>`;
 }
 
+function cardTagsHtml(p) {
+  return sourceTags(p.source) +
+         (p.edited ? '<span class="tag tag-corrected">Edited</span>' : '') +
+         confidenceBadge(p.confidence);
+}
+
 // ── Editable description ─────────────────────────────────────────────────────
-async function sendCorrection(partNumber, newDesc, price) {
+// The logger's edit is the truth. It is written to the card (and localStorage)
+// on every keystroke, on every phone, so nothing can lose it: not a re-render
+// when another lookup lands, not the screen locking, not the tab closing.
+// The server copy (/db-correct, stored by part number so the next scan of the
+// same part number comes back corrected) is queued and retried until it lands.
+const PENDING_CORRECTIONS_KEY = 'pulledapart_pending_corrections';
+
+function readQueue(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key) || 'null') || fallback; }
+  catch(e) { return fallback; }
+}
+function writeQueue(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); }
+  catch(e) { console.warn('localStorage write failed:', e); }
+}
+
+function queueCorrection(p) {
+  if (!p.part_number) return;
+  const q = readQueue(PENDING_CORRECTIONS_KEY, {});
+  q[p.part_number] = {
+    part_number: p.part_number,
+    corrected_description: p.description,
+    ai_description: p.ai_description != null ? p.ai_description : null,
+    price: p.your_price != null ? parseFloat(p.your_price) : null,
+  };
+  writeQueue(PENDING_CORRECTIONS_KEY, q);
+}
+
+let correctionTimer = null, correctionsBusy = false, correctionsAgain = false;
+function scheduleCorrections(ms) {
+  clearTimeout(correctionTimer);
+  correctionTimer = setTimeout(flushCorrections, ms);
+}
+
+async function flushCorrections() {
   if (!cfg.url) return;
+  if (correctionsBusy) { correctionsAgain = true; return; }
+  correctionsBusy = true;
   try {
-    await fetch(cfg.url + '/db-correct', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        part_number: partNumber,
-        corrected_description: newDesc,
-        price: price != null ? parseFloat(price) : null,
-      }),
-    });
-  } catch(e) {
-    console.warn('db-correct failed:', e);
+    const q = readQueue(PENDING_CORRECTIONS_KEY, {});
+    for (const pn of Object.keys(q)) {
+      const item = q[pn];
+      try {
+        const r = await fetch(cfg.url + '/db-correct', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(item),
+          keepalive: true,
+        });
+        if (!r.ok) continue;  // stays queued; retried next time
+        const now = readQueue(PENDING_CORRECTIONS_KEY, {});
+        if (now[pn] && now[pn].corrected_description === item.corrected_description) {
+          delete now[pn];
+          writeQueue(PENDING_CORRECTIONS_KEY, now);
+        }
+      } catch(e) {
+        console.warn('db-correct failed, will retry:', e);
+      }
+    }
+  } finally {
+    correctionsBusy = false;
+    if (correctionsAgain) { correctionsAgain = false; scheduleCorrections(1500); }
   }
 }
 
-function startEditDesc(partId) {
+// Apply a new name to the card and save it at once.
+function setDescription(p, value) {
+  if (p.description === value) return false;
+  if (p.ai_description === undefined) p.ai_description = p.description;  // cards logged before this version
+  p.description = value;
+  p.edited = value !== p.ai_description;
+  saveParts();
+  queueCorrection(p);
+  return true;
+}
+
+function startEditDesc(partId, caret) {
   const p = parts.find(x => x.id === partId);
   if (!p) return;
   const card = partsList.querySelector(`[data-id="${partId}"]`);
@@ -2151,40 +2295,52 @@ function startEditDesc(partId) {
   const descEl = card.querySelector('.card-desc');
   if (!descEl) return;
 
+  const before = p.description;
   const input = document.createElement('input');
   input.type = 'text';
   input.className = 'card-desc-input';
+  input.dataset.editId = partId;
   input.value = p.description;
   descEl.replaceWith(input);
   input.focus();
-  input.select();
+  if (caret == null) input.select();
+  else input.setSelectionRange(caret, caret);
 
-  async function finish() {
-    const newDesc = input.value.trim() || p.description;
-    const changed = newDesc !== p.description;
+  let changed = false;
+  // Saved as typed (Android and iPhone alike); an emptied box keeps the last real name.
+  input.addEventListener('input', () => {
+    const v = input.value.trim();
+    if (v && setDescription(p, v)) { changed = true; scheduleCorrections(1500); }
+  });
 
+  function finish() {
+    if (input.dataset.replaced || !input.isConnected) return;  // a re-render took over
     const newDescEl = document.createElement('div');
     newDescEl.className = 'card-desc';
-    newDescEl.textContent = newDesc;
+    newDescEl.textContent = p.description;
     newDescEl.onclick = () => startEditDesc(partId);
     input.replaceWith(newDescEl);
-
     if (changed) {
-      p.description = newDesc;
-      saveParts();
       const flash = document.createElement('span');
       flash.className = 'save-flash';
-      flash.textContent = 'Saved \u2713';
+      flash.textContent = 'Saved ✓';
       newDescEl.after(flash);
       setTimeout(() => flash.remove(), 2000);
-      await sendCorrection(p.part_number, newDesc, p.your_price);
+      const tags = card.querySelector('.card-tags');
+      if (tags) tags.innerHTML = cardTagsHtml(p);
+      flushCorrections();
     }
   }
 
   input.addEventListener('blur', finish, { once: true });
   input.addEventListener('keydown', e => {
     if (e.key === 'Enter')  { e.preventDefault(); input.blur(); }
-    if (e.key === 'Escape') { input.value = p.description; input.blur(); }
+    if (e.key === 'Escape') {
+      input.value = before;
+      if (setDescription(p, before)) scheduleCorrections(1500);
+      changed = false;
+      input.blur();
+    }
   });
 }
 
@@ -2194,6 +2350,14 @@ function render() {
   emptyState.style.display = hasParts ? 'none' : 'block';
   clearBtn.style.display   = hasParts ? 'flex'  : 'none';
   countLabel.textContent   = hasParts ? 'Parts (' + parts.length + ')' : 'Parts';
+
+  // Re-open an edit box the logger is typing in (its text is already saved).
+  const editing = document.activeElement && document.activeElement.classList &&
+                  document.activeElement.classList.contains('card-desc-input')
+    ? { el: document.activeElement, id: +document.activeElement.dataset.editId,
+        caret: document.activeElement.selectionStart }
+    : null;
+  if (editing) editing.el.dataset.replaced = '1';
 
   partsList.innerHTML = '';
 
@@ -2227,10 +2391,7 @@ function render() {
           ${p.vehicle_ref ? `<div class="card-ref">${esc(p.vehicle_ref)}</div>` : ''}
           ${p.part_number ? `<div class="card-desc" title="Tap to correct description">${esc(p.description)}</div>` : ''}
         </div>
-        <div class="card-tags">
-          ${sourceTags(p.source)}
-          ${confidenceBadge(p.confidence)}
-        </div>
+        <div class="card-tags">${cardTagsHtml(p)}</div>
       </div>
       <div class="card-pricing">${pricingHtml}${bpPrice}</div>
       <div class="your-price-row">
@@ -2250,6 +2411,7 @@ function render() {
     if (descEl) descEl.addEventListener('click', () => startEditDesc(p.id));
     partsList.appendChild(div);
   });
+  if (editing && parts.some(x => x.id === editing.id)) startEditDesc(editing.id, editing.caret);
 }
 
 // ── Delegated events ──────────────────────────────────────────────────────────
@@ -2407,6 +2569,7 @@ try {
 render();
 updateStats();
 pnInput.focus();
+flushQueues();
 
 // ── Vehicles overlay ─────────────────────────────────────────────────────────
 window.PA_VEHICLES = [];

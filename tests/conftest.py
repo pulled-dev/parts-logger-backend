@@ -38,6 +38,21 @@ def clean_env(monkeypatch):
         monkeypatch.delenv(var, raising=False)
 
 
+@pytest.fixture(scope="session")
+def _session_db_path(tmp_path_factory):
+    return str(tmp_path_factory.mktemp("session-db") / "session.db")
+
+
+@pytest.fixture(autouse=True)
+def isolated_db_path(_session_db_path, monkeypatch):
+    """No test may touch the repo's ./vehicles.db: anything that reads the
+    part-name database without asking for tmp_db gets a shared throwaway file
+    (seeded once per run)."""
+    import db
+    monkeypatch.setenv("DB_PATH", _session_db_path)
+    monkeypatch.setattr(db, "DB_PATH", _session_db_path)
+
+
 @pytest.fixture
 def tmp_db(tmp_path, monkeypatch):
     """Point both db.py and the pricing store at a throwaway SQLite file."""
