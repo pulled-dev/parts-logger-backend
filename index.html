@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="page-version" content="2026-10-15.4067c45">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Pulled Apart — Parts Logger</title>
@@ -522,6 +523,31 @@
     }
 
     .stats { display: flex; gap: 24px; flex: 1; flex-wrap: wrap; }
+
+    /* Which version of the page this phone is running */
+    .page-version {
+      flex-basis: 100%;
+      margin-top: -8px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      text-align: right;
+    }
+    .update-banner {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 200;
+      padding: 12px 16px;
+      border: 0;
+      background: var(--accent-red);
+      color: #fff;
+      font-family: var(--display);
+      font-size: 15px;
+      letter-spacing: 0.04em;
+      text-align: center;
+      cursor: pointer;
+    }
+    .update-banner[hidden] { display: none; }
 
     .stat { display: flex; flex-direction: column; gap: 2px; }
     .stat-lbl {
@@ -1618,7 +1644,10 @@
     </div>
   </div>
   <button class="export-btn" id="export-btn">&#8595; Export CSV</button>
+  <div class="page-version" id="page-version"></div>
 </div>
+
+<button class="update-banner" id="update-banner" hidden>New version available &mdash; tap to reload</button>
 
 <!-- Settings -->
 <div class="overlay" id="overlay"></div>
@@ -2558,6 +2587,61 @@ sSave.addEventListener('click', () => {
   checkStatus();
 });
 
+// ── Page version ─────────────────────────────────────────────────────────────
+// The version is stamped into <meta name="page-version"> (date + short hash,
+// scripts/stamp_page_version.py) and shown at the bottom of the page. When the
+// page opens, and when it comes back to the front after a while, it fetches the
+// live copy (bypassing the phone's cache) and, if the live version differs,
+// offers a reload. Logged parts are already in localStorage, so a reload loses
+// nothing. Any failure is silent: the check must never get in the way.
+const VERSION_RECHECK_MS = 5 * 60 * 1000;
+let lastVersionCheck = 0;
+
+function pageVersionOf(html) {
+  const m = /<meta name="page-version" content="([^"]*)">/.exec(html);
+  return m ? m[1] : '';
+}
+function ownPageVersion() {
+  const el = document.querySelector('meta[name="page-version"]');
+  return el ? el.getAttribute('content') || '' : '';
+}
+
+function showPageVersion() {
+  const el = $('page-version');
+  if (el) el.textContent = ownPageVersion() ? 'Version ' + ownPageVersion().replace('.', ' \u00b7 ') : '';
+}
+
+async function checkPageVersion() {
+  lastVersionCheck = Date.now();
+  try {
+    if (!/^https?:$/.test(location.protocol)) return;
+    const own = ownPageVersion();
+    if (!own) return;
+    const r = await fetch(location.origin + location.pathname + '?vcheck=' + Date.now(),
+                          { cache: 'no-store', signal: AbortSignal.timeout(8000) });
+    if (!r.ok) return;
+    const live = pageVersionOf(await r.text());
+    if (live && live !== own) showUpdateBanner(live);
+  } catch (e) { /* offline or blocked: say nothing */ }
+}
+
+function showUpdateBanner(live) {
+  const el = $('update-banner');
+  if (!el) return;
+  el.hidden = false;
+  el.onclick = () => {
+    saveParts();  // already saved on every change; once more for certainty
+    // A new query string makes the phone fetch the page instead of using its cached copy.
+    location.replace(location.pathname + '?v=' + encodeURIComponent(live));
+  };
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && Date.now() - lastVersionCheck > VERSION_RECHECK_MS) {
+    checkPageVersion();
+  }
+});
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 checkStatus();
 loadPaintCodes();
@@ -2570,6 +2654,8 @@ render();
 updateStats();
 pnInput.focus();
 flushQueues();
+showPageVersion();
+checkPageVersion();
 
 // ── Vehicles overlay ─────────────────────────────────────────────────────────
 window.PA_VEHICLES = [];

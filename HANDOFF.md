@@ -479,6 +479,22 @@ be lost if the list redrew while someone was typing.
   counts and up to 20 examples, and changes nothing. It can only check
   exports made after this version went live.
 
+### Which version is a phone running?
+
+The bottom of the logger page shows its version in small text, e.g.
+`Version 2026-10-15 · 4067c45` (date + a short code that changes whenever the
+page changes). When the page opens, and when it comes back to the front after
+5 minutes or more, it checks the live copy. If that's newer, a red bar says
+**New version available, tap to reload**. Tapping it reloads the page and
+keeps every logged part (they're saved on the phone).
+
+The page doesn't use any offline caching of its own (no service worker).
+GitHub Pages lets phones and its own servers keep a copy for up to 10 minutes,
+so after a merge the red bar can take up to about 10 minutes to appear.
+
+**After any change to `index.html`**, run `python scripts/stamp_page_version.py`
+before committing. The tests fail until you do.
+
 ## 7. Where things are (for a developer)
 
 - `PRICING-ENGINE-SPEC.md`: the brief. `docs/pricing-recon.md`: how the old
