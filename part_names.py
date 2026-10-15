@@ -319,7 +319,7 @@ def _phrase_re(phrases: list[str], plural: bool) -> re.Pattern:
 
 _ALWAYS_SIDED_RE = _phrase_re(cfg.ALWAYS_SIDED, plural=True)
 _SIDED_RE = _phrase_re(cfg.SIDED_PART_TYPES, plural=True)
-_NOT_SIDED_RE = _phrase_re(cfg.NOT_SIDED_WORDS, plural=False)
+_NOT_SIDED_RE = _phrase_re(cfg.NOT_SIDED_WORDS, plural=True)
 # "SEAT Leon" etc.: the car make, removed before looking for part words
 _SEAT_MARQUE_RE = re.compile(
     r"(?<![A-Za-z0-9])seat\s+(?:" + "|".join(re.escape(m) for m in cfg.SEAT_MODELS) + r")(?![A-Za-z0-9])",

@@ -214,6 +214,20 @@ def test_side_guard(ai, expected):
     ("Track Rod End Left", "Track Rod End Left"),
     ("Wheel Arch Liner OSF", "Wheel Arch Liner OSF"),
     ("Bumper Bracket N/S", "Bumper Bracket N/S"),
+    # exceptions added after review: not sided even though they contain a sided word
+    ("Clock Spring Passenger Side", "Clock Spring"),
+    ("Indicator Stalk Left", "Indicator Stalk"),
+    ("Wiper Stalk N/S", "Wiper Stalk"),
+    ("Boot Strut Left", "Boot Strut"),
+    ("Bonnet Strut O/S", "Bonnet Strut"),
+    ("Tailgate Strut Driver Side", "Tailgate Strut"),
+    ("Tailgate Struts Right", "Tailgate Struts"),
+    ("Fuel Filler Door Passenger Side", "Fuel Filler Door"),
+    # ...while the real sided parts they sit next to keep their side
+    ("Coil Spring Front N/S", "Coil Spring Front N/S"),
+    ("Front Strut O/S", "Front Strut O/S"),
+    ("Indicator NSF", "Indicator NSF"),
+    ("Rear Door O/S", "Rear Door O/S"),
     # "seat" the part vs SEAT the car make
     ("SEAT Leon fuel pump passenger side", "SEAT Leon fuel pump"),
     ("Seat Ibiza Wiper Motor N/S", "Seat Ibiza Wiper Motor"),

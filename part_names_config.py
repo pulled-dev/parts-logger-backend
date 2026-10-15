@@ -58,6 +58,9 @@ NOT_SIDED_WORDS = [
     "switch", "switches", "button", "buttons",
     "relay", "module", "control unit", "ecu", "fuse",
     "sensor", "interior mirror", "rear view mirror",
+    "clock spring", "stalk",
+    "boot strut", "bonnet strut", "tailgate strut",  # gas struts come as a pair, not a left and right
+    "fuel filler door",
 ]
 
 # "Seat" followed by one of these is the SEAT car make, not a seat:
