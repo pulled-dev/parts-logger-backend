@@ -22,7 +22,7 @@ from categories import (
     list_category_keys,
     BODY_PANEL_CATEGORIES,
 )
-from paint_codes import PAINT_CODES, lookup_paint_name
+from paint_codes import PAINT_CODES, is_unverified_code, lookup_paint_name
 
 
 router = APIRouter()
@@ -39,8 +39,12 @@ def paint_codes():
     """Return VAG paint code dictionary as a list of {code, name} objects.
 
     Frontend caches this in window.PA_PAINT_CODES on init and uses it for
-    paint-code dropdowns / labels (Phase 3b Task 2)."""
-    return [{"code": code, "name": name} for code, name in PAINT_CODES.items()]
+    paint-code dropdowns / labels (Phase 3b Task 2). Unverified codes are
+    listed with a blank name and verified=false, so an unchecked name is
+    never offered."""
+    return [{"code": code, "name": "" if is_unverified_code(code) else name,
+             "verified": not is_unverified_code(code)}
+            for code, name in PAINT_CODES.items()]
 
 
 def _err(status_code: int, content: dict) -> JSONResponse:

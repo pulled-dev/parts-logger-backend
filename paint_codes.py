@@ -15,7 +15,7 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-from paint_config import NAME_FAMILY_WORDS, PAINT_CODE_FAMILIES
+from paint_config import NAME_FAMILY_WORDS, PAINT_CODE_FAMILIES, UNVERIFIED_PAINT_CODES
 
 
 PAINT_CODES: dict[str, str] = {
@@ -65,15 +65,21 @@ PAINT_CODES: dict[str, str] = {
 }
 
 
+def is_unverified_code(code: Optional[str]) -> bool:
+    """True if the code's dictionary name hasn't been checked yet."""
+    return bool(code) and str(code).strip().upper() in UNVERIFIED_PAINT_CODES
+
+
 def lookup_paint_name(code: Optional[str]) -> Optional[str]:
     """Return the friendly name for a paint code, or None if not found.
 
     Input is normalised to uppercase and stripped of whitespace before lookup.
-    None input returns None."""
+    None input returns None. Unverified codes (paint_config) return None, so
+    their unchecked names are never auto-filled onto a vehicle."""
     if code is None:
         return None
     key = str(code).strip().upper()
-    if not key:
+    if not key or key in UNVERIFIED_PAINT_CODES:
         return None
     return PAINT_CODES.get(key)
 
@@ -106,3 +112,15 @@ def paint_family_conflict(code: Optional[str], name: Optional[str]) -> Optional[
         return None
     return (f"Paint code {str(code).strip().upper()} is {'/'.join(code_fams)}"
             f" but the name says {'/'.join(sorted(name_fams))} ({str(name).strip()})")
+
+
+def paint_warning(code: Optional[str], name: Optional[str]) -> Optional[str]:
+    """What the logger shows after "⚠ Check paint:", or None if paint looks
+    fine: a code/name colour clash, or an unverified code with no name."""
+    clash = paint_family_conflict(code, name)
+    if clash:
+        return clash
+    if is_unverified_code(code) and not (name or "").strip():
+        return (f"Paint code {str(code).strip().upper()} isn't verified yet, "
+                f"so no colour name was filled in")
+    return None

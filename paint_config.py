@@ -78,6 +78,17 @@ PAINT_CODE_FAMILIES: dict[str, tuple[str, ...]] = {
     "LF8H": ("beige",),   # Cappuccino Beige
 }
 
+# paint_codes.PAINT_CODES entries nobody has checked yet: none of them appear
+# in our BreakerPro exports, and LX7Z "Mythos Black" already looks wrong
+# (Mythos Black is LY9T). Until a code is checked, its name is NEVER
+# auto-filled: the vehicle keeps a blank name and shows "Check paint".
+# Once checked (BreakerPro / PartsLink24), fix the name in PAINT_CODES if
+# needed, add the code to PAINT_CODE_FAMILIES, and delete it from here.
+UNVERIFIED_PAINT_CODES: frozenset[str] = frozenset({
+    "B4B4", "LB9Y", "LX7Z", "LH7Z", "LD5R", "LA3W", "LB5K", "LA5W", "LD7W",
+    "LB7Z", "LD8U", "LB6V", "LP5C", "LD6P", "LR5W", "LB5W", "LZ7H",
+})
+
 # Vehicles whose paint was confirmed by hand (e.g. in PartsLink24). These win
 # over the BreakerPro CSV in scripts/paint_audit.py and fix_paint_mismatches.py.
 # Add a line only after checking the car itself; note where it was confirmed.
