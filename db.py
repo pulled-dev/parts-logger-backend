@@ -239,6 +239,15 @@ def update_vehicle(ref: str, data: dict) -> Optional[dict]:
     # Force the ref to match the URL path so callers can't rename.
     payload["ref"] = norm
 
+    # Paint code and name are a pair: a new code sent without a name must not
+    # keep the OLD code's name. Clear it so it is re-derived for the new code
+    # (or left blank if the code is unknown). Re-sending the same code keeps
+    # the stored name rather than swapping in the dictionary's.
+    if "paint_code" in payload and "paint_name" not in payload:
+        old = (existing.get("paint_code") or "").strip().upper()
+        new = (payload.get("paint_code") or "").strip().upper()
+        payload["paint_name"] = None if new != old else existing.get("paint_name")
+
     _auto_paint_name(payload)
 
     merged = dict(existing)

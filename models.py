@@ -49,3 +49,6 @@ class VehicleOut(VehicleIn):
 
     created_at: str
     updated_at: str
+    # Set when the paint name's colour contradicts the paint code (e.g. LC9X
+    # with "Reflex Silver"); computed on read, never stored.
+    paint_warning: Optional[str] = None

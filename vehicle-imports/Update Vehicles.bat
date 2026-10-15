@@ -92,7 +92,17 @@ for %%F in ("%INBOX%\*.csv") do (
     echo   New vehicles added:
     findstr /c:"] NEW " "!LOG!" || echo     none - all already in the database
     echo.
-    findstr /c:"Created (new)" /c:"blanks filled" /c:"Already complete" /c:"Skipped:" /c:"Failed:" "!LOG!"
+    findstr /c:"Created (new)" /c:"blanks filled" /c:"Already complete" /c:"Skipped:" /c:"Failed:" /c:"Held (row" /c:"Paint warnings:" "!LOG!"
+    findstr /c:"  HOLD " "!LOG!" >nul && (
+      echo.
+      echo   ** These rows look like a different vehicle - nothing was filled:
+      findstr /c:"  HOLD " "!LOG!"
+    )
+    findstr /c:"  PAINT " "!LOG!" >nul && (
+      echo.
+      echo   ** Paint code and colour name disagree - check these in BreakerPro:
+      findstr /c:"  PAINT " "!LOG!"
+    )
     echo.
     echo   Done - CSV moved to "done". Full log: !LOG!
   )
