@@ -20,6 +20,7 @@ from fastapi.responses import JSONResponse
 
 import db
 from models import VehicleIn, VehicleUpdate, VehicleOut
+from paint_codes import paint_family_conflict
 
 
 router = APIRouter()
@@ -27,6 +28,13 @@ router = APIRouter()
 
 def _err(status_code: int, message: str) -> JSONResponse:
     return JSONResponse(status_code=status_code, content={"error": message})
+
+
+def _with_paint_check(record: dict) -> dict:
+    """Attach paint_warning so the logger can flag a code/name mismatch."""
+    record["paint_warning"] = paint_family_conflict(
+        record.get("paint_code"), record.get("paint_name"))
+    return record
 
 
 @router.post("/vehicles", response_model=VehicleOut, status_code=201)
@@ -39,12 +47,13 @@ def create_vehicle(payload: VehicleIn):
         return _err(409, "ref already exists")
     except ValueError as e:
         return _err(400, str(e))
-    return JSONResponse(status_code=201, content=saved)
+    return JSONResponse(status_code=201, content=_with_paint_check(saved))
 
 
 @router.get("/vehicles")
 def list_vehicles(include_inactive: bool = False):
-    return db.list_vehicles(include_inactive=include_inactive)
+    return [_with_paint_check(v)
+            for v in db.list_vehicles(include_inactive=include_inactive)]
 
 
 @router.get("/vehicles/{ref}", response_model=VehicleOut)
@@ -52,7 +61,7 @@ def get_vehicle(ref: str):
     record = db.get_vehicle(ref)
     if record is None:
         return _err(404, "vehicle not found")
-    return record
+    return _with_paint_check(record)
 
 
 @router.patch("/vehicles/{ref}", response_model=VehicleOut)
@@ -68,7 +77,7 @@ def update_vehicle(ref: str, payload: VehicleUpdate):
     updated = db.update_vehicle(norm, data)
     if updated is None:
         return _err(404, "vehicle not found")
-    return updated
+    return _with_paint_check(updated)
 
 
 @router.delete("/vehicles/{ref}")
