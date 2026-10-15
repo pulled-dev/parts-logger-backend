@@ -20,7 +20,7 @@ from fastapi.responses import JSONResponse
 
 import db
 from models import VehicleIn, VehicleUpdate, VehicleOut
-from paint_codes import paint_family_conflict
+from paint_codes import paint_warning
 
 
 router = APIRouter()
@@ -31,8 +31,9 @@ def _err(status_code: int, message: str) -> JSONResponse:
 
 
 def _with_paint_check(record: dict) -> dict:
-    """Attach paint_warning so the logger can flag a code/name mismatch."""
-    record["paint_warning"] = paint_family_conflict(
+    """Attach paint_warning so the logger can flag a code/name mismatch or
+    an unverified code with no name."""
+    record["paint_warning"] = paint_warning(
         record.get("paint_code"), record.get("paint_name"))
     return record
 

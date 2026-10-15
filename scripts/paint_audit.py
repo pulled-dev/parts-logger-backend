@@ -36,7 +36,7 @@ from import_breakerpro import (  # noqa: E402
 )
 from paint_config import CONFIRMED_VEHICLE_PAINT  # noqa: E402
 from paint_codes import (  # noqa: E402
-    colour_families_in_name, colour_families_of_code, paint_family_conflict,
+    colour_families_in_name, colour_families_of_code, paint_family_conflict, paint_warning,
 )
 
 IMPORT_DIRS = (ROOT / "vehicle-imports" / "done", ROOT / "vehicle-imports" / "inbox")
@@ -100,9 +100,11 @@ def audit_vehicle(vehicle: dict, csv_info: dict | None) -> dict | None:
     code = vehicle.get("paint_code") or ""
     name = vehicle.get("paint_name") or ""
     issues = []
-    warning = paint_family_conflict(code, name)
-    if warning:
+    warning = paint_warning(code, name)
+    if paint_family_conflict(code, name):
         issues.append("code/name colour clash")
+    elif warning:
+        issues.append("unverified code, no name")
 
     proposed = None
     action = None
@@ -215,6 +217,7 @@ def summarise(vehicles: list[dict], lines: list[dict]) -> str:
         f"Vehicles checked:                {len(vehicles)}",
         f"Vehicles with a paint problem:   {len(lines)}",
         f"  code/name colour clash:        {n('colour clash')}",
+        f"  unverified code, no name:      {n('unverified code')}",
         f"  code differs from CSV:         {n('code differs')}",
         f"  name differs from CSV:         {n('name differs')}",
         f"  CSV colour only, clashes:      {n('CSV has no code')}",

@@ -29,7 +29,7 @@ import json
 
 # paint_codes / paint_config live in the repo root, one level up.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from paint_codes import lookup_paint_name, paint_family_conflict  # noqa: E402
+from paint_codes import lookup_paint_name, paint_warning  # noqa: E402
 
 API_BASE = "https://web-production-7a1f0.up.railway.app"
 
@@ -320,7 +320,7 @@ def backfill_vehicle(ref: str, candidate: dict, dry_run: bool,
     if current is None:
         return "failed", "could not GET existing record"
 
-    warn = paint_family_conflict(current.get("paint_code"), current.get("paint_name"))
+    warn = paint_warning(current.get("paint_code"), current.get("paint_name"))
     problem = row_identity_problem(current, row or {}, others)
     if problem:
         return "held", (f"NOT filled, CSV row looks like another vehicle ({problem})"
@@ -395,7 +395,7 @@ def main():
         paint_code, paint_name = parse_paint(colour)
         engine_code = parse_engine_code(engine_raw)
 
-        csv_warn = paint_family_conflict(paint_code, paint_name)
+        csv_warn = paint_warning(paint_code, paint_name)
         if csv_warn:
             paint_warnings.append((ref, f"BreakerPro Colour {colour!r}: {csv_warn}"))
 
@@ -471,7 +471,7 @@ def main():
     print(f"  Paint warnings:         {len(paint_warnings)}")
 
     if paint_warnings:
-        print(f"\n--- Paint warnings (code and name are different colours) ---")
+        print(f"\n--- Paint warnings (colour clash, or unverified code with no name) ---")
         for ref, msg in paint_warnings:
             print(f"  PAINT {ref}: {msg}")
 
