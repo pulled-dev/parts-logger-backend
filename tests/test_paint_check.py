@@ -295,3 +295,97 @@ def test_audit_real_name_difference_same_family_is_updated():
     v = {"ref": "VEH104", "paint_code": "LZ7G", "paint_name": "Reflex Silver"}
     line = paint_audit.audit_vehicle(v, _csv("LZ7G", "Floret Silver"))
     assert line["action"] == "update from CSV"
+
+
+# ── 6. Cloned BreakerPro rows (VEH120 was a copy of VEH89's Jetta row) ──
+
+def _clone_csv(tmp_path):
+    jetta = ("VH-{id},Volkswagen,Jetta,{ref},2.0 TDI BKD,Saloon 4 Door,2008,LC5F Blue Graphite,"
+             "AB08HDL,WVWZZZ1KZ8M150209,153148,DIESEL,,12/11/25,Global,VH-{id}")
+    return _write_breakerpro(tmp_path / "2026-10-12_stock.csv", [
+        _row("VEH88", "Golf Mk7", "LA7W Reflex Silver", "VIN88", reg="AA11AAA"),
+        jetta.format(id="121125", ref="veh89"),
+        jetta.format(id="160426", ref="veh120"),
+        _row("VEH121", "Polo 6r", "LC9X Deep Black", "VIN121", reg="BB22BBB"),
+    ])
+
+
+def test_shared_identity_refs_finds_cloned_rows(tmp_path):
+    shared = ib.shared_identity_refs(ib.read_breakerpro_rows(_clone_csv(tmp_path)))
+    assert shared == {"VEH89": {"VEH120"}, "VEH120": {"VEH89"}}
+
+
+def test_row_identity_problem():
+    polo = {"make": "VOLKSWAGEN", "model": "Polo 6R"}
+    assert "Jetta" in ib.row_identity_problem(polo, {"Make": "Volkswagen", "Model": "Jetta"})
+    assert "VEH89" in ib.row_identity_problem(polo, {"Make": "Volkswagen", "Model": "Polo 6r"}, {"VEH89"})
+    golf = {"make": "VOLKSWAGEN", "model": "Golf Mk7"}
+    assert ib.row_identity_problem(golf, {"Make": "Volkswagen", "Model": "Golf Mk7 Dsg"}) is None
+    assert ib.row_identity_problem({"make": "", "model": None}, {"Make": "VW", "Model": "Up"}) is None
+
+
+def test_backfill_holds_row_from_another_vehicle(monkeypatch):
+    """VEH120 (Polo) got the Jetta's VIN and year from the cloned row."""
+    monkeypatch.setattr(ib, "get_vehicle", lambda ref: {
+        "ref": ref, "make": "VOLKSWAGEN", "model": "Polo 6R", "year_range": None,
+        "vin": None, "engine_code": "CGP", "paint_code": None, "paint_name": None})
+    monkeypatch.setattr(ib, "patch_vehicle", lambda *a: pytest.fail("must not write"))
+    status, msg = ib.backfill_vehicle(
+        "VEH120", {"year_range": "2008", "vin": "WVWZZZ1KZ8M150209", "engine_code": "BKD",
+                   "paint_code": "LC5F", "paint_name": "Blue Graphite"},
+        dry_run=False, row={"Make": "Volkswagen", "Model": "Jetta"}, others={"VEH89"})
+    assert status == "held" and "another vehicle" in msg
+
+
+def test_importer_dry_run_reports_held_rows(tmp_path, monkeypatch, capsys):
+    records = {
+        "VEH88": {"make": "VOLKSWAGEN", "model": "Golf Mk7", "paint_code": "LA7W",
+                  "paint_name": "Reflex Silver", "year_range": "2014", "vin": "VIN88", "engine_code": "CGP"},
+        "VEH89": {"make": "VOLKSWAGEN", "model": "Jetta", "paint_code": "LC5F",
+                  "paint_name": "Blue Graphite", "year_range": "2008",
+                  "vin": "WVWZZZ1KZ8M150209", "engine_code": "BKD"},
+        "VEH120": {"make": "VOLKSWAGEN", "model": "Polo 6R", "paint_code": "LD5Q",
+                   "paint_name": "Atlantic Blue", "year_range": None, "vin": None, "engine_code": "CGP"},
+        "VEH121": {"make": "VOLKSWAGEN", "model": "Polo 6r", "paint_code": "LC9X",
+                   "paint_name": "Deep Black", "year_range": "2014", "vin": "VIN121", "engine_code": "CGP"},
+    }
+    monkeypatch.setattr(ib, "get_vehicle", lambda ref: records.get(ref.upper()))
+    monkeypatch.setattr(ib, "patch_vehicle", lambda *a: pytest.fail("dry run must not write"))
+    monkeypatch.setattr(ib.time, "sleep", lambda s: None)
+    monkeypatch.setattr(sys, "argv", ["x", str(_clone_csv(tmp_path)), "--fill-missing", "--dry-run"])
+    with pytest.raises(SystemExit) as e:
+        ib.main()
+    out = capsys.readouterr().out
+    assert e.value.code == 0
+    assert "Held (row looks wrong): 2" in out
+    assert "HOLD veh120" in out and "HOLD veh89" in out
+    assert "would fill" not in out          # VEH120's blank VIN/year are NOT filled from the Jetta
+
+
+def test_audit_veh120_uses_confirmed_paint_not_cloned_row(tmp_path):
+    idx = paint_audit.load_csv_paint([_clone_csv(tmp_path)])
+    assert idx["VEH120"]["others"] == ["VEH89"] and idx["VEH120"]["code"] == "LC5F"
+    v = {"ref": "VEH120", "make": "VOLKSWAGEN", "model": "Polo 6R",
+         "paint_code": "LD5Q", "paint_name": "Atlantic Blue"}
+    line = paint_audit.audit_vehicle(v, idx["VEH120"])
+    assert (line["proposed_paint_code"], line["proposed_paint_name"]) == ("LD5Q", "Shadow Blue")
+    assert line["action"] == "update (confirmed by hand)"
+    assert "another vehicle" in line["issues"]
+    fixes, _ = plan_fixes([line])
+    assert fixes[0]["patch"] == {"paint_code": "LD5Q", "paint_name": "Shadow Blue"}
+    done = dict(v, paint_name="Shadow Blue")
+    assert paint_audit.audit_vehicle(done, idx["VEH120"]) is None
+
+
+def test_audit_cloned_row_without_confirmation_is_never_used(tmp_path):
+    idx = paint_audit.load_csv_paint([_clone_csv(tmp_path)])
+    v = {"ref": "VEH89", "make": "VOLKSWAGEN", "model": "Jetta",
+         "paint_code": "LB9A", "paint_name": "Candy White"}
+    line = paint_audit.audit_vehicle(v, idx["VEH89"])
+    assert line["action"].startswith("check by hand") and line["proposed_paint_code"] == ""
+    assert plan_fixes([line])[0] == []
+
+
+def test_ld5q_is_shadow_blue():
+    assert lookup_paint_name("LD5Q") == "Shadow Blue"
+    assert paint_family_conflict("LD5Q", "Shadow Blue") is None

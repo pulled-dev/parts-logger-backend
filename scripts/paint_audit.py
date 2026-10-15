@@ -31,8 +31,10 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 from db import normalise_ref  # noqa: E402
 from import_breakerpro import (  # noqa: E402
-    API_BASE, parse_paint, read_breakerpro_rows, same_paint,
+    API_BASE, parse_paint, read_breakerpro_rows, row_identity_problem, same_paint,
+    shared_identity_refs,
 )
+from paint_config import CONFIRMED_VEHICLE_PAINT  # noqa: E402
 from paint_codes import (  # noqa: E402
     colour_families_in_name, colour_families_of_code, paint_family_conflict,
 )
@@ -44,7 +46,7 @@ AUDIT_COLUMNS = [
     "db_paint_code", "db_paint_name",
     "csv_colour", "csv_paint_code", "csv_paint_name",
     "issues", "warning",
-    "proposed_paint_code", "proposed_paint_name", "action", "csv_file",
+    "proposed_paint_code", "proposed_paint_name", "action", "csv_file", "csv_row",
 ]
 
 
@@ -60,10 +62,13 @@ def csv_files(dirs=IMPORT_DIRS) -> list[Path]:
 
 
 def load_csv_paint(files) -> dict[str, dict]:
-    """{ref: paint info from the NEWEST file that contains that ref}."""
+    """{ref: paint info from the NEWEST file that contains that ref}.
+    `others` lists refs whose row in that file has the same VIN or reg."""
     index = {}
     for path in files:
-        for row_no, row in read_breakerpro_rows(path):
+        rows = list(read_breakerpro_rows(path))
+        shared = shared_identity_refs(rows)
+        for row_no, row in rows:
             try:
                 ref = normalise_ref(row.get("Stock Reference"))
             except ValueError:
@@ -72,8 +77,11 @@ def load_csv_paint(files) -> dict[str, dict]:
             code, name = parse_paint(colour)
             index[ref] = {
                 "colour": colour, "code": code, "name": name,
+                "make": (row.get("Make") or "").strip(),
+                "model": (row.get("Model") or "").strip(),
                 "reg": (row.get("Reg") or "").strip(),
                 "vin": (row.get("Vin") or "").strip(),
+                "others": sorted(shared.get((row.get("Stock Reference") or "").strip().upper(), ())),
                 "file": Path(path).name, "row": row_no,
             }
     return index
@@ -98,7 +106,22 @@ def audit_vehicle(vehicle: dict, csv_info: dict | None) -> dict | None:
 
     proposed = None
     action = None
-    if csv_info and csv_info["code"]:
+    confirmed = CONFIRMED_VEHICLE_PAINT.get(vehicle.get("ref"))
+    problem = csv_info and row_identity_problem(
+        vehicle, {"Make": csv_info.get("make"), "Model": csv_info.get("model")},
+        csv_info.get("others"))
+    if problem:
+        issues.append(f"CSV row looks like another vehicle ({problem})")
+
+    if confirmed:
+        # Checked by hand: beats the CSV, whatever the CSV says.
+        if same_paint(code, name, *confirmed):
+            return None
+        issues.append("differs from hand-confirmed paint")
+        proposed, action = confirmed, "update (confirmed by hand)"
+    elif problem:
+        action = "check by hand (CSV row looks like another vehicle)"
+    elif csv_info and csv_info["code"]:
         if (code or "").strip().upper() != csv_info["code"]:
             issues.append("code differs from CSV")
         if not same_paint("", name, "", csv_info["name"]):
@@ -128,7 +151,8 @@ def audit_vehicle(vehicle: dict, csv_info: dict | None) -> dict | None:
         return None
 
     if action:
-        proposed = None
+        if not action.startswith("update"):
+            proposed = None
     elif proposed and "BreakerPro colour contradicts itself" not in issues:
         action = "update from CSV"
     elif proposed:
@@ -156,6 +180,7 @@ def audit_vehicle(vehicle: dict, csv_info: dict | None) -> dict | None:
         "proposed_paint_name": proposed[1] if proposed else "",
         "action": action,
         "csv_file": csv_info.get("file", ""),
+        "csv_row": csv_info.get("row", ""),
     }
 
 
@@ -195,7 +220,10 @@ def summarise(vehicles: list[dict], lines: list[dict]) -> str:
         f"  CSV colour only, clashes:      {n('CSV has no code')}",
         f"  spelling difference only:      {n('spelt differently')}",
         f"  BreakerPro text inconsistent:  {n('contradicts itself')}",
+        f"  CSV row is another vehicle:    {n('looks like another vehicle')}",
+        f"  differs from confirmed paint:  {n('hand-confirmed')}",
         f"Fixable from CSV:                {sum(1 for l in lines if l['action'] == 'update from CSV')}",
+        f"Fixable from confirmed paint:    {sum(1 for l in lines if l['action'] == 'update (confirmed by hand)')}",
         f"Keep as is (spelling only):      {sum(1 for l in lines if l['action'].startswith('keep'))}",
         f"Need a manual check:             {sum(1 for l in lines if l['action'].startswith('check by hand'))}",
     ])

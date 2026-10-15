@@ -3,7 +3,8 @@ Correct vehicles whose paint code/name don't match BreakerPro.
 
 Uses the same checks as scripts/paint_audit.py. For every vehicle the audit
 marks "update from CSV", it sets paint_code AND paint_name together to the
-pair from that vehicle's latest BreakerPro row. Nothing else is touched.
+pair from that vehicle's latest BreakerPro row; "update (confirmed by hand)"
+uses paint_config.CONFIRMED_VEHICLE_PAINT instead. Nothing else is touched.
 Vehicles marked "check by hand" or "keep" are listed but never changed.
 
 DRY RUN BY DEFAULT: it only reads and prints what it would change.
@@ -30,7 +31,7 @@ def plan_fixes(lines: list[dict]) -> tuple[list[dict], list[dict]]:
     {ref, before: (code, name), patch: {paint_code, paint_name}}."""
     fixes, manual = [], []
     for l in lines:
-        if l["action"] == "update from CSV":
+        if l["action"].startswith("update"):
             fixes.append({
                 "ref": l["ref"],
                 "before": (l["db_paint_code"], l["db_paint_name"]),

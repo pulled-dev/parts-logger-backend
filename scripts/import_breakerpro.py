@@ -20,6 +20,7 @@ import csv
 import re
 import sys
 import time
+from collections import defaultdict
 from pathlib import Path
 
 import urllib.request
@@ -116,6 +117,45 @@ def read_breakerpro_rows(csv_path):
         reader = csv.DictReader(f)
         for i, row in enumerate(reader, start=1):
             yield i, row
+
+
+def shared_identity_refs(rows) -> dict[str, set[str]]:
+    """{REF: other refs in the same file whose row has the same VIN or reg}.
+
+    A BreakerPro record cloned from another car keeps the other car's VIN,
+    reg and colour (VEH120 was a copy of VEH89's Jetta row). Such a row can't
+    be trusted for either ref."""
+    owners = defaultdict(set)
+    for _, row in rows:
+        ref = (row.get("Stock Reference") or "").strip().upper()
+        for col in ("Vin", "Reg"):
+            value = (row.get(col) or "").strip().upper()
+            if ref and value:
+                owners[(col, value)].add(ref)
+    shared = defaultdict(set)
+    for refs in owners.values():
+        if len(refs) > 1:
+            for ref in refs:
+                shared[ref] |= refs - {ref}
+    return dict(shared)
+
+
+def _first_word(value) -> str:
+    words = (value or "").split()
+    return words[0].casefold() if words else ""
+
+
+def row_identity_problem(current: dict, row: dict, others=()) -> str | None:
+    """Why this CSV row may describe a DIFFERENT car than the stored vehicle,
+    or None if it looks like the same car. Checks: VIN/reg shared with another
+    ref in the file, and make/model (first word) disagreeing with the record."""
+    if others:
+        return f"same VIN/reg as {', '.join(sorted(others))} in the CSV"
+    for col, key in (("Make", "make"), ("Model", "model")):
+        a, b = _first_word(current.get(key)), _first_word(row.get(col))
+        if a and b and a != b:
+            return f"{key} is {current.get(key)!r} here but {row.get(col)!r} in the CSV"
+    return None
 
 
 def parse_engine_code(engine: str) -> str | None:
@@ -265,20 +305,28 @@ def patch_vehicle(ref: str, fields: dict) -> tuple[bool, str]:
         return False, f"Error: {e}"
 
 
-def backfill_vehicle(ref: str, candidate: dict, dry_run: bool) -> tuple[str, str]:
+def backfill_vehicle(ref: str, candidate: dict, dry_run: bool,
+                     row: dict | None = None, others=()) -> tuple[str, str]:
     """Fill ONLY blank fields on an existing vehicle. Never overwrites a value
     that is already set. Returns (status, message) where status is one of
-    'updated', 'complete', 'failed'.
+    'updated', 'complete', 'held', 'failed'.
 
     `candidate` holds the values parsed from the CSV for BACKFILL_FIELDS and
-    paint_code/paint_name.
+    paint_code/paint_name. `row` is the raw CSV row and `others` the refs that
+    share its VIN/reg: if the row looks like a different car, nothing is
+    filled ('held').
     """
     current = get_vehicle(ref)
     if current is None:
         return "failed", "could not GET existing record"
 
-    to_fill, note = plan_backfill(current, candidate)
     warn = paint_family_conflict(current.get("paint_code"), current.get("paint_name"))
+    problem = row_identity_problem(current, row or {}, others)
+    if problem:
+        return "held", (f"NOT filled, CSV row looks like another vehicle ({problem})"
+                        + (f"; PAINT CHECK: {warn}" if warn else ""))
+
+    to_fill, note = plan_backfill(current, candidate)
     extra = "".join(f"; {m}" for m in (note, f"PAINT CHECK: {warn}" if warn else None) if m)
 
     if not to_fill:
@@ -316,11 +364,15 @@ def main():
           f"{'  [DRY RUN — no writes]' if dry_run else ''}\n")
 
     stats = {"created": 0, "updated": 0, "complete": 0, "exists": 0,
-             "failed": 0, "skipped": 0}
+             "held": 0, "failed": 0, "skipped": 0}
     failures = []
     paint_warnings = []
+    held = []
 
-    for i, row in read_breakerpro_rows(csv_path):
+    rows = list(read_breakerpro_rows(csv_path))
+    shared = shared_identity_refs(rows)
+
+    for i, row in rows:
         ref = (row.get("Stock Reference") or "").strip()
         make = (row.get("Make") or "").strip()
         model = (row.get("Model") or "").strip()
@@ -375,7 +427,10 @@ def main():
                 "paint_name": paint_name,
                 "engine_code": engine_code or "",
             }
-            status, msg = backfill_vehicle(ref, candidate, dry_run)
+            status, msg = backfill_vehicle(ref, candidate, dry_run, row=row,
+                                           others=shared.get(ref.upper(), set()))
+            if status == "held":
+                held.append((ref, msg))
             if "PAINT CHECK: " in msg:
                 paint_warnings.append((ref, "database: " + msg.split("PAINT CHECK: ", 1)[1]))
 
@@ -384,8 +439,13 @@ def main():
             "updated": "FILL",
             "complete": "DONE",
             "exists": "SKIP",
+            "held": "HOLD",
             "failed": "FAIL",
         }.get(status, "????")
+
+        if status == "created" and shared.get(ref.upper()):
+            held.append((ref, "created, but its VIN/reg is also on "
+                              f"{', '.join(sorted(shared[ref.upper()]))}: check in BreakerPro"))
 
         if status == "failed":
             stats["failed"] += 1
@@ -405,6 +465,7 @@ def main():
     print(f"  Already complete:       {stats['complete']}")
     if not fill_missing:
         print(f"  Already exists:         {stats['exists']}")
+    print(f"  Held (row looks wrong): {stats['held']}")
     print(f"  Skipped:                {stats['skipped']}")
     print(f"  Failed:                 {stats['failed']}")
     print(f"  Paint warnings:         {len(paint_warnings)}")
@@ -413,6 +474,11 @@ def main():
         print(f"\n--- Paint warnings (code and name are different colours) ---")
         for ref, msg in paint_warnings:
             print(f"  PAINT {ref}: {msg}")
+
+    if held:
+        print(f"\n--- Held: CSV row looks like a different vehicle (check BreakerPro) ---")
+        for ref, msg in held:
+            print(f"  HOLD {ref}: {msg}")
 
     if failures:
         print(f"\n--- Failures ---")

@@ -58,6 +58,7 @@ PAINT_CODE_FAMILIES: dict[str, tuple[str, ...]] = {
     "LA5J": ("blue",),    # Pacific Blue
     "LC5F": ("blue",),    # Blue Graphite
     "LD5L": ("blue",),    # Blue Silk
+    "LD5Q": ("blue",),    # Shadow Blue (PartsLink24)
     "LF5A": ("blue",),    # Pacific Blue (Skoda)
     "LF5Q": ("blue",),    # Storm Blue
     "LF5W": ("blue",),    # Race Blue
@@ -75,6 +76,15 @@ PAINT_CODE_FAMILIES: dict[str, tuple[str, ...]] = {
     # ── Green / beige ──
     "LF6Z": ("green",),   # Rallye Green
     "LF8H": ("beige",),   # Cappuccino Beige
+}
+
+# Vehicles whose paint was confirmed by hand (e.g. in PartsLink24). These win
+# over the BreakerPro CSV in scripts/paint_audit.py and fix_paint_mismatches.py.
+# Add a line only after checking the car itself; note where it was confirmed.
+CONFIRMED_VEHICLE_PAINT: dict[str, tuple[str, str]] = {
+    # BreakerPro exports of 24 Sep - 12 Oct 2026 had VEH120 as a clone of
+    # VEH89's row (Jetta, LC5F). Confirmed LD5Q in BreakerPro + PartsLink24, 15 Oct 2026.
+    "VEH120": ("LD5Q", "Shadow Blue"),
 }
 
 # Words in a paint NAME that place it in a colour family. A name can hit more

@@ -44,7 +44,7 @@ PAINT_CODES: dict[str, str] = {
     "LA3W": "Mars Red",
     # Blues
     "LB5K": "Lapiz Blue",
-    "LD5Q": "Atlantic Blue",
+    "LD5Q": "Shadow Blue",            # PartsLink24 (was "Atlantic Blue")
     "LA5W": "Night Blue Pearl",
     # Greys
     "LD7W": "Pepper Grey",
