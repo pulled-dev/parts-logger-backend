@@ -313,19 +313,27 @@ def edit_report(conn: sqlite3.Connection, sample_size: int = 20) -> dict:
 def _phrase_re(phrases: list[str], plural: bool) -> re.Pattern:
     alts = sorted({p.strip().lower() for p in phrases if p.strip()}, key=len, reverse=True)
     body = "|".join(re.escape(p).replace(r"\ ", r"[\s\-]+") for p in alts)
-    suffix = "s?" if plural else ""
+    suffix = "(?:e?s)?" if plural else ""
     return re.compile(rf"(?<![A-Za-z0-9])(?:{body}){suffix}(?![A-Za-z0-9])", re.IGNORECASE)
 
 
+_ALWAYS_SIDED_RE = _phrase_re(cfg.ALWAYS_SIDED, plural=True)
 _SIDED_RE = _phrase_re(cfg.SIDED_PART_TYPES, plural=True)
-_NOT_SIDED_RE = _phrase_re(cfg.NOT_SIDED_WORDS, plural=False)
+_NOT_SIDED_RE = _phrase_re(cfg.NOT_SIDED_WORDS, plural=True)
+# "SEAT Leon" etc.: the car make, removed before looking for part words
+_SEAT_MARQUE_RE = re.compile(
+    r"(?<![A-Za-z0-9])seat\s+(?:" + "|".join(re.escape(m) for m in cfg.SEAT_MODELS) + r")(?![A-Za-z0-9])",
+    re.IGNORECASE)
 _SIDE_RE = _phrase_re(cfg.SIDE_WORDS, plural=False)
 
 
 def is_sided_part(description: str | None) -> bool:
-    """True when the description names a part type that has a left and a
-    right (part_names_config.SIDED_PART_TYPES)."""
-    text = description or ""
+    """True when the description names a part that has a left and a right
+    (part_names_config.py: ALWAYS_SIDED, then NOT_SIDED_WORDS, then
+    SIDED_PART_TYPES). "Seat" as the SEAT car make doesn't count."""
+    text = _SEAT_MARQUE_RE.sub(" ", description or "")
+    if _ALWAYS_SIDED_RE.search(text):
+        return True
     return bool(_SIDED_RE.search(text)) and not _NOT_SIDED_RE.search(text)
 
 

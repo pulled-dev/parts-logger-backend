@@ -185,6 +185,67 @@ def test_side_guard(ai, expected):
     assert part_names.guard_ai_side(ai) == expected
 
 
+@pytest.mark.parametrize("ai, expected", [
+    # ALWAYS_SIDED beats the exception words
+    ("ABS Sensor O/S", "ABS Sensor O/S"),
+    ("Front ABS Sensor Passenger Side", "Front ABS Sensor Passenger Side"),
+    ("Window Switch Driver Side", "Window Switch Driver Side"),
+    ("Window Switch Pack N/S", "Window Switch Pack N/S"),
+    ("Window Switches Left", "Window Switches Left"),
+    ("Door Control Module OSF", "Door Control Module OSF"),
+    ("Door Module Right", "Door Module Right"),
+    ("Seat Belt Pretensioner Driver Side", "Seat Belt Pretensioner Driver Side"),
+    ("Headlight Washer Jet N/S", "Headlight Washer Jet N/S"),
+    # exceptions still win over the plain sided list
+    ("Headlight Switch Passenger Side", "Headlight Switch"),
+    ("Interior Mirror Right", "Interior Mirror"),
+    ("Rear View Mirror Left", "Rear View Mirror"),
+    # newly sided part types
+    ("Fog Light Passenger Side", "Fog Light Passenger Side"),
+    ("Fog Lamp N/S", "Fog Lamp N/S"),
+    ("Indicator Repeater Left", "Indicator Repeater Left"),
+    ("Rear Quarter Glass O/S", "Rear Quarter Glass O/S"),
+    ("Front Wishbone N/S", "Front Wishbone N/S"),
+    ("Lower Control Arm Right", "Lower Control Arm Right"),
+    ("Coil Spring Rear Left", "Coil Spring Rear Left"),
+    ("Shock Absorber O/S", "Shock Absorber O/S"),
+    ("Front Strut Driver Side", "Front Strut Driver Side"),
+    ("Brake Caliper NSF", "Brake Caliper NSF"),
+    ("Track Rod End Left", "Track Rod End Left"),
+    ("Wheel Arch Liner OSF", "Wheel Arch Liner OSF"),
+    ("Bumper Bracket N/S", "Bumper Bracket N/S"),
+    # exceptions added after review: not sided even though they contain a sided word
+    ("Clock Spring Passenger Side", "Clock Spring"),
+    ("Indicator Stalk Left", "Indicator Stalk"),
+    ("Wiper Stalk N/S", "Wiper Stalk"),
+    ("Boot Strut Left", "Boot Strut"),
+    ("Bonnet Strut O/S", "Bonnet Strut"),
+    ("Tailgate Strut Driver Side", "Tailgate Strut"),
+    ("Tailgate Struts Right", "Tailgate Struts"),
+    ("Fuel Filler Door Passenger Side", "Fuel Filler Door"),
+    # ...while the real sided parts they sit next to keep their side
+    ("Coil Spring Front N/S", "Coil Spring Front N/S"),
+    ("Front Strut O/S", "Front Strut O/S"),
+    ("Indicator NSF", "Indicator NSF"),
+    ("Rear Door O/S", "Rear Door O/S"),
+    # "seat" the part vs SEAT the car make
+    ("SEAT Leon fuel pump passenger side", "SEAT Leon fuel pump"),
+    ("Seat Ibiza Wiper Motor N/S", "Seat Ibiza Wiper Motor"),
+    ("passenger seat", "passenger seat"),
+    ("Passenger Seat Right", "Passenger Seat Right"),
+    ("seat belt", "seat belt"),
+    ("SEAT Leon Seat Belt Left", "SEAT Leon Seat Belt Left"),
+    ("SEAT Leon Front Seat O/S", "SEAT Leon Front Seat O/S"),
+])
+def test_side_guard_lists(ai, expected):
+    assert part_names.guard_ai_side(ai) == expected
+
+
+def test_seat_leon_fuel_pump_loses_side_through_lookup(api):
+    api.claude["answer"] = "SEAT Leon fuel pump passenger side"
+    assert api.post("/lookup", json={"part_number": "5Q0919051BH"}).json()["description"] == "SEAT Leon fuel pump"
+
+
 def test_side_stripped_from_non_sided_ai_part(api, conn):
     api.claude["answer"] = "Headlight Switch Passenger Side"
     hit = api.post("/lookup", json={"part_number": "6R0941531F"}).json()
