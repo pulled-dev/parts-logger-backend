@@ -340,14 +340,16 @@ def test_backfill_holds_row_from_another_vehicle(monkeypatch):
 def test_importer_dry_run_reports_held_rows(tmp_path, monkeypatch, capsys):
     records = {
         "VEH88": {"make": "VOLKSWAGEN", "model": "Golf Mk7", "paint_code": "LA7W",
-                  "paint_name": "Reflex Silver", "year_range": "2014", "vin": "VIN88", "engine_code": "CGP"},
+                  "paint_name": "Reflex Silver", "year_range": "2014", "vin": "VIN88", "engine_code": "CGP",
+                      "arrived_at": "2026-08-29"},
         "VEH89": {"make": "VOLKSWAGEN", "model": "Jetta", "paint_code": "LC5F",
                   "paint_name": "Blue Graphite", "year_range": "2008",
                   "vin": "WVWZZZ1KZ8M150209", "engine_code": "BKD"},
         "VEH120": {"make": "VOLKSWAGEN", "model": "Polo 6R", "paint_code": "LD5Q",
                    "paint_name": "Atlantic Blue", "year_range": None, "vin": None, "engine_code": "CGP"},
         "VEH121": {"make": "VOLKSWAGEN", "model": "Polo 6r", "paint_code": "LC9X",
-                   "paint_name": "Deep Black", "year_range": "2014", "vin": "VIN121", "engine_code": "CGP"},
+                   "paint_name": "Deep Black", "year_range": "2014", "vin": "VIN121", "engine_code": "CGP",
+                       "arrived_at": "2026-08-29"},
     }
     monkeypatch.setattr(ib, "get_vehicle", lambda ref: records.get(ref.upper()))
     monkeypatch.setattr(ib, "patch_vehicle", lambda *a: pytest.fail("dry run must not write"))

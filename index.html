@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="page-version" content="2026-10-15.130c4f0">
+  <meta name="page-version" content="2026-10-20.8fccb3f">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Pulled Apart — Parts Logger</title>
@@ -1331,6 +1331,54 @@
       color: var(--text-muted);
     }
 
+    /* Yard status: badge on every vehicle + one-tap buttons */
+    .vs-badge {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 3px;
+      border: 1px solid currentColor;
+      white-space: nowrap;
+    }
+    .vs-on_yard  { color: var(--success); background: rgba(0,200,83,0.10); }
+    .vs-stripped { color: var(--warning); background: rgba(255,179,0,0.10); }
+    .vs-crushed  { color: var(--error);   background: rgba(255,23,68,0.10); }
+    .vs-unknown  { color: var(--text-muted); background: transparent; }
+    .veh-row-side { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .veh-row-damage { font-size: 12px; color: var(--text-secondary); font-style: italic; }
+    .vs-btns { display: flex; gap: 6px; }
+    .vs-btn {
+      flex: 1;
+      min-height: 44px;
+      padding: 0 8px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-secondary);
+      font-family: var(--display);
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+    .vs-btn:disabled { opacity: 0.5; cursor: wait; }
+    .vs-btn.on.vs-on_yard  { border-color: var(--success); color: var(--success); background: rgba(0,200,83,0.12); }
+    .vs-btn.on.vs-stripped { border-color: var(--warning); color: var(--warning); background: rgba(255,179,0,0.12); }
+    .vs-btn.on.vs-crushed  { border-color: var(--error);   color: var(--error);   background: rgba(255,23,68,0.12); }
+    .vs-since { font-size: 11px; color: var(--text-muted); font-family: var(--mono); }
+    .veh-tabs { display: flex; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+    .veh-tab {
+      flex: 1; min-height: 44px; background: transparent; border: none;
+      color: var(--text-muted); font-family: var(--display); font-size: 15px;
+      letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer;
+    }
+    .veh-tab + .veh-tab { border-left: 1px solid var(--border); }
+    .veh-tab.active { background: var(--bg-elevated); color: var(--text-primary); box-shadow: inset 0 -2px 0 var(--accent-red); }
+
     .veh-status {
       padding: 32px 20px;
       text-align: center;
@@ -1691,6 +1739,10 @@
       <div class="veh-search">
         <input type="text" id="veh-search-input" placeholder="Search VIN, ref, make..." autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
       </div>
+      <div class="veh-tabs" role="tablist">
+        <button type="button" class="veh-tab active" data-view="all" role="tab" aria-selected="true">All</button>
+        <button type="button" class="veh-tab" data-view="yard" role="tab" aria-selected="false">Yard</button>
+      </div>
       <div id="veh-list-status" class="veh-status"><span class="veh-spinner"></span>Loading vehicles...</div>
       <div class="veh-list" id="veh-list"></div>
     </div>
@@ -1757,6 +1809,21 @@
           <label for="veh-transmission">Transmission</label>
           <input type="text" id="veh-transmission" name="transmission" placeholder="e.g. Manual / DSG"
                  autocomplete="off" autocorrect="off" autocapitalize="words" spellcheck="false">
+        </div>
+
+        <div class="veh-form-field" id="veh-status-field" style="display:none;">
+          <label>Status <span class="vs-since" id="veh-status-since"></span></label>
+          <div id="veh-status-btns"></div>
+        </div>
+
+        <div class="veh-form-field">
+          <label for="veh-damage-notes">Damage Notes</label>
+          <textarea id="veh-damage-notes" name="damage_notes" rows="2" placeholder="e.g. front-end hit, passenger side damaged"></textarea>
+        </div>
+
+        <div class="veh-form-field">
+          <label for="veh-arrived-at">Arrived On Yard</label>
+          <input type="date" id="veh-arrived-at" name="arrived_at">
         </div>
 
         <div class="veh-form-field">
@@ -2658,6 +2725,63 @@ flushQueues();
 showPageVersion();
 checkPageVersion();
 
+// ── Vehicle status ───────────────────────────────────────────────────────────
+// Where each donor car is, so the yard can keep it current and the eBay
+// message bot can tell buyers whether a part is still on the car.
+const VEH_STATUSES = [
+  { key: 'on_yard',  label: 'On yard' },
+  { key: 'stripped', label: 'Stripped' },
+  { key: 'crushed',  label: 'Crushed' },
+];
+const VEH_STATUS_LABEL = { on_yard: 'On yard', stripped: 'Stripped', crushed: 'Crushed', unknown: 'Unknown' };
+
+function vehStatusOf(v) {
+  return v && Object.prototype.hasOwnProperty.call(VEH_STATUS_LABEL, v.status) ? v.status : 'unknown';
+}
+
+function vehStatusBadge(v) {
+  const s = vehStatusOf(v);
+  return '<span class="vs-badge vs-' + s + '">' + VEH_STATUS_LABEL[s] + '</span>';
+}
+
+function vehStatusButtons(v) {
+  const cur = vehStatusOf(v);
+  return '<div class="vs-btns">' + VEH_STATUSES.map(s =>
+    '<button type="button" class="vs-btn vs-' + s.key + (s.key === cur ? ' on' : '') +
+    '" data-status="' + s.key + '" aria-pressed="' + (s.key === cur) + '">' + s.label + '</button>'
+  ).join('') + '</div>';
+}
+
+// Yard view: cars still being broken or never given a status. Newest arrival
+// first; cars with no arrival date go after them, newest added first.
+function yardVehicles(list) {
+  const key = v => v.arrived_at ? '1' + v.arrived_at : '0' + (v.created_at || '');
+  return (list || [])
+    .filter(v => { const s = vehStatusOf(v); return s === 'on_yard' || s === 'unknown'; })
+    .sort((a, b) => key(b).localeCompare(key(a)));
+}
+
+// PATCH the status (and damage_notes if given), then swap the saved record
+// into window.PA_VEHICLES so every view shows the new badge.
+async function setVehicleStatus(ref, status, extra) {
+  const r = await fetch(cfg.url + '/vehicles/' + encodeURIComponent(ref) + '/status', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(Object.assign({ status }, extra || {})),
+    signal: AbortSignal.timeout(12000),
+  });
+  let data = null;
+  try { data = await r.json(); } catch {}
+  if (!r.ok) {
+    const msg = data && (data.error || data.detail);
+    throw new Error(typeof msg === 'string' ? msg : 'HTTP ' + r.status);
+  }
+  const list = window.PA_VEHICLES || [];
+  const i = list.findIndex(v => v.ref === data.ref);
+  if (i >= 0) list[i] = data;
+  return data;
+}
+
 // ── Vehicles overlay ─────────────────────────────────────────────────────────
 window.PA_VEHICLES = [];
 
@@ -2689,11 +2813,20 @@ window.PA_VEHICLES = [];
     engine_code:   document.getElementById('veh-engine-code'),
     transmission:  document.getElementById('veh-transmission'),
     notes:         document.getElementById('veh-notes'),
+    damage_notes:  document.getElementById('veh-damage-notes'),
+    arrived_at:    document.getElementById('veh-arrived-at'),
   };
+  const statusField = document.getElementById('veh-status-field');
+  const statusSince = document.getElementById('veh-status-since');
+  const tabs        = document.querySelectorAll('.veh-tab');
 
   let editingRef = null;       // null = add mode, otherwise the ref being edited
   let listLoaded = false;
   let filterTerm = '';
+  let view = 'all';            // 'all' | 'yard'
+  // Refs in the Yard view, fixed when the view is opened so a car tapped to
+  // Stripped stays on screen (showing its new badge) until the view is reopened.
+  let yardRefs = [];
 
   function escHtml(s) {
     return String(s == null ? '' : s)
@@ -2729,6 +2862,7 @@ window.PA_VEHICLES = [];
       const data = await r.json();
       window.PA_VEHICLES = Array.isArray(data) ? data : [];
       listLoaded = true;
+      if (view === 'yard') yardRefs = yardVehicles(window.PA_VEHICLES).map(v => v.ref);
       renderList();
     } catch (e) {
       console.warn('loadVehicles failed:', e);
@@ -2743,7 +2877,9 @@ window.PA_VEHICLES = [];
     if (!listLoaded) return;
     const term = filterTerm.trim().toLowerCase();
     const all = window.PA_VEHICLES || [];
-    const filtered = !term ? all : all.filter(v => {
+    const byRef = new Map(all.map(v => [v.ref, v]));
+    const shown = view === 'yard' ? yardRefs.map(r => byRef.get(r)).filter(Boolean) : all;
+    const filtered = !term ? shown : shown.filter(v => {
       const haystack = [v.ref, v.vin, v.make, v.model, v.paint_name, v.paint_code]
         .map(x => (x || '').toString().toLowerCase()).join(' ');
       return haystack.includes(term);
@@ -2757,7 +2893,8 @@ window.PA_VEHICLES = [];
     }
     if (!filtered.length) {
       listStatus.style.display = 'block';
-      listStatus.textContent = 'No matches for "' + term + '"';
+      listStatus.textContent = term ? 'No matches for "' + term + '"'
+        : 'Nothing on the yard list: every car is stripped or crushed.';
       return;
     }
     listStatus.style.display = 'none';
@@ -2777,10 +2914,15 @@ window.PA_VEHICLES = [];
       row.innerHTML =
         '<div class="veh-row-top">' +
           '<div class="veh-row-vrm">' + headline + '</div>' +
-          (v.vin ? '<div class="veh-row-ref">' + escHtml(v.ref) + '</div>' : '') +
+          '<div class="veh-row-side">' +
+            (v.vin ? '<div class="veh-row-ref">' + escHtml(v.ref) + '</div>' : '') +
+            vehStatusBadge(v) +
+          '</div>' +
         '</div>' +
         (parts || yr ? '<div class="veh-row-meta">' + escHtml(parts) + yr + '</div>' : '') +
-        paint;
+        paint +
+        (v.damage_notes ? '<div class="veh-row-damage">Damage: ' + escHtml(v.damage_notes) + '</div>' : '') +
+        (view === 'yard' ? vehStatusButtons(v) : '');
       frag.appendChild(row);
     });
     listEl.appendChild(frag);
@@ -2826,11 +2968,13 @@ window.PA_VEHICLES = [];
         if (!el) return;
         el.value = vehicle[k] == null ? '' : vehicle[k];
       });
+      renderFormStatus(vehicle);
     } else {
       editingRef = null;
       formTitle.textContent = 'Add Vehicle';
       renderRefAsInput();
       deleteBtn.style.display = 'none';
+      statusField.style.display = 'none';
       // Reset non-ref fields
       Object.keys(fields).forEach(k => {
         const el = fields[k];
@@ -2843,6 +2987,42 @@ window.PA_VEHICLES = [];
     // Scroll form to top
     const fsBody = formView.querySelector('.fs-body');
     if (fsBody) fsBody.scrollTop = 0;
+  }
+
+  function renderFormStatus(vehicle) {
+    statusField.style.display = 'flex';
+    document.getElementById('veh-status-btns').innerHTML = vehStatusButtons(vehicle);
+    statusSince.textContent = vehicle.status_changed_at
+      ? 'since ' + String(vehicle.status_changed_at).slice(0, 10) : '';
+  }
+
+  // One tap: save the status straight away (no Save needed), from either a
+  // Yard row or the edit form.
+  async function tapStatus(btn, ref) {
+    const status = btn.dataset.status;
+    const group = btn.parentElement;
+    group.querySelectorAll('.vs-btn').forEach(b => { b.disabled = true; });
+    try {
+      const saved = await setVehicleStatus(ref, status);
+      toast(ref + ': ' + VEH_STATUS_LABEL[vehStatusOf(saved)], 'success');
+      if (editingRef === ref) renderFormStatus(saved);
+      renderList();
+    } catch (e) {
+      console.warn('set status failed:', e);
+      toast('Status not saved: ' + (e.message || 'network error'));
+      group.querySelectorAll('.vs-btn').forEach(b => { b.disabled = false; });
+    }
+  }
+
+  function setView(next) {
+    view = next;
+    tabs.forEach(t => {
+      const on = t.dataset.view === view;
+      t.classList.toggle('active', on);
+      t.setAttribute('aria-selected', String(on));
+    });
+    if (view === 'yard') yardRefs = yardVehicles(window.PA_VEHICLES).map(v => v.ref);
+    renderList();
   }
 
   function openOverlay() {
@@ -2868,7 +3048,11 @@ window.PA_VEHICLES = [];
       if (!el) return;
       let v = el.value;
       if (typeof v === 'string') v = v.trim();
-      if (v === '') return; // skip empty (server defaults to null)
+      if (v === '') {
+        // Editing: an emptied damage note / arrival date must clear it.
+        if (!includeRef && (k === 'damage_notes' || k === 'arrived_at')) out[k] = null;
+        return; // skip empty (server defaults to null)
+      }
       if (k === 'vin' || k === 'paint_code' || k === 'engine_code') {
         v = v.toUpperCase();
       }
@@ -2989,8 +3173,22 @@ window.PA_VEHICLES = [];
     });
   }
 
-  // Tap row → edit
+  tabs.forEach(t => t.addEventListener('click', () => setView(t.dataset.view)));
+
+  // Status buttons in the edit form (re-rendered, so delegate from the field)
+  statusField.addEventListener('click', e => {
+    const btn = e.target.closest('.vs-btn');
+    if (btn && editingRef != null) tapStatus(btn, editingRef);
+  });
+
+  // Tap a status button on a Yard row → set it; tap anywhere else → edit
   listEl.addEventListener('click', e => {
+    const btn = e.target.closest('.vs-btn');
+    if (btn) {
+      const r = btn.closest('.veh-row');
+      if (r) tapStatus(btn, r.dataset.ref);
+      return;
+    }
     const row = e.target.closest('.veh-row');
     if (!row) return;
     const ref = row.dataset.ref;
@@ -3088,7 +3286,7 @@ window.PA_BODY_PANEL_CATS = window.PA_BODY_PANEL_CATS || [];
       row.innerHTML =
         '<div class="bp-r-headline">' + escHtml(vehicleHeadline(v)) + '</div>' +
         (meta ? '<div class="bp-r-meta">' + escHtml(meta) + '</div>' : '') +
-        '<div class="bp-r-ref">' + escHtml(v.ref) + '</div>';
+        '<div class="bp-r-ref">' + escHtml(v.ref) + ' ' + vehStatusBadge(v) + '</div>';
       frag.appendChild(row);
     });
     vehList.appendChild(frag);
