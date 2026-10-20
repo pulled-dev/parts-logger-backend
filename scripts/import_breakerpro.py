@@ -21,6 +21,7 @@ import re
 import sys
 import time
 from collections import defaultdict
+from datetime import datetime
 from pathlib import Path
 
 import urllib.request
@@ -189,11 +190,26 @@ def parse_year(year_str: str) -> int | None:
     return None
 
 
+def parse_onsite_date(value: str) -> str | None:
+    """BreakerPro's "On-site Date" (DD/MM/YY, e.g. 09/04/25) as an ISO date
+    for arrived_at. None if blank or not that format.
+
+    The export has no status / scrapped / crushed / off-road column, so this
+    is the only yard-status data it can give us."""
+    value = (value or "").strip()
+    for fmt in ("%d/%m/%y", "%d/%m/%Y"):
+        try:
+            return datetime.strptime(value, fmt).date().isoformat()
+        except ValueError:
+            continue
+    return None
+
+
 # Fields the importer is allowed to backfill on an EXISTING vehicle.
 # make/model are excluded (they are required at create time and never blank),
 # and everything else the API stores is left untouched. paint_code and
 # paint_name are handled together by plan_paint_backfill(), never singly.
-BACKFILL_FIELDS = ("year_range", "vin", "engine_code")
+BACKFILL_FIELDS = ("year_range", "vin", "engine_code", "arrived_at")
 
 
 def _is_empty(value) -> bool:
@@ -380,6 +396,7 @@ def main():
         colour = (row.get("Colour") or "").strip()
         engine_raw = (row.get("Engine") or "").strip()
         vin = (row.get("Vin") or "").strip()
+        arrived_at = parse_onsite_date(row.get("On-site Date"))
 
         if not ref or not make or not model:
             stats["skipped"] += 1
@@ -413,6 +430,7 @@ def main():
             "paint_name": paint_name,
             "engine_code": engine_code or "",
             "vin": vin or "",
+            "arrived_at": arrived_at,
             "is_active": True,
         }
 
@@ -426,6 +444,7 @@ def main():
                 "paint_code": paint_code,
                 "paint_name": paint_name,
                 "engine_code": engine_code or "",
+                "arrived_at": arrived_at or "",
             }
             status, msg = backfill_vehicle(ref, candidate, dry_run, row=row,
                                            others=shared.get(ref.upper(), set()))

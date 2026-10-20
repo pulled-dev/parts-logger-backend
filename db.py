@@ -75,9 +75,31 @@ CREATE TABLE IF NOT EXISTS vehicles (
     notes TEXT,
     is_active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    updated_at TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'unknown',
+    status_changed_at TEXT,
+    status_changed_by TEXT,
+    damage_notes TEXT,
+    arrived_at TEXT
 )
 """
+
+# Where a donor car is: on_yard (being broken, parts still on it), stripped
+# (everything worth keeping is off and on the shelf), crushed (gone), or
+# unknown (never set; every vehicle that existed before statuses did).
+VEHICLE_STATUSES = ("on_yard", "stripped", "crushed", "unknown")
+
+# Additive migrations: (column, definition). Each is only ever ADDed, never
+# altered or dropped, so existing rows keep every value they had and pick up
+# the column default (status -> 'unknown', the rest -> NULL).
+_ADDED_COLUMNS = (
+    ("is_active", "INTEGER NOT NULL DEFAULT 1"),
+    ("status", "TEXT NOT NULL DEFAULT 'unknown'"),
+    ("status_changed_at", "TEXT"),
+    ("status_changed_by", "TEXT"),
+    ("damage_notes", "TEXT"),
+    ("arrived_at", "TEXT"),
+)
 
 
 class RefAlreadyExists(Exception):
@@ -92,15 +114,10 @@ def init_db() -> None:
     DB_PATH = _resolve_db_path()
     with _connect() as conn:
         conn.execute(_CREATE_TABLE_SQL)
-        # Phase 3b Task 0: add is_active column to existing databases.
-        # SQLite ignores ADD COLUMN if the column is already present, so we
-        # swallow the OperationalError that would otherwise be raised.
-        try:
-            conn.execute(
-                "ALTER TABLE vehicles ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1"
-            )
-        except sqlite3.OperationalError:
-            pass  # column already exists
+        have = {r["name"] for r in conn.execute("PRAGMA table_info(vehicles)")}
+        for col, definition in _ADDED_COLUMNS:
+            if col not in have:
+                conn.execute(f"ALTER TABLE vehicles ADD COLUMN {col} {definition}")
         conn.commit()
 
 
@@ -151,6 +168,7 @@ def normalise_ref(value: Optional[str]) -> str:
 _FIELDS = [
     "ref", "make", "model", "year_range", "paint_code", "paint_name",
     "engine_code", "transmission", "vin", "notes", "is_active",
+    "damage_notes", "arrived_at",
 ]
 
 
@@ -281,3 +299,37 @@ def delete_vehicle(ref: str) -> bool:
         )
         conn.commit()
         return cur.rowcount > 0
+
+
+_UNSET = object()
+
+
+def set_vehicle_status(ref: str, status: str, damage_notes=_UNSET,
+                       changed_by: Optional[str] = None) -> Optional[dict]:
+    """Set a vehicle's status (and optionally its damage notes). Returns the
+    updated record, or None if the ref does not exist.
+
+    status_changed_at / status_changed_by only move when the status actually
+    changes, so "stripped since 3 Oct" stays true if someone re-taps Stripped.
+    damage_notes is left alone unless passed; None or "" clears it."""
+    if status not in VEHICLE_STATUSES:
+        raise ValueError(f"status must be one of {', '.join(VEHICLE_STATUSES)}")
+    norm = normalise_ref(ref)
+    existing = get_vehicle(norm)
+    if existing is None:
+        return None
+
+    now = _now()
+    sets = {"updated_at": now}
+    if existing.get("status") != status:
+        sets.update(status=status, status_changed_at=now,
+                    status_changed_by=(changed_by or "").strip() or None)
+    if damage_notes is not _UNSET:
+        sets["damage_notes"] = (damage_notes or "").strip() or None
+
+    set_clause = ", ".join(f"{c} = ?" for c in sets)
+    with _connect() as conn:
+        conn.execute(f"UPDATE vehicles SET {set_clause} WHERE ref = ?",
+                     (*sets.values(), norm))
+        conn.commit()
+    return get_vehicle(norm)

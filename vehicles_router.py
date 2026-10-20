@@ -15,11 +15,14 @@ Phase 3b Task 0:
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Response
+import hmac
+import os
+
+from fastapi import APIRouter, Header, Response
 from fastapi.responses import JSONResponse
 
 import db
-from models import VehicleIn, VehicleUpdate, VehicleOut
+from models import Availability, StatusUpdate, VehicleIn, VehicleUpdate, VehicleOut
 from paint_codes import paint_warning
 
 
@@ -94,3 +97,63 @@ def delete_vehicle(ref: str):
     if not deleted:
         return _err(404, "vehicle not found")
     return Response(status_code=204)
+
+
+@router.patch("/vehicles/{ref}/status", response_model=VehicleOut)
+def set_vehicle_status(ref: str, payload: StatusUpdate):
+    """Set on_yard / stripped / crushed / unknown, plus damage_notes if sent.
+    status_changed_at is stamped whenever the status actually changes."""
+    sent = payload.model_dump(exclude_unset=True)
+    extra = {"damage_notes": sent["damage_notes"]} if "damage_notes" in sent else {}
+    try:
+        updated = db.set_vehicle_status(ref, payload.status,
+                                        changed_by=payload.changed_by, **extra)
+    except ValueError as e:
+        return _err(400, str(e))
+    if updated is None:
+        return _err(404, "vehicle not found")
+    return _with_paint_check(updated)
+
+
+# The eBay message bot sends this header; its value must match BOT_API_KEY.
+BOT_KEY_HEADER = "X-API-Key"
+
+
+def _bot_key_error(sent: str | None) -> JSONResponse | None:
+    expected = os.environ.get("BOT_API_KEY", "")
+    if not expected:
+        # Fail closed: with no key configured nobody gets in.
+        return _err(503, "availability API is not configured (BOT_API_KEY unset)")
+    if not sent:
+        return _err(401, f"missing API key: send it in the {BOT_KEY_HEADER} header")
+    if not hmac.compare_digest(sent.encode(), expected.encode()):
+        return _err(401, "invalid API key")
+    return None
+
+
+@router.get("/vehicles/{ref}/availability", response_model=Availability)
+def vehicle_availability(ref: str,
+                         x_api_key: str | None = Header(default=None, alias=BOT_KEY_HEADER)):
+    """Read-only, for the eBay message bot: is this donor car still on the
+    yard? Needs the X-API-Key header. Soft-deleted vehicles are still
+    answered (they may well have been crushed)."""
+    denied = _bot_key_error(x_api_key)
+    if denied:
+        return denied
+    try:
+        record = db.get_vehicle(ref)
+    except ValueError as e:
+        return _err(400, str(e))
+    if record is None:
+        return _err(404, f"no vehicle with ref {ref!r}")
+    return {
+        "ref": record["ref"],
+        "make": record["make"],
+        "model": record["model"],
+        "year": record.get("year_range"),
+        "engine_code": record.get("engine_code"),
+        "paint_code": record.get("paint_code"),
+        "status": record.get("status") or "unknown",
+        "status_changed_at": record.get("status_changed_at"),
+        "damage_notes": record.get("damage_notes"),
+    }
