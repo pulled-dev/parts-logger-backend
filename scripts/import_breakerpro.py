@@ -17,6 +17,7 @@ What it does:
 """
 
 import csv
+import os
 import re
 import sys
 import time
@@ -33,6 +34,21 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from paint_codes import lookup_paint_name, paint_warning  # noqa: E402
 
 API_BASE = "https://web-production-7a1f0.up.railway.app"
+
+# Vehicle writes (POST/PATCH) need the staff key. Taken from the STAFF_API_KEY
+# env var, else from this file (kept outside the repo).
+STAFF_KEY_FILE = Path.home() / ".secrets" / "parts-logger" / "STAFF_API_KEY.txt"
+
+
+def staff_key() -> str:
+    key = os.environ.get("STAFF_API_KEY", "").strip()
+    if not key and STAFF_KEY_FILE.is_file():
+        key = STAFF_KEY_FILE.read_text(encoding="utf-8").strip()
+    return key
+
+
+def _write_headers() -> dict:
+    return {"Content-Type": "application/json", "X-Staff-Key": staff_key()}
 
 # VAG paint codes follow patterns like LC9X, LY9T, LZ9Y, LX7W, LB9A, LS3H, LA3H
 # 2 letters + 1 digit + 1 alphanumeric, OR sometimes 4 chars with mixed case
@@ -275,7 +291,7 @@ def post_vehicle(payload: dict, dry_run: bool = False) -> tuple[str, str]:
     req = urllib.request.Request(
         f"{API_BASE}/vehicles",
         data=data,
-        headers={"Content-Type": "application/json"},
+        headers=_write_headers(),
         method="POST",
     )
     try:
@@ -307,7 +323,7 @@ def patch_vehicle(ref: str, fields: dict) -> tuple[bool, str]:
     req = urllib.request.Request(
         f"{API_BASE}/vehicles/{ref}",
         data=data,
-        headers={"Content-Type": "application/json"},
+        headers=_write_headers(),
         method="PATCH",
     )
     try:
@@ -372,6 +388,11 @@ def main():
     csv_path = Path(positional[0])
     if not csv_path.exists():
         print(f"File not found: {csv_path}")
+        sys.exit(1)
+
+    if not dry_run and not staff_key():
+        print("No staff key: set STAFF_API_KEY or put the key in "
+              f"{STAFF_KEY_FILE}. Nothing was imported.")
         sys.exit(1)
 
     print(f"Reading {csv_path}...")

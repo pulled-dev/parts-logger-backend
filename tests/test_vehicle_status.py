@@ -14,6 +14,7 @@ import time
 import pytest
 
 import db
+from conftest import STAFF_KEY
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INDEX = os.path.join(ROOT, "index.html")
@@ -213,12 +214,67 @@ def test_availability_still_answers_for_soft_deleted(client, bot_key):
     assert r.status_code == 200 and r.json()["status"] == "crushed"
 
 
-def test_existing_endpoints_need_no_key(client, bot_key):
+# ── Staff key on vehicle writes ─────────────────────────────────────────
+
+WRITES = [
+    ("post", "/vehicles", {"ref": "VEH200", "make": "VW", "model": "Polo"}),
+    ("patch", "/vehicles/VEH113", {"notes": "changed"}),
+    ("patch", "/vehicles/VEH113/status", {"status": "crushed"}),
+    ("delete", "/vehicles/VEH113", None),
+]
+
+
+def _send(c, method, url, body, headers=None):
+    kw = {"headers": headers or {}}
+    if body is not None:
+        kw["json"] = body
+    return c.request(method.upper(), url, **kw)
+
+
+@pytest.mark.parametrize("method,url,body", WRITES)
+@pytest.mark.parametrize("headers", [{}, {"X-Staff-Key": ""}, {"X-Staff-Key": "wrong"},
+                                     {"X-Staff-Key": STAFF_KEY + "x"}, {"X-API-Key": STAFF_KEY}])
+def test_vehicle_writes_need_the_staff_key(client, anon_client, method, url, body, headers):
+    before = _add(client)
+    r = _send(anon_client, method, url, body, headers)
+    assert r.status_code == 401, r.text
+    assert "API key" in r.json()["error"]
+    # Nothing changed.
+    after = client.get("/vehicles/VEH113").json()
+    assert {k: after[k] for k in before} == before
+    assert client.get("/vehicles/VEH200").status_code == 404
+
+
+@pytest.mark.parametrize("method,url,body", WRITES)
+def test_vehicle_writes_work_with_the_staff_key(client, anon_client, method, url, body):
     _add(client)
-    assert client.get("/vehicles").status_code == 200
-    assert client.get("/vehicles/VEH113").status_code == 200
-    assert client.patch("/vehicles/VEH113", json={"notes": "x"}).status_code == 200
-    assert _status(client, "VEH113", status="on_yard").status_code == 200
+    r = _send(anon_client, method, url, body, {"X-Staff-Key": STAFF_KEY})
+    assert r.status_code in (200, 201, 204), r.text
+
+
+def test_vehicle_writes_fail_closed_without_configured_key(client, monkeypatch):
+    _add(client)
+    monkeypatch.delenv("STAFF_API_KEY")
+    for method, url, body in WRITES:
+        assert _send(client, method, url, body).status_code == 503
+
+
+def test_bot_key_is_not_a_staff_key(client, anon_client, bot_key):
+    _add(client)
+    r = anon_client.patch("/vehicles/VEH113/status", json={"status": "crushed"},
+                          headers={"X-Staff-Key": bot_key})
+    assert r.status_code == 401
+
+
+def test_reads_and_part_logging_need_no_key(client, anon_client):
+    _add(client)
+    assert anon_client.get("/vehicles").status_code == 200
+    assert anon_client.get("/vehicles/VEH113").status_code == 200
+    assert anon_client.get("/body-panel-categories").status_code == 200
+    assert anon_client.get("/paint-codes").status_code == 200
+    r = anon_client.post("/parts/exports", json={"export_id": "x1", "exported_at": "2026-10-20T10:00:00",
+                                                 "rows": []})
+    assert r.status_code == 200, r.text
 
 
 # ── BreakerPro import: On-site Date → arrived_at ───────────────────────
@@ -253,7 +309,7 @@ def _src() -> str:
 
 def _status_section() -> str:
     s = _src()
-    a = s.index("// ── Vehicle status")
+    a = s.index("// ── Staff key")
     return s[a:s.index("// ── Vehicles overlay", a)]
 
 
@@ -289,19 +345,29 @@ def _node(tmp_path, body: str) -> dict:
     return json.loads(res.stdout.strip().splitlines()[-1])
 
 
-def test_page_status_change_round_trip(tmp_path, live_server, bot_key):
-    from fastapi.testclient import TestClient
-    import main
+FAKE_BROWSER = """
+const window = {};
+const store = {};
+const localStorage = {
+  getItem: k => (k in store ? store[k] : null),
+  setItem: (k, v) => { store[k] = String(v); },
+  removeItem: k => { delete store[k]; },
+};
+const prompts = [];
+let answers = [];
+const prompt = msg => { prompts.push(msg); return answers.length ? answers.shift() : null; };
+"""
 
-    with TestClient(main.app) as c:
-        _add(c)
-        _add(c, ref="VEH115", make="SEAT", model="Leon")
-    out = _node(tmp_path, f"""
-const window = {{}};
+
+def test_page_status_change_round_trip(tmp_path, client, live_server, bot_key):
+    _add(client)
+    _add(client, ref="VEH115", make="SEAT", model="Leon")
+    out = _node(tmp_path, FAKE_BROWSER + f"""
 const cfg = {{ url: {json.dumps(live_server)} }};
 (async () => {{
   window.PA_VEHICLES = await (await fetch(cfg.url + '/vehicles')).json();
   const before = vehStatusBadge(window.PA_VEHICLES.find(v => v.ref === 'VEH113'));
+  answers = [{json.dumps(STAFF_KEY)}];
   const saved = await setVehicleStatus('VEH113', 'stripped', {{ damage_notes: 'front-end hit' }});
   const cached = window.PA_VEHICLES.find(v => v.ref === 'VEH113');
   let error = null;
@@ -309,9 +375,12 @@ const cfg = {{ url: {json.dumps(live_server)} }};
   console.log(JSON.stringify({{
     before, after: vehStatusBadge(cached), saved: saved.status, cachedDamage: cached.damage_notes,
     buttons: vehStatusButtons(cached), yard: yardVehicles(window.PA_VEHICLES).map(v => v.ref), error,
+    prompts: prompts.length, stored: localStorage.getItem('pa_staff_key'),
   }}));
 }})();
 """)
+    # Asked for the key once, kept it, and didn't ask again on the second change.
+    assert out["prompts"] == 1 and out["stored"] == STAFF_KEY
     assert out["before"] == '<span class="vs-badge vs-unknown">Unknown</span>'
     assert out["after"] == '<span class="vs-badge vs-stripped">Stripped</span>'
     assert out["saved"] == "stripped" and out["cachedDamage"] == "front-end hit"
@@ -352,3 +421,101 @@ def test_page_has_status_controls():
                    "damage_notes:  document.getElementById('veh-damage-notes')",
                    ".vs-on_yard", ".vs-stripped", ".vs-crushed", ".vs-unknown"):
         assert needle in s, needle
+
+
+def test_page_staff_key_wrong_then_fixed_or_refused(tmp_path, client, live_server):
+    _add(client)
+    out = _node(tmp_path, FAKE_BROWSER + f"""
+const cfg = {{ url: {json.dumps(live_server)} }};
+(async () => {{
+  // A stale key on the device: rejected, forgotten, asked for again, retried.
+  localStorage.setItem('pa_staff_key', 'old-key');
+  answers = [{json.dumps(STAFF_KEY)}];
+  const ok = await setVehicleStatus('VEH113', 'on_yard');
+  const afterFix = {{ prompts: prompts.slice(), stored: localStorage.getItem('pa_staff_key') }};
+
+  // No key given at all: nothing is sent, the caller gets a clear error.
+  localStorage.removeItem('pa_staff_key');
+  answers = [];
+  let refused = null;
+  try {{ await setVehicleStatus('VEH113', 'crushed'); }} catch (e) {{ refused = e.message; }}
+
+  // Wrong key typed twice: gives up after one retry with the 401.
+  answers = ['nope', 'still-nope'];
+  let twice = null;
+  try {{ await setVehicleStatus('VEH113', 'crushed'); }} catch (e) {{ twice = e.message; }}
+  console.log(JSON.stringify({{ ok: ok.status, afterFix, refused, twice,
+    finalStored: localStorage.getItem('pa_staff_key') }}));
+}})();
+""")
+    assert out["ok"] == "on_yard"
+    assert len(out["afterFix"]["prompts"]) == 1 and "not accepted" in out["afterFix"]["prompts"][0]
+    assert out["afterFix"]["stored"] == STAFF_KEY
+    assert out["refused"] == "staff key needed to change vehicles"
+    assert out["twice"] == "invalid API key"
+    assert out["finalStored"] is None
+    assert client.get("/vehicles/VEH113").json()["status"] == "on_yard"
+
+
+def test_page_sends_staff_key_on_every_vehicle_write():
+    s = _src()
+    a = s.index("// ── Vehicles overlay")
+    overlay = s[a:s.index("// ── Body Panel mode flow", a)]
+    assert "staffFetch(url, {" in overlay  # add / edit
+    assert "staffFetch(cfg.url + '/vehicles/' + encodeURIComponent(ref), {" in overlay  # delete
+    assert "await fetch(url, {" not in overlay
+    assert "method: 'DELETE'" in overlay
+    # Part logging calls stay plain fetch (no key needed).
+    for path in ("'/lookup'", "'/parts/exports'", "'/db-correct'"):
+        i = s.index("cfg.url + " + path)
+        assert "staffFetch" not in s[i - 80:i], path
+    assert 'id="s-staff-key"' in s
+
+
+# ── Import scripts send the staff key ──────────────────────────────────
+
+def test_importer_key_from_env_or_file(tmp_path, monkeypatch):
+    from scripts import import_breakerpro as ib
+    keyfile = tmp_path / "STAFF_API_KEY.txt"
+    monkeypatch.setattr(ib, "STAFF_KEY_FILE", keyfile)
+    assert ib.staff_key() == ""
+    keyfile.write_text(" from-file \n", encoding="utf-8")
+    assert ib._write_headers()["X-Staff-Key"] == "from-file"
+    monkeypatch.setenv("STAFF_API_KEY", "from-env")
+    assert ib._write_headers()["X-Staff-Key"] == "from-env"
+
+
+def test_importer_writes_with_key_against_real_api(tmp_path, client, live_server, monkeypatch):
+    from scripts import import_breakerpro as ib
+    monkeypatch.setattr(ib, "API_BASE", live_server)
+    body = {"ref": "VEH300", "make": "VW", "model": "Up", "arrived_at": "2025-04-09"}
+
+    # (The server shares this process's env, so stub the script's key instead.)
+    monkeypatch.setattr(ib, "staff_key", lambda: "wrong")
+    status, msg = ib.post_vehicle(body)
+    assert (status, msg[:8]) == ("failed", "HTTP 401")
+    assert ib.patch_vehicle("VEH300", {"vin": "X"})[0] is False
+
+    monkeypatch.setattr(ib, "staff_key", lambda: STAFF_KEY)
+    assert ib.post_vehicle(body)[0] == "created"
+    assert ib.patch_vehicle("VEH300", {"vin": "VIN300"})[0] is True
+    v = client.get("/vehicles/VEH300").json()
+    assert (v["vin"], v["arrived_at"], v["status"]) == ("VIN300", "2025-04-09", "unknown")
+
+
+def test_importer_refuses_to_run_without_key(tmp_path, monkeypatch, capsys):
+    import sys
+    from scripts import import_breakerpro as ib
+    monkeypatch.setattr(ib, "STAFF_KEY_FILE", tmp_path / "none.txt")
+    csv_path = tmp_path / "x.csv"
+    csv_path.write_text("junk\n\n\nStock Reference,Make,Model\n", encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", ["x", str(csv_path), "--fill-missing"])
+    with pytest.raises(SystemExit) as e:
+        ib.main()
+    assert e.value.code == 1
+    assert "No staff key" in capsys.readouterr().out
+    # A dry run needs no key (it only reads).
+    monkeypatch.setattr(sys, "argv", ["x", str(csv_path), "--fill-missing", "--dry-run"])
+    with pytest.raises(SystemExit) as e:
+        ib.main()
+    assert e.value.code == 0

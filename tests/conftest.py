@@ -34,7 +34,8 @@ def no_network(monkeypatch):
 @pytest.fixture(autouse=True)
 def clean_env(monkeypatch):
     for var in ("EBAY_APP_ID", "EBAY_CERT_ID", "EBAY_DEV_ID", "EBAY_AUTH_TOKEN", "EBAY_SITE_ID",
-                "EBAY_USER_REFRESH_TOKEN", "PRICING_ADMIN_TOKEN", "PRICING_DAILY_SYNC", "PRICING_MODE"):
+                "EBAY_USER_REFRESH_TOKEN", "PRICING_ADMIN_TOKEN", "PRICING_DAILY_SYNC", "PRICING_MODE",
+                "STAFF_API_KEY", "BOT_API_KEY"):
         monkeypatch.delenv(var, raising=False)
 
 
@@ -75,8 +76,24 @@ def conn(tmp_db):
     c.close()
 
 
+STAFF_KEY = "test-staff-key-0123456789"
+
+
 @pytest.fixture
-def client(tmp_db):
+def client(tmp_db, monkeypatch):
+    """The app as the logger page uses it: staff key configured and sent."""
+    from fastapi.testclient import TestClient
+
+    import main
+
+    monkeypatch.setenv("STAFF_API_KEY", STAFF_KEY)
+    with TestClient(main.app, headers={"X-Staff-Key": STAFF_KEY}) as c:
+        yield c
+
+
+@pytest.fixture
+def anon_client(client):
+    """Same app and database, but sending no staff key."""
     from fastapi.testclient import TestClient
 
     import main

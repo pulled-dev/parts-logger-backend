@@ -22,7 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from import_breakerpro import API_BASE, patch_vehicle  # noqa: E402
+from import_breakerpro import API_BASE, STAFF_KEY_FILE, patch_vehicle, staff_key  # noqa: E402
 from paint_audit import audit, csv_files, fetch_vehicles, load_csv_paint  # noqa: E402
 
 
@@ -49,6 +49,9 @@ def main():
     apply = "--apply" in args
     if apply and "--dry-run" in args:
         print("Pick one: --dry-run or --apply.")
+        sys.exit(2)
+    if apply and not staff_key():
+        print(f"No staff key: set STAFF_API_KEY or put the key in {STAFF_KEY_FILE}.")
         sys.exit(2)
 
     print(f"Target API: {API_BASE}")

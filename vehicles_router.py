@@ -18,7 +18,7 @@ from __future__ import annotations
 import hmac
 import os
 
-from fastapi import APIRouter, Header, Response
+from fastapi import APIRouter, Depends, Header, Response
 from fastapi.responses import JSONResponse
 
 import db
@@ -33,6 +33,30 @@ def _err(status_code: int, message: str) -> JSONResponse:
     return JSONResponse(status_code=status_code, content={"error": message})
 
 
+# Every vehicle write needs the staff key (STAFF_API_KEY) in this header; the
+# availability endpoint for the eBay message bot needs BOT_API_KEY in its own.
+# Reads stay open.
+STAFF_KEY_HEADER = "X-Staff-Key"
+BOT_KEY_HEADER = "X-API-Key"
+
+
+def _key_error(env_var: str, header: str, sent: str | None) -> JSONResponse | None:
+    """None if `sent` matches the key in env_var, otherwise the error response.
+    Fails closed: with no key configured nobody gets in."""
+    expected = os.environ.get(env_var, "")
+    if not expected:
+        return _err(503, f"not configured on the server ({env_var} unset)")
+    if not sent:
+        return _err(401, f"missing API key: send it in the {header} header")
+    if not hmac.compare_digest(sent.encode(), expected.encode()):
+        return _err(401, "invalid API key")
+    return None
+
+
+def _staff_key(x_staff_key: str | None = Header(default=None, alias=STAFF_KEY_HEADER)):
+    return x_staff_key
+
+
 def _with_paint_check(record: dict) -> dict:
     """Attach paint_warning so the logger can flag a code/name mismatch or
     an unverified code with no name."""
@@ -42,7 +66,10 @@ def _with_paint_check(record: dict) -> dict:
 
 
 @router.post("/vehicles", response_model=VehicleOut, status_code=201)
-def create_vehicle(payload: VehicleIn):
+def create_vehicle(payload: VehicleIn, staff_key: str | None = Depends(_staff_key)):
+    denied = _key_error("STAFF_API_KEY", STAFF_KEY_HEADER, staff_key)
+    if denied:
+        return denied
     data = payload.model_dump()
     try:
         data["ref"] = db.normalise_ref(data.get("ref"))
@@ -69,7 +96,10 @@ def get_vehicle(ref: str):
 
 
 @router.patch("/vehicles/{ref}", response_model=VehicleOut)
-def update_vehicle(ref: str, payload: VehicleUpdate):
+def update_vehicle(ref: str, payload: VehicleUpdate, staff_key: str | None = Depends(_staff_key)):
+    denied = _key_error("STAFF_API_KEY", STAFF_KEY_HEADER, staff_key)
+    if denied:
+        return denied
     # exclude_unset=True means only fields the client actually sent are merged.
     # Per spec: any 'ref' in body is ignored; URL path ref wins.
     data = payload.model_dump(exclude_unset=True)
@@ -85,10 +115,13 @@ def update_vehicle(ref: str, payload: VehicleUpdate):
 
 
 @router.delete("/vehicles/{ref}")
-def delete_vehicle(ref: str):
+def delete_vehicle(ref: str, staff_key: str | None = Depends(_staff_key)):
     """Soft delete: marks vehicle is_active = 0 (Phase 3b hard rule #10).
     The row is never removed from the database. Returns 204 on success,
     404 if the ref does not exist."""
+    denied = _key_error("STAFF_API_KEY", STAFF_KEY_HEADER, staff_key)
+    if denied:
+        return denied
     try:
         norm = db.normalise_ref(ref)
     except ValueError as e:
@@ -100,9 +133,12 @@ def delete_vehicle(ref: str):
 
 
 @router.patch("/vehicles/{ref}/status", response_model=VehicleOut)
-def set_vehicle_status(ref: str, payload: StatusUpdate):
+def set_vehicle_status(ref: str, payload: StatusUpdate, staff_key: str | None = Depends(_staff_key)):
     """Set on_yard / stripped / crushed / unknown, plus damage_notes if sent.
     status_changed_at is stamped whenever the status actually changes."""
+    denied = _key_error("STAFF_API_KEY", STAFF_KEY_HEADER, staff_key)
+    if denied:
+        return denied
     sent = payload.model_dump(exclude_unset=True)
     extra = {"damage_notes": sent["damage_notes"]} if "damage_notes" in sent else {}
     try:
@@ -115,29 +151,13 @@ def set_vehicle_status(ref: str, payload: StatusUpdate):
     return _with_paint_check(updated)
 
 
-# The eBay message bot sends this header; its value must match BOT_API_KEY.
-BOT_KEY_HEADER = "X-API-Key"
-
-
-def _bot_key_error(sent: str | None) -> JSONResponse | None:
-    expected = os.environ.get("BOT_API_KEY", "")
-    if not expected:
-        # Fail closed: with no key configured nobody gets in.
-        return _err(503, "availability API is not configured (BOT_API_KEY unset)")
-    if not sent:
-        return _err(401, f"missing API key: send it in the {BOT_KEY_HEADER} header")
-    if not hmac.compare_digest(sent.encode(), expected.encode()):
-        return _err(401, "invalid API key")
-    return None
-
-
 @router.get("/vehicles/{ref}/availability", response_model=Availability)
 def vehicle_availability(ref: str,
                          x_api_key: str | None = Header(default=None, alias=BOT_KEY_HEADER)):
     """Read-only, for the eBay message bot: is this donor car still on the
     yard? Needs the X-API-Key header. Soft-deleted vehicles are still
     answered (they may well have been crushed)."""
-    denied = _bot_key_error(x_api_key)
+    denied = _key_error("BOT_API_KEY", BOT_KEY_HEADER, x_api_key)
     if denied:
         return denied
     try:
