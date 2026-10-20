@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="page-version" content="2026-10-20.8fccb3f">
+  <meta name="page-version" content="2026-10-20.17b9a8f">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Pulled Apart — Parts Logger</title>
@@ -1712,6 +1712,11 @@
       <div class="hint">Your Railway deployment URL</div>
     </div>
     <div class="setting">
+      <label>Staff Key</label>
+      <input type="password" id="s-staff-key" placeholder="Needed to change vehicles" autocomplete="off">
+      <div class="hint">Kept on this device only. Leave blank to forget it.</div>
+    </div>
+    <div class="setting">
       <div class="toggle-row">
         <span class="tl">Demo Mode</span>
         <label class="toggle">
@@ -1902,6 +1907,7 @@ const panelClose = $('panel-close');
 const sUrl       = $('s-url');
 const sDemo      = $('s-demo');
 const sSave      = $('s-save');
+const sStaffKey  = $('s-staff-key');
 const toastEl    = $('toast');
 const countLabel = $('parts-count-label');
 
@@ -2633,6 +2639,7 @@ exportBtn.addEventListener('click', () => {
 function openPanel() {
   sUrl.value   = cfg.url;
   sDemo.checked = cfg.demo;
+  sStaffKey.value = getStaffKey();
   panel.classList.add('open');
   overlay.classList.add('open');
   settBtn.classList.add('active');
@@ -2651,6 +2658,7 @@ sSave.addEventListener('click', () => {
   cfg.url  = (sUrl.value.trim().replace(/\/$/, '')) || DEFAULT_URL;
   cfg.demo = sDemo.checked;
   saveCfg();
+  setStaffKey(sStaffKey.value.trim());
   closePanel();
   checkStatus();
 });
@@ -2725,6 +2733,46 @@ flushQueues();
 showPageVersion();
 checkPageVersion();
 
+// ── Staff key ────────────────────────────────────────────────────────────────
+// Adding, editing, deleting a vehicle or changing its status needs the staff
+// key. It is asked for once and then kept on this device. Logging parts and
+// every read work without it.
+const STAFF_KEY_STORE = 'pa_staff_key';
+
+function getStaffKey() {
+  try { return localStorage.getItem(STAFF_KEY_STORE) || ''; } catch { return ''; }
+}
+function setStaffKey(key) {
+  try {
+    if (key) localStorage.setItem(STAFF_KEY_STORE, key);
+    else localStorage.removeItem(STAFF_KEY_STORE);
+  } catch {}
+}
+function askStaffKey(wrong) {
+  const msg = wrong
+    ? 'That staff key was not accepted. Enter the staff key:'
+    : 'Enter the staff key to change vehicles (only asked once on this device):';
+  const key = (prompt(msg) || '').trim();
+  setStaffKey(key);
+  return key;
+}
+
+// fetch() for vehicle changes: sends the staff key, asking for it if this
+// device doesn't have one. A rejected key is forgotten and asked for again
+// once. Throws if no key is given.
+async function staffFetch(url, opts, timeoutMs) {
+  let key = getStaffKey() || askStaffKey(false);
+  for (let attempt = 0; ; attempt++) {
+    if (!key) throw new Error('staff key needed to change vehicles');
+    const headers = Object.assign({}, opts.headers, { 'X-Staff-Key': key });
+    const r = await fetch(url, Object.assign({}, opts, { headers, signal: AbortSignal.timeout(timeoutMs || 15000) }));
+    if (r.status !== 401) return r;
+    setStaffKey('');
+    if (attempt > 0) return r;
+    key = askStaffKey(true);
+  }
+}
+
 // ── Vehicle status ───────────────────────────────────────────────────────────
 // Where each donor car is, so the yard can keep it current and the eBay
 // message bot can tell buyers whether a part is still on the car.
@@ -2764,12 +2812,11 @@ function yardVehicles(list) {
 // PATCH the status (and damage_notes if given), then swap the saved record
 // into window.PA_VEHICLES so every view shows the new badge.
 async function setVehicleStatus(ref, status, extra) {
-  const r = await fetch(cfg.url + '/vehicles/' + encodeURIComponent(ref) + '/status', {
+  const r = await staffFetch(cfg.url + '/vehicles/' + encodeURIComponent(ref) + '/status', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(Object.assign({ status }, extra || {})),
-    signal: AbortSignal.timeout(12000),
-  });
+  }, 12000);
   let data = null;
   try { data = await r.json(); } catch {}
   if (!r.ok) {
@@ -3094,12 +3141,11 @@ window.PA_VEHICLES = [];
         if (!payload.make) { showFormError('Make is required.'); return; }
         if (!payload.model) { showFormError('Model is required.'); return; }
       }
-      const r = await fetch(url, {
+      const r = await staffFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(15000),
-      });
+      }, 15000);
       if (!r.ok) {
         let detail = 'HTTP ' + r.status;
         try {
@@ -3116,7 +3162,7 @@ window.PA_VEHICLES = [];
       toast(isEdit ? 'Vehicle updated' : 'Vehicle added', 'success');
     } catch (e) {
       console.warn('submit vehicle failed:', e);
-      showFormError('Network error: ' + (e.message || 'unknown'));
+      showFormError(/staff key/.test(e.message) ? 'Not saved: ' + e.message + '.' : 'Network error: ' + (e.message || 'unknown'));
     } finally {
       saveBtn.disabled = false;
       saveBtn.textContent = originalLabel;
@@ -3131,10 +3177,9 @@ window.PA_VEHICLES = [];
     const originalLabel = deleteBtn.textContent;
     deleteBtn.textContent = 'Deleting...';
     try {
-      const r = await fetch(cfg.url + '/vehicles/' + encodeURIComponent(ref), {
+      const r = await staffFetch(cfg.url + '/vehicles/' + encodeURIComponent(ref), {
         method: 'DELETE',
-        signal: AbortSignal.timeout(12000),
-      });
+      }, 12000);
       if (!r.ok && r.status !== 204) {
         let detail = 'HTTP ' + r.status;
         try { const e = await r.json(); if (e && (e.error || e.detail)) detail = e.error || e.detail; } catch {}
@@ -3146,7 +3191,7 @@ window.PA_VEHICLES = [];
       toast('Vehicle deleted', 'success');
     } catch (e) {
       console.warn('delete vehicle failed:', e);
-      showFormError('Network error: ' + (e.message || 'unknown'));
+      showFormError(/staff key/.test(e.message) ? 'Not deleted: ' + e.message + '.' : 'Network error: ' + (e.message || 'unknown'));
     } finally {
       deleteBtn.disabled = false;
       deleteBtn.textContent = originalLabel;
