@@ -16,3 +16,10 @@ vehicle-imports/done/*
 vehicle-imports/logs/*
 !vehicle-imports/logs/_README.txt
 vehicle-imports/stock-sheets/
+
+# Local settings and generated reports (BreakerPro exceptions etc.)
+.env
+reports/
+
+# Playwright MCP snapshots/console logs
+.playwright-mcp/
