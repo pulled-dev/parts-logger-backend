@@ -1,0 +1,623 @@
+# Canonical part types for VAG breaking.
+#
+# Rules are tried top to bottom against the NORMALISED part name (see
+# scripts/part_classifier.py: upper case, "A BAG"/"ABAG"/"AIR BAG" -> AIRBAG,
+# "SEAT BELT" -> SEATBELT, "HEADLAMP" -> HEADLIGHT, punctuation -> spaces).
+# The first type with a matching pattern wins, so specific types sit above
+# general ones. Side/position (front/rear, driver/passenger, pair) is a
+# separate attribute and must NOT become its own type.
+#
+# confidence: rule confidence (default 0.95). Catch-all types use < 0.95 and
+# ambiguous ones < 0.7 so they land in analytics/review_queue.csv.
+
+types:
+  # --- not a part ---------------------------------------------------------
+  - id: vehicle_listing
+    label: Breaking-for-spares ad (not a part)
+    patterns: ['BREAKING FOR SPARES', '^BREAKING\b']
+
+  # --- airbags / SRS (before anything matching STEERING, SEAT, DASH) -------
+
+  - id: airbag_squib_slip_ring
+    label: Airbag squib / slip ring / clock spring
+    patterns: ['SQUIB', 'SLIP RING', 'CLOCK ?SPRING', 'SLIPRING']
+
+  - id: airbag_crash_sensor
+    label: Crash / impact sensor
+    patterns: ['CRASH', 'IMPACT SENSOR']
+
+  - id: airbag_curtain
+    label: Curtain airbag
+    patterns: ['CURTAIN', 'ROOF AIRBAG']
+
+  - id: airbag_knee
+    label: Knee airbag
+    patterns: ['KNEE']
+
+  - id: airbag_seat
+    label: Seat airbag
+    patterns: ['SEAT AIRBAG', 'AIRBAG SEAT']
+
+  - id: airbag_steering
+    label: Steering wheel airbag
+    patterns: ['STEERING (WHEEL )?(SRS )?AIRBAG', 'AIRBAG STEERING', 'DRIVER AIRBAG', '^AIRBAG DRIVER( SIDE)?$']
+
+  - id: airbag_passenger_dash
+    label: Passenger / dash airbag
+    patterns: ['PASSENGER AIRBAG(?!.*SWITCH)', 'DASH (SRS )?AIRBAG', '^AIRBAG PASSENGER( SIDE)?$']
+
+  - id: airbag_control_module
+    label: Airbag control module (SRS ECU)
+    patterns: ['AIRBAG (CONTROL )?(MODULE|ECU|UNIT)', 'SRS (AIRBAG )?(MODULE|ECU)']
+    confidence: 0.85
+
+  - id: airbag_kit
+    label: Airbag kit (set with module)
+    patterns: ['AIRBAG KIT', 'SRS KIT', 'AIRBAG SET']
+
+  - id: airbag_other
+    label: Airbag (type unclear)
+    patterns: ['AIRBAG(?!.*SWITCH)']
+    confidence: 0.6
+
+  # --- engine & drivetrain -------------------------------------------------
+
+  - id: gearbox_control_module
+    label: Gearbox control module / mechatronic
+    patterns: ['GEARBOX (CONTROL )?(MODULE|ECU)', 'MECHATRONIC', '\bTCU\b', 'TRANSMISSION CONTROL']
+
+  - id: gearbox_mount
+    label: Gearbox mount
+    patterns: ['GEARBOX MOUNT', 'TRANSMISSION MOUNT']
+
+  - id: gearbox_dsg
+    label: Gearbox DSG
+    patterns: ['DSG', 'DUAL CLUTCH']
+
+  - id: gearbox_auto
+    label: Gearbox automatic
+    patterns: ['GEARBOX AUTO', 'AUTO(MATIC)? GEARBOX']
+
+  - id: gearbox_manual
+    label: Gearbox manual
+    patterns: ['GEARBOX']
+
+  - id: ecu_engine
+    label: Engine ECU
+    patterns: ['ENGINE ECU', 'ECU ENGINE', '^AUTO ENGINE ECU$', '^ECU( [0-9].*)?$', 'ENGINE CONTROL (UNIT|MODULE)']
+
+  - id: engine_mount
+    label: Engine mount
+    patterns: ['ENGINE MOUNT']
+
+  - id: engine_cover
+    label: Engine top cover
+    patterns: ['ENGINE (TOP )?COVER']
+
+  - id: engine_complete
+    label: Engine (complete / bare)
+    patterns: ['^ENGINE( (PETROL|DIESEL|HYBRID))?( (FULL|BARE|COMPLETE))?$', 'ENGINE (PETROL|DIESEL) (FULL|BARE|COMPLETE)', 'COMPLETE ENGINE']
+
+  - id: turbo
+    label: Turbo
+    patterns: ['TURBO(?!.*PIPE)']
+
+  - id: boost_solenoid
+    label: Boost / vacuum solenoid
+    patterns: ['SOLENOID', 'SOLINOID']
+
+  - id: intake_pipe
+    label: Air intake / boost pipe / intercooler
+    patterns: ['INTAKE', 'AIR INLET', 'BOOST PIPE', 'INTERCOOLER PIPE', 'AIR DUCT', 'INTERCOOLER']
+
+  - id: air_filter_box
+    label: Air filter box
+    patterns: ['^AIR FILTER', 'AIR FILTER BOX', 'AIR BOX', 'AIRBOX']
+
+  - id: throttle_body
+    label: Throttle body
+    patterns: ['THROTTLE BODY']
+
+  - id: fuel_pump_control_module
+    label: Fuel pump control module
+    patterns: ['FUEL PUMP (CONTROL )?(MODULE|ECU|RELAY)']
+
+  - id: fuel_pump
+    label: Fuel pump (in tank)
+    patterns: ['FUEL PUMP']
+
+  - id: fuel_injection_pump
+    label: Injector / high-pressure fuel pump
+    patterns: ['INJECTION (UNIT|PUMP)', 'HIGH PRESSURE (FUEL )?PUMP', 'DIESEL PUMP', 'INJECTOR']
+
+  - id: fuel_filter_housing
+    label: Fuel filter housing
+    patterns: ['FUEL FILTER']
+
+  - id: fuel_tank
+    label: Fuel tank
+    patterns: ['FUEL TANK', 'PETROL TANK', 'DIESEL TANK']
+
+  - id: adblue_tank
+    label: AdBlue tank
+    patterns: ['AD ?BLUE']
+
+  - id: dpf
+    label: DPF / cat / EGR / exhaust
+    patterns: ['PARTICULATE', '^DPF$', 'CATALYTIC', '\bCAT\b', 'EGR', 'EXHAUST', 'BACK BOX', 'SILENCER']
+
+  - id: alternator
+    label: Alternator
+    patterns: ['ALTERNATOR']
+
+  - id: starter_motor
+    label: Starter motor
+    patterns: ['STARTER']
+
+  - id: ac_compressor
+    label: A/C compressor
+    patterns: ['AIR CON(DITIONING)? (COMPRESSOR|PUMP)', '\bA ?C (COMPRESSOR|PUMP)', 'AC COMPRESSOR']
+
+  - id: radiator
+    label: Radiator / A/C condenser
+    patterns: ['CONDENSER', 'RADIATOR(?! FAN)']
+
+  - id: power_steering_pump
+    label: Power steering pump
+    patterns: ['POWER STEERING PUMP', 'STEERING PUMP']
+
+  - id: steering_rack
+    label: Steering rack
+    patterns: ['STEERING RACK']
+
+  - id: steering_column
+    label: Steering column
+    patterns: ['STEERING COLUMN(?!.*MODULE)']
+
+  - id: steering_control_module
+    label: Steering control module / angle sensor
+    patterns: ['STEERING ANGLE', 'STEERING (COLUMN )?CONTROL MODULE', 'STEERING MODULE']
+
+  - id: radiator_expansion_tank
+    label: Coolant expansion tank
+    patterns: ['EXPANSION', 'COOLANT (BOTTLE|TANK|RESERVOIR)']
+
+  - id: rad_pack
+    label: Radiator pack / front panel with rads
+    patterns: ['RAD PACK', 'RADIATOR PACK', 'FRONT PANEL WITH RAD']
+
+  - id: cooling_fan
+    label: Cooling fan
+    patterns: ['COOLING FAN(?! RELAY| CONTROL)', 'RADIATOR FAN', '^FAN$', 'FAN (MOTOR|ASSEMBLY)']
+
+  - id: water_pump
+    label: Water pump
+    patterns: ['WATER PUMP', 'COOLANT PUMP']
+
+  - id: relay
+    label: Relay
+    patterns: ['RELAY']
+
+  - id: engine_sensor
+    label: Sensor (engine, exhaust, other)
+    patterns: ['DPF PRESSURE', 'AIR FLOW', '\bMAF\b', '\bMAP SENSOR', 'LAMBDA', 'O2 SENSOR', 'TEMP(ERATURE)? SENSOR', 'PRESSURE SENSOR', 'CAMSHAFT SENSOR', 'CRANK(SHAFT)? SENSOR', 'KNOCK SENSOR', 'NOX', 'SENSOR']
+
+  - id: battery
+    label: Battery / tray / cable
+    patterns: ['BATTERY (CABLE|LEAD|TERMINAL)', 'BATTERY']
+
+  # --- brakes, suspension, wheels ----------------------------------------
+
+  - id: abs_pump
+    label: ABS pump / modulator
+    patterns: ['ABS (PUMP|MODULATOR|UNIT|CONTROL|MODULE|ECU)']
+
+  - id: brake_servo_master_cylinder
+    label: Brake servo / master cylinder
+    patterns: ['SERVO', 'MASTER CYLINDER']
+
+  - id: brake_caliper
+    label: Brake caliper / disc / drum
+    patterns: ['CALIPER', 'CALLIPER', 'BRAKE DISC', '\bDISCS?\b', 'BRAKE DRUM']
+
+  - id: handbrake_switch
+    label: Electric handbrake switch
+    patterns: ['HANDBRAKE SWITCH']
+
+  - id: handbrake_lever
+    label: Handbrake lever / motor / module
+    patterns: ['HANDBRAKE (CONTROL )?(MODULE|MOTOR|ECU)', 'HANDBRAKE']
+
+  - id: driveshaft
+    label: Driveshaft
+    patterns: ['DRIVE ?SHAFT', 'PROP ?SHAFT']
+
+  - id: hub
+    label: Hub / knuckle
+    patterns: ['\bHUB\b(?! CAP)', 'KNUCKLE', 'UPRIGHT']
+
+  - id: suspension_corner
+    label: Suspension corner (complete)
+    patterns: ['SUSPENSION CORNER', '\bCORNER\b']
+
+  - id: lower_arm
+    label: Lower arm / wishbone / anti-roll bar
+    patterns: ['WISHBONE', 'LOWER ARM', 'CONTROL ARM', 'TRACK ARM', 'TRAILING ARM', 'ANTI ROLL', 'ROLL BAR', 'DROP LINK']
+
+  - id: gas_strut
+    label: Gas strut (bonnet / boot / tailgate)
+    patterns: ['(TAILGATE|BOOTLID|BOOT|BONNET|HOOD) (HOOD )?(STRUTS?|RAMS?)', 'STRUTS? RAMS?', 'GAS STRUT']
+
+  - id: shock_strut
+    label: Shock absorber / strut / spring
+    patterns: ['SHOCK', 'STRUT', 'SUSPENSION LEG', 'COIL SPRING', '\bSPRINGS?\b']
+
+  - id: subframe
+    label: Subframe
+    patterns: ['SUBFRAME', 'SUB FRAME']
+
+  - id: rear_axle
+    label: Rear axle / beam
+    patterns: ['AXLE', 'REAR BEAM']
+
+  - id: wheel_trim
+    label: Wheel trim / centre cap / tyre
+    patterns: ['WHEEL TRIM', 'CENTRE CAP', 'HUB ?CAP', '^TYRES?\b']
+
+  - id: wheel_spare
+    label: Space-saver / spare wheel
+    patterns: ['SPACE ?SAVER', 'SPARE WHEEL']
+
+  - id: wheel_steel
+    label: Steel wheel
+    patterns: ['STEEL WHEEL']
+
+  - id: wheel_alloy
+    label: Alloy wheel
+    patterns: ['ALLOY']
+
+  - id: headlight_bracket
+    label: Headlight bracket
+    patterns: ['HEADLIGHT (SUPPORT |MOUNTING )?BRACKET']
+
+  - id: headlight_switch
+    label: Headlight switch
+    patterns: ['HEADLIGHT SWITCH', 'LIGHT SWITCH']
+
+  - id: headlight_control_module
+    label: Headlight control / ballast module
+    patterns: ['HEADLIGHT (CONTROL |BALLAST |LEVELLING )?(MODULE|ECU|UNIT)', 'BALLAST', 'LIGHT CONTROL MODULE']
+
+  - id: washer_bottle
+    label: Washer bottle / pump / headlight washer
+    patterns: ['HEADLIGHT WASHER', 'WASHER (BOTTLE|TANK|RESERVOIR)', 'WASHER PUMP']
+
+  - id: headlight
+    label: Headlight
+    patterns: ['HEADLIGHT']
+
+  - id: tail_light
+    label: Tail light
+    patterns: ['TAIL ?LIGHT', 'REAR LIGHT', 'REAR TAIL', '^(INNER |OUTER )?LIGHT (N S R|O S R|PASSENGER SIDE REAR|DRIVER SIDE REAR)', '^(INNER|OUTER) LIGHT', 'BULB HOLDER']
+
+  - id: fog_light
+    label: Fog light
+    patterns: ['FOG']
+
+  - id: brake_light_high
+    label: High-level brake light
+    patterns: ['HIGH LEVEL', 'THIRD BRAKE', '3RD BRAKE']
+
+  - id: indicator_light
+    label: Indicator / repeater / number plate light
+    patterns: ['INDICATOR (LIGHT|LAMP|REPEATER)', 'REPEATER', 'NUMBER PLATE']
+
+  - id: interior_light
+    label: Interior / courtesy light
+    patterns: ['INTERIOR LIGHT', 'COURTESY', 'READING LIGHT', 'MAP LIGHT', 'ROOF LIGHT', 'BOOT LIGHT']
+
+  # --- wipers & washers ----------------------------------------------------
+
+  - id: stalk
+    label: Wiper / indicator stalk
+    patterns: ['STALK']
+
+  - id: wiper_motor
+    label: Wiper motor / linkage
+    patterns: ['WIPER MOTOR', 'WIPER LINKAGE']
+
+  - id: wiper_arm
+    label: Wiper arm
+    patterns: ['WIPER']
+
+  # --- doors, glass, mirrors -----------------------------------------------
+
+  - id: window_switch
+    label: Electric window switch
+    patterns: ['WINDOW SWITCH']
+
+  - id: window_regulator
+    label: Window regulator / mechanism
+    patterns: ['REGULATOR', 'WINDOW MECH']
+
+  - id: window_motor
+    label: Window motor
+    patterns: ['WINDOW MOTOR']
+
+  - id: quarter_glass
+    label: Quarter glass
+    patterns: ['QUARTER', 'QUATER']
+
+  - id: windscreen
+    label: Windscreen / rear screen
+    patterns: ['WINDSCREEN', 'WINDSHIELD', 'REAR SCREEN']
+
+  - id: door_glass
+    label: Door window glass
+    patterns: ['DOOR (WINDOW|GLASS)', 'WINDOW GLASS', '^WINDOW\b']
+
+  - id: mirror_switch
+    label: Mirror adjust switch
+    patterns: ['MIRROR SWITCH']
+
+  - id: rear_view_mirror
+    label: Interior rear-view mirror
+    patterns: ['REAR ?VIEW MIRROR']
+
+  - id: door_mirror
+    label: Door / wing mirror (or glass)
+    patterns: ['MIRROR GLASS', 'MIRROR']
+
+  - id: door_control_module
+    label: Door control module
+    patterns: ['DOOR (CONTROL )?MODULE', 'DOOR ECU']
+
+  - id: door_lock
+    label: Door lock mechanism
+    patterns: ['DOOR LOCK', 'LOCK MECH(?!.*(BOOT|TAILGATE))']
+
+  - id: door_handle_exterior
+    label: Exterior door handle
+    patterns: ['DOOR HANDLE EXTERIOR', 'EXTERIOR DOOR HANDLE', 'OUTER DOOR HANDLE', 'OUTSIDE DOOR HANDLE', 'EXTERNAL DOOR HANDLE', 'DOOR HANDLE.*(EXTERNAL|EXTERIOR|OUTER|OUTSIDE)']
+
+  - id: door_handle_interior
+    label: Interior door handle
+    patterns: ['DOOR HANDLE', 'DOOR PULL']
+
+  - id: door_card
+    label: Door card / door trim (interior or exterior)
+    patterns: ['DOOR CARD(?!.*LOOM)', 'DOOR PANEL', 'DOOR TRIM(?!.*EXTERIOR)', 'INTERIOR DOOR TRIM', 'EXTERIOR DOOR TRIM', 'DOOR MOULDING', 'DOOR TRIM']
+
+  - id: speaker
+    label: Speaker
+    patterns: ['SPEAKER', 'TWEETER', 'SUBWOOFER', 'SUB WOOFER']
+
+  - id: door_complete
+    label: Door complete
+    patterns: ['DOOR COMPLETE', 'COMPLETE DOOR']
+
+  - id: door_bare
+    label: Door bare / shell
+    patterns: ['DOOR BARE', 'DOOR SHELL', 'BARE DOOR', '^DOOR( (FRONT|REAR|DRIVER|PASSENGER|N S|O S)\b|$)', '^SLIDING DOOR( (FRONT|REAR|DRIVER|PASSENGER)\b|$)']
+
+  # --- body panels ---------------------------------------------------------
+
+  - id: bonnet_hinge
+    label: Bonnet hinge
+    patterns: ['BONNET HINGE']
+
+  - id: bonnet_release
+    label: Bonnet release cable / handle / lock
+    patterns: ['BONNET (RELEASE|CABLE|OPENING)', 'BONNET (LOCK|CATCH|LATCH)', 'BONNET CATCH', 'UPPER BONNET']
+
+  - id: bonnet
+    label: Bonnet
+    patterns: ['BONNET', '^HOOD$']
+
+  - id: tailgate_lock
+    label: Boot / tailgate lock, handle or release
+    patterns: ['(TAILGATE|BOOTLID|BOOT) (LOCK|CATCH|LATCH)', 'BOOTLID LOCK', '(TAILGATE|BOOTLID|BOOT) (HANDLE|RELEASE|SWITCH|OPENER)']
+
+  - id: tailgate
+    label: Tailgate / bootlid
+    patterns: ['TAILGATE', 'BOOTLID', 'BOOT LID', 'BARN DOOR']
+
+  - id: wing_bracket
+    label: Wing / slam-panel / body bracket
+    patterns: ['WING (MOUNTING |SUPPORT )?BRACKET', 'FRONT WING BRACKET', 'SLAM PANEL (SUPPORT )?BRACKET', 'PANEL BRACKET']
+
+  - id: arch_liner
+    label: Inner wing / arch liner
+    patterns: ['ARCH LINER', 'INNER WING', 'WHEEL ARCH', 'ARCHLINER']
+
+  - id: wing
+    label: Wing
+    patterns: ['\bWING\b(?! MIRROR)']
+
+  - id: bumper_bracket
+    label: Bumper bracket / reinforcer
+    patterns: ['BUMPER (\w+ )?BRACKET', 'BUMPER (MOUNT|GUIDE)', 'REINFORC', 'CRASH BAR', 'IMPACT BAR']
+
+  - id: parking_sensor_module
+    label: Parking sensor control module
+    patterns: ['PARKING (SENSOR |DISTANCE |AID )?(MODULE|ECU|CONTROL)', 'PDC (MODULE|ECU)']
+
+  - id: wiring_loom
+    label: Wiring loom / cable
+    patterns: ['PARKING SENSOR LOOM', 'SENSOR LOOM', 'DOOR (WIRING )?LOOM', 'DOOR WIRING', 'LOOM', 'WIRING', 'HARNESS', 'CABLE']
+    confidence: 0.85
+
+  - id: parking_sensor
+    label: Parking sensors
+    patterns: ['PARKING SENSOR', 'PARK SENSOR', 'PDC SENSOR']
+
+  - id: grille
+    label: Grille
+    patterns: ['GRILL']
+
+  - id: bumper
+    label: Bumper
+    patterns: ['BUMPER']
+
+  - id: slam_panel
+    label: Slam panel / front panel
+    patterns: ['SLAM PANEL', '^FRONT PANEL$', 'FRONT PANEL']
+
+  - id: scuttle_panel
+    label: Exterior trim (scuttle, spoiler, roof rails, sunroof)
+    patterns: ['SCUTTLE', 'SPOILER', 'ROOF RAIL', 'SUNROOF', 'SUN ROOF', 'PANORAMIC']
+
+  - id: fuel_flap_actuator
+    label: Fuel flap actuator
+    patterns: ['FUEL FLAP ACTUATOR', 'FLAP (LOCK )?ACTUATOR.*FUEL']
+
+  - id: fuel_flap
+    label: Fuel flap
+    patterns: ['FUEL.*FLAP', 'PETROL FLAP', 'FILLER FLAP']
+
+  - id: steering_wheel
+    label: Steering wheel
+    patterns: ['STEERING WHEEL(?!.*(SWITCH|BUTTON|CONTROL))']
+
+  - id: dashboard
+    label: Dashboard (bare / complete)
+    patterns: ['DASH ?BOARD']
+
+  - id: dash_clocks
+    label: Speedo / instrument cluster
+    patterns: ['SPEEDO', 'CLOCKS', 'INSTRUMENT CLUSTER', 'DASH CLOCK', 'DIGITAL COCKPIT', 'VIRTUAL COCKPIT']
+
+  - id: heater_flap_actuator
+    label: Heater flap actuator / motor
+    patterns: ['FLAP (ACTUATOR|MOTOR)', 'RECIRCULATION', 'HEATER ACTUATOR', '^ACTUATOR']
+
+  - id: heater_control_panel
+    label: Heater / climate control panel
+    patterns: ['HEATER CONTROL', 'CLIMATE CONTROL', 'HEATER PANEL', '\bA ?C CONTROL', 'AIR CON CONTROL', 'CLIMATRONIC']
+
+  - id: heater_blower_motor
+    label: Heater blower motor / resistor
+    patterns: ['BLOWER', 'RESISTOR']
+
+  - id: heater_matrix
+    label: Heater / A/C matrix
+    patterns: ['MATRIX', 'EVAPORATOR']
+
+  - id: head_unit
+    label: Head unit / stereo / infotainment
+    patterns: ['HEAD ?UNIT', 'STEREO', 'RADIO', 'CD (PLAYER|CHANGER)', 'INFOTAINMENT', 'MULTIMEDIA', 'NAVIGATION', '\bNAV\b', '^MMI$']
+
+  - id: mmi_control
+    label: MMI / infotainment control panel
+    patterns: ['MMI CONTROL', 'MMI (SWITCH|KNOB)', 'MEDIA CONTROL']
+
+  - id: display_screen
+    label: Display screen
+    patterns: ['DISPLAY', 'SCREEN']
+
+  - id: air_vent
+    label: Dash / air vents
+    patterns: ['VENT']
+
+  - id: glove_box
+    label: Glove box
+    patterns: ['GLOVE ?BOX']
+
+  - id: centre_console
+    label: Centre console / armrest / ashtray
+    patterns: ['ARM ?REST', 'CONSOLE', 'ASH ?TRAY', 'CUP ?HOLDER', 'STORAGE (BOX|TRAY)']
+
+  - id: seatbelt_buckle
+    label: Seatbelt buckle
+    patterns: ['BUCKLE']
+
+  - id: seatbelt
+    label: Seatbelt
+    patterns: ['SEATBELT']
+
+  - id: seats
+    label: Seats / interior set
+    patterns: ['SEATS', '\bSEAT\b(?! IBIZA| LEON| ARONA| ATECA| ALHAMBRA| TOLEDO| MII| TARRACO)', '^INTERIOR$', 'LEATHER INTERIOR', 'FULL INTERIOR']
+
+  - id: sun_visor
+    label: Sun visor
+    patterns: ['VISOR']
+
+  - id: boot_floor
+    label: Boot floor / parcel shelf / load cover
+    patterns: ['PARCEL SHELF', 'LOAD COVER', 'TONNEAU', 'BOOT FLOOR', 'BOOT CARPET', 'BOOT LINER', 'BOOT MAT']
+
+  - id: interior_trim
+    label: Interior trim / grab handle / carpet
+    patterns: ['GRAB HANDLE', 'CARPET', 'PILLAR TRIM', 'ROOF LINING', 'HEADLINING', '\bTRIM\b', 'FLOOR MATS?', 'ROOF LINER', 'SILL TRIM']
+    confidence: 0.85
+
+  - id: pedal_accelerator
+    label: Accelerator pedal
+    patterns: ['ACCELERATOR', 'THROTTLE PEDAL', 'GAS PEDAL']
+
+  - id: pedal_clutch
+    label: Clutch / brake pedal
+    patterns: ['CLUTCH PEDAL', 'BRAKE PEDAL']
+
+  - id: gear_linkage
+    label: Gear linkage / selector cables
+    patterns: ['LINKAGE', 'GEAR CABLES?', 'SELECTOR CABLE']
+
+  - id: gearstick
+    label: Gearstick / selector / knob / gaiter
+    patterns: ['GEAR (\w+ )?KNOB', 'GAITER', 'GEAR ?STICK', 'GEAR (SHIFTER|SELECTOR|LEVER)', 'SHIFTER', 'GEAR SELECTOR']
+
+  - id: ignition_barrel_key
+    label: Ignition barrel, key / keyless module
+    patterns: ['IGNITION', '\bKEY\b(?!LESS)', 'KEYLESS']
+
+  - id: central_control_unit
+    label: Central / body / comfort control unit
+    patterns: ['CENTRAL CONTROL', 'BODY CONTROL', '\bBCM\b', 'COMFORT (CONTROL )?MODULE', 'CONVENIENCE']
+
+  - id: gateway_module
+    label: Gateway module
+    patterns: ['GATEWAY']
+
+  - id: radar_sensor
+    label: Radar / distance sensor (ACC)
+    patterns: ['RADAR', 'DISTANCE SENSOR', '\bACC\b']
+
+  - id: camera
+    label: Camera (lane assist / reverse)
+    patterns: ['CAMERA']
+
+  - id: fuse_box
+    label: Fuse box
+    patterns: ['FUSE']
+
+  - id: module_other
+    label: Other control module / ECU
+    patterns: ['BLUETOOTH', 'TELEPHONE', 'PHONE MODULE', 'MODULE', '\bECU\b', 'CONTROL UNIT', 'CONTROLLER', 'STABILISER']
+    confidence: 0.75
+
+  - id: aerial
+    label: Aerial / antenna
+    patterns: ['AERIAL', 'ANTENNA', 'ARIEL', 'SHARK FIN']
+
+  - id: horn
+    label: Horn / alarm siren
+    patterns: ['SIREN', '^ALARM$', 'ALARM (SIREN|HORN|SOUNDER)', 'HORN']
+
+  - id: usb_port
+    label: USB / AUX port
+    patterns: ['USB', '\bAUX\b']
+
+  - id: switch_other
+    label: Switch (hazard, central locking, start-stop, other)
+    patterns: ['SWITCH', 'SWTICH', 'BUTTON']
+    confidence: 0.85
+
+  - id: jack_toolkit
+    label: Jack / toolkit / handbook
+    patterns: ['\bJACK\b', 'TOOL ?KIT', 'TOOL TRAY', 'BOOK PACK', 'HANDBOOK', 'OWNERS MANUAL', 'SERVICE BOOK']
+
+  - id: misc_unknown
+    label: Unclassified / other
+    patterns: []

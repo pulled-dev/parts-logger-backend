@@ -23,3 +23,7 @@ reports/
 
 # Playwright MCP snapshots/console logs
 .playwright-mcp/
+
+# Local analytics store and generated review queue
+analytics/analytics.db
+analytics/review_queue.csv
