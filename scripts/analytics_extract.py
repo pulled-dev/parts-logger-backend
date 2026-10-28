@@ -23,7 +23,7 @@ from exceptions_report import ReportError, connect, load_env  # noqa: E402
 
 TABLES = {"Stock", "Invoices", "StockDeleted"}
 ALLOWED_COLUMNS = {
-    "Part ID", "Vehicle ID", "Stock Reference", "Part Type", "Part Name",
+    "Part ID", "Vehicle ID", "Stock Reference", "Part Type", "Part Name", "Part Location",
     "Part Nett Sale", "Ebay_FixedPrice", "Ebay_Number", "Ebay_Status", "AddedDate",
     "Make", "Model", "Year Manufacture", "Engine", "VEH_ENGINECODE", "Fuel",
     "Invoice ID", "Invoice Date", "Invoice Time", "Transaction Type",
@@ -53,11 +53,13 @@ SELECT p.[Invoice ID] AS invoice_id, p.[Invoice Date] AS invoice_date, p.[Invoic
        TRY_CONVERT(decimal(10,2), p.[Transaction Amount]) AS net_price,
        p.[Transaction Amount] AS net_raw,
        UPPER(LTRIM(RTRIM(p.[Make]))) AS make, UPPER(LTRIM(RTRIM(p.[Model]))) AS model,
-       p.[AddedDate] AS added_date
+       p.[Year Manufacture] AS year, p.[AddedDate] AS added_date
 FROM [Invoices] p WHERE p.[Transaction Type] = 'PART'
 """
 
-# One row per invoice: channel signals, void/refund flag, gross paid.
+# One row per invoice: channel signals, void/refund flag, gross paid and the
+# DELIVERY (postage/courier) charge. Paid = parts + VAT + delivery; VAT is on
+# the parts only, so the parts' gross share is paid minus delivery.
 SQL_INVOICE_FLAGS = """
 SELECT i.[Invoice ID] AS invoice_id,
   MAX(CASE WHEN i.[Transaction Type] = 'SALESMAN' AND i.[Transaction Details] LIKE '%BY AUTO' THEN 1 ELSE 0 END) AS auto_raised,
@@ -68,7 +70,9 @@ SELECT i.[Invoice ID] AS invoice_id,
                                                       OR i.[Transaction Details] LIKE '%REFUND%'))
            THEN 1 ELSE 0 END) AS voided,
   -SUM(CASE WHEN i.[Transaction Type] = 'PAYMENT' AND i.[Transaction Details] IN ('Pay Pal', 'Cash')
-            THEN TRY_CONVERT(decimal(10,2), i.[Transaction Amount]) END) AS gross_paid
+            THEN TRY_CONVERT(decimal(10,2), i.[Transaction Amount]) END) AS gross_paid,
+  SUM(CASE WHEN i.[Transaction Type] = 'DELIVERY'
+           THEN TRY_CONVERT(decimal(10,2), i.[Transaction Amount]) END) AS delivery
 FROM [Invoices] i GROUP BY i.[Invoice ID]
 """
 
@@ -82,7 +86,7 @@ FROM [Invoices] i WHERE i.[Transaction Type] = 'PART'
 # Parts in stock now (vehicle rows excluded).
 SQL_STOCK = f"""
 SELECT s.[Part ID] AS part_id, {REF.format(a='s')} AS veh_ref, s.[Part Name] AS part_name,
-       {PRICE} AS price, s.[AddedDate] AS added_date,
+       LTRIM(RTRIM(s.[Part Location])) AS location, {PRICE} AS price, s.[AddedDate] AS added_date,
        CASE WHEN ISNULL(s.[Ebay_Number], '') = '' THEN 'unlisted'
             WHEN CAST(s.[Ebay_Status] AS nvarchar(20)) LIKE 'Failed%' THEN 'dead'
             ELSE 'listed' END AS listing

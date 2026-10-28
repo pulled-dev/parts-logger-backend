@@ -30,7 +30,9 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+import yaml
+
+sys.path[:0] = [str(Path(__file__).resolve().parent)]
 import part_classifier as pc  # noqa: E402
 from analytics_extract import extract  # noqa: E402
 
@@ -41,39 +43,78 @@ REPORTS = ROOT / "reports"
 
 PULL_FIRST_MAX_DAYS = 30
 PULL_FIRST_MIN_PRICE = 40
-STOP_PULLING_COVER_MONTHS = 12
+DONT_PULL_COVER_MONTHS = 24  # "Don't pull": more cover than this, or no sales in 12 months
 TYPE_MODEL_MIN_SALES = 5
 NOT_PARTS = {"misc_unknown", "vehicle_listing"}  # never in the stop / pull lists
+# Engines, gearboxes and doors often went as cash yard sales that were never
+# invoiced (removed on the mobile app instead) before the cutover, so their
+# sales are under-recorded and their cover overstated. Flag only; do not act.
+YARD_SALE_BIAS_TYPES = {"engine_complete", "gearbox_manual", "gearbox_auto", "gearbox_dsg",
+                        "door_bare", "door_complete"}
+# Postage / courier charges typed in as a part line (normally they sit on
+# separate DELIVERY lines, which are never counted as parts revenue).
+POSTAGE_RX = re.compile(r"\b(POSTAGE|COURIER|SHIPPING|CARRIAGE|P ?& ?P|DELIVERY( CHARGE)?|PALLET)\b")
+
+# Personal-data patterns for the output scan (emails, UK postcodes, UK phones).
+PII_PATTERNS = [
+    ("email", re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")),
+    ("UK postcode", re.compile(r"\b[A-Z]{1,2}\d[A-Z\d]? ?\d[ABD-HJLNP-UW-Z]{2}\b")),
+    ("UK phone", re.compile(r"(?<!\d)(?:\+44 ?7\d{3}|07\d{3}|01\d{3}|02\d)[ -]?\d{3}[ -]?\d{3,4}(?!\d)")),
+]
 
 # --------------------------------------------------------------------------
 # Normalisation helpers
 # --------------------------------------------------------------------------
 
-MAKES = {"VW": "VOLKSWAGEN", "VOLKSWAGON": "VOLKSWAGEN", "SKODA": "SKODA", "SEAT": "SEAT",
-         "AUDI": "AUDI", "VOLKSWAGEN": "VOLKSWAGEN", "CUPRA": "CUPRA"}
-MODEL_BASES = [
-    "GOLF PLUS", "GOLF SPORTSVAN", "E GOLF", "GOLF", "POLO", "UP", "PASSAT CC", "PASSAT", "TIGUAN",
-    "TOURAN", "SHARAN", "CADDY", "TRANSPORTER", "SCIROCCO", "EOS", "BEETLE", "JETTA", "T ROC",
-    "T CROSS", "TOUAREG", "ARTEON", "ID 3", "ID3", "ID 4", "FOX", "LUPO", "BORA", "TAIGO",
-    "A1", "A2", "A3", "A4", "A5", "A6", "A7", "Q2", "Q3", "Q5", "Q7", "TT",
-    "IBIZA", "LEON", "ARONA", "ATECA", "ALHAMBRA", "MII", "TOLEDO", "ALTEA", "TARRACO", "FORMENTOR",
-    "FABIA", "OCTAVIA", "SUPERB", "YETI", "CITIGO", "KAROQ", "KODIAQ", "RAPID", "ROOMSTER",
-    "KAMIQ", "SCALA", "ENYAQ",
-]
-GEN_RX = re.compile(r"\b(MK ?\d{1,2}|\d[A-Z]{1,2}\d?|B\d{1,2}|8[A-Z])\b")
-GEN_IGNORE = {"5DR", "3DR", "2DR", "4DR", "5D", "3D", "4X4", "2WD", "4WD"}
+MODEL_MAP_PATH = ROOT / "analytics" / "model_map.yaml"
 
 
-def model_family(make: str, model: str) -> str:
-    """'VOLKSWAGEN', 'POLO MATCH 6R' -> 'VOLKSWAGEN POLO 6R'."""
-    mk = MAKES.get((make or "").strip().upper(), (make or "").strip().upper()) or "UNKNOWN"
-    m = re.sub(r"[^A-Z0-9 ]+", " ", (model or "").upper())
-    m = re.sub(r"\s+", " ", m).strip()
+def load_model_map(path: Path = MODEL_MAP_PATH) -> dict:
+    mm = yaml.safe_load(path.read_text(encoding="utf-8"))
+    for entries in mm["models"].values():
+        for e in entries:
+            e["_rx"] = re.compile(e["match"])
+            for g in e["generations"]:
+                g["gen"] = str(g["gen"])  # YAML reads codes such as 121 as numbers
+                g["_codes"] = [re.compile(rf"\b{re.escape(str(c))}\b") for c in g.get("codes") or []]
+    return mm
+
+
+def _year(y):
+    m = re.search(r"(19|20)\d{2}", str(y or ""))
+    return int(m.group(0)) if m else None
+
+
+def normalise_model(mm: dict, make, model, year=None) -> dict:
+    """('SEAT', 'IBIZA FR', '2014') -> make SEAT, model Ibiza, gen 6J, method year.
+
+    method: code (generation written in the string), year (inferred from the
+    year of manufacture), single (model has one generation), gen unknown,
+    unmapped (no model matched), no model (blank)."""
+    mk = " ".join(str(make or "").upper().split())
+    mk = mm["make_aliases"].get(mk, mk)
+    m = re.sub(r"\s+", " ", re.sub(r"[^A-Z0-9 ]+", " ", str(model or "").upper())).strip()
+    label = mm["make_labels"].get(mk, mk.title() or "Unknown")
     if not m:
-        return f"{mk} (no model)"
-    base = next((b for b in MODEL_BASES if re.search(rf"\b{b}\b", m)), m.split()[0])
-    gens = [g.replace(" ", "") for g in GEN_RX.findall(m) if g.replace(" ", "") not in GEN_IGNORE]
-    return " ".join([mk, base] + gens[:1])
+        return dict(make=mk or None, model=None, gen=None, method="no model", family=f"{label} (no model)")
+    entry = next((e for e in mm["models"].get(mk, []) if e["_rx"].search(m)), None)
+    if entry is None:
+        return dict(make=mk, model=None, gen=None, method="unmapped", family=f"{label} {m} (unmapped)")
+    gens, gen, method = entry["generations"], None, None
+    gen = next((g for g in gens if any(rx.search(m) for rx in g["_codes"])), None)
+    if gen:
+        method = "code"
+    elif (y := _year(year)) is not None:
+        gen = next((g for g in gens if g["years"][0] <= y <= g["years"][1]), None)
+        method = "year" if gen else None
+    if gen is None and len(gens) == 1:
+        gen, method = gens[0], "single"
+    if gen is None:
+        return dict(make=mk, model=entry["model"], gen=None, method="gen unknown",
+                    family=f"{label} {entry['model']} (gen unknown)")
+    shown = "" if gen["gen"] == entry["model"] else f" {gen['gen']}"
+    return dict(make=mk, model=entry["model"], gen=gen["gen"], method=method,
+                family=f"{label} {entry['model']}{shown}")
 
 
 def name_key(name) -> str:
@@ -118,17 +159,20 @@ CREATE TABLE part_name_map (raw_name TEXT PRIMARY KEY, part_type TEXT, position 
     confidence REAL, rows_stock INTEGER, rows_sold INTEGER, rows_deleted INTEGER);
 DROP TABLE IF EXISTS sales;
 CREATE TABLE sales (invoice_id TEXT, part_id TEXT, veh_ref TEXT, make TEXT, model TEXT,
-    model_family TEXT, part_name TEXT, part_type TEXT, position TEXT, sale_date TEXT,
+    model_family TEXT, model_method TEXT, part_name TEXT, part_type TEXT, position TEXT, sale_date TEXT,
     net_price REAL, gross_price REAL, channel TEXT, added_date TEXT, added_source TEXT,
     days_to_sell INTEGER);
 DROP TABLE IF EXISTS sales_excluded;
 CREATE TABLE sales_excluded (reason TEXT, lines INTEGER, net_total REAL);
+DROP TABLE IF EXISTS unknown_vehicle_sales;
+CREATE TABLE unknown_vehicle_sales (grp TEXT, invoice_id TEXT, part_id TEXT, part_name TEXT,
+    sale_date TEXT, net_price REAL);
 DROP TABLE IF EXISTS vehicles;
 CREATE TABLE vehicles (veh_ref TEXT PRIMARY KEY, vehicle_id TEXT, make TEXT, model TEXT,
-    model_family TEXT, year TEXT, engine TEXT, engine_code TEXT, fuel TEXT, has_vehicle_row INTEGER);
+    model_family TEXT, norm_make TEXT, norm_model TEXT, generation TEXT, model_method TEXT, year TEXT, engine TEXT, engine_code TEXT, fuel TEXT, has_vehicle_row INTEGER);
 DROP TABLE IF EXISTS stock;
 CREATE TABLE stock (part_id TEXT, veh_ref TEXT, part_name TEXT, part_type TEXT, position TEXT,
-    price REAL, added_date TEXT, listing TEXT);
+    location TEXT, price REAL, added_date TEXT, listing TEXT);
 """
 
 
@@ -159,6 +203,9 @@ def classify_all(db, names: dict, types, use_llm: bool, log):
         else:
             pending.append(nm)
     usage = None
+    reuse = sum(1 for m in mapping.values() if m[2] == "llm")
+    log(f"Claude API cache: {reuse} names answered from llm_cache (not re-sent); "
+        f"{len(pending)} names have no rule and no cached answer")
     if pending and use_llm:
         log(f"Claude API: classifying {len(pending)} names in batches of {pc.LLM_BATCH} ({pc.LLM_MODEL})")
         results, usage = pc.classify_llm(sorted(pending), types, log=log)
@@ -198,9 +245,12 @@ def build(use_llm: bool, log=print):
     db = sqlite3.connect(DB_PATH)
     try:
         db.executescript(SCHEMA)
-        if use_llm and not pc.llm_available():
-            log("Claude API: no credentials found (ANTHROPIC_API_KEY / ant profile) - LLM step skipped")
-            use_llm = False
+        if use_llm:
+            ok, why = pc.llm_available()
+            if not ok:
+                log(f"Claude API step SKIPPED: {why}. Rules and cached answers only; "
+                    "names with neither are left unclassified and go to the review queue.")
+                use_llm = False
         mapping, usage = classify_all(db, names, types, use_llm, log)
 
         # Vehicles: vehicle row if present, else the most common make/model per ref.
@@ -213,8 +263,12 @@ def build(use_llm: bool, log=print):
                 best[ref] = r
         for ref, r in best.items():
             veh.setdefault(ref, r)
-        db.executemany("INSERT OR REPLACE INTO vehicles VALUES (?,?,?,?,?,?,?,?,?,?)",
-                       [(ref, r["vehicle_id"], r["make"], r["model"], model_family(r["make"], r["model"]),
+        mm = load_model_map()
+        for r in veh.values():
+            r["norm"] = normalise_model(mm, r["make"], r["model"], r["year"])
+        db.executemany("INSERT OR REPLACE INTO vehicles VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                       [(ref, r["vehicle_id"], r["make"], r["model"], r["norm"]["family"], r["norm"]["make"],
+                         r["norm"]["model"], r["norm"]["gen"], r["norm"]["method"],
                          r["year"], r["engine"], r["engine_code"], r["fuel"], r["has_vehicle_row"])
                         for ref, r in veh.items()])
 
@@ -225,7 +279,7 @@ def build(use_llm: bool, log=print):
             if r["net_price"] is not None:
                 inv_net[r["invoice_id"]] += r["net_price"]
         excluded = defaultdict(lambda: [0, Decimal(0)])
-        sales, neg_days = [], 0
+        sales, neg_days, unknown_veh = [], 0, []
         for r in data["sale_lines"]:
             nm = name_key(r["part_name"])
             ptype, pos, _, _ = mapping.get(nm, ("misc_unknown", "", "", 0))
@@ -242,6 +296,12 @@ def build(use_llm: bool, log=print):
                 excluded["breaking-for-spares ad (not a part)"][0] += 1
                 excluded["breaking-for-spares ad (not a part)"][1] += net
                 continue
+            if POSTAGE_RX.search(nm):
+                excluded["postage / courier typed as a part line"][0] += 1
+                excluded["postage / courier typed as a part line"][1] += net
+                if not r["make"] and not r["model"]:
+                    unknown_veh.append(dict(r, grp="postage / courier"))
+                continue
             sale_dt = r["invoice_date"]
             if r["invoice_time"]:
                 sale_dt = sale_dt.replace(hour=r["invoice_time"].hour, minute=r["invoice_time"].minute)
@@ -252,25 +312,40 @@ def build(use_llm: bool, log=print):
             if days is not None and days < 0:
                 neg_days += 1
                 days = None
-            gross = None
+            # Gross = this line's share of (paid - delivery): VAT is on parts only,
+            # so this is the part price the buyer paid, without postage.
+            gross = gross_with_post = None
             if fl.get("gross_paid") is not None and inv_net[r["invoice_id"]]:
-                gross = fl["gross_paid"] * net / inv_net[r["invoice_id"]]
+                share = net / inv_net[r["invoice_id"]]
+                gross_with_post = fl["gross_paid"] * share
+                gross = (fl["gross_paid"] - (fl.get("delivery") or 0)) * share
             channel = "ebay" if fl.get("auto_raised") else "counter"
-            make, model = r["make"], r["model"]
-            if not model and r["veh_ref"] in veh:
-                make, model = veh[r["veh_ref"]]["make"], veh[r["veh_ref"]]["model"]
+            make, model, year = r["make"], r["model"], r["year"]
+            v = veh.get(r["veh_ref"])
+            if v and (not model or not _year(year)):
+                if not model:
+                    make, model = v["make"], v["model"]
+                year = year if _year(year) else v["year"]
+            norm = normalise_model(mm, make, model, year)
+            if not make and not model:
+                unknown_veh.append(dict(r, grp="manually typed part (MISC ID)"
+                                        if "-MISC" in (r["part_id"] or "") else "other"))
             sales.append(dict(invoice_id=r["invoice_id"], part_id=r["part_id"], veh_ref=r["veh_ref"] or None,
-                              make=make, model=model, model_family=model_family(make, model),
+                              make=make, model=model, model_family=norm["family"], model_method=norm["method"],
+                              gross_with_post=gross_with_post,
                               part_name=nm, part_type=ptype, position=pos, sale_date=sale_dt,
                               net_price=net, gross_price=gross, channel=channel, added_date=added,
                               added_source=src if added else None, days_to_sell=days))
-        db.executemany("INSERT INTO sales VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        db.executemany("INSERT INTO sales VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                        [(s["invoice_id"], s["part_id"], s["veh_ref"], s["make"], s["model"], s["model_family"],
-                         s["part_name"], s["part_type"], s["position"], iso(s["sale_date"]), f2(s["net_price"]),
+                         s["model_method"], s["part_name"], s["part_type"], s["position"], iso(s["sale_date"]), f2(s["net_price"]),
                          f2(s["gross_price"]), s["channel"], iso(s["added_date"]), s["added_source"],
                          s["days_to_sell"]) for s in sales])
         db.executemany("INSERT INTO sales_excluded VALUES (?,?,?)",
                        [(k, v[0], f2(v[1])) for k, v in excluded.items()])
+        db.executemany("INSERT INTO unknown_vehicle_sales VALUES (?,?,?,?,?,?)",
+                       [(u["grp"], u["invoice_id"], u["part_id"], name_key(u["part_name"]),
+                         iso(u["invoice_date"]), f2(u["net_price"])) for u in unknown_veh])
 
         # Stock now.
         stock = []
@@ -278,15 +353,15 @@ def build(use_llm: bool, log=print):
             nm = name_key(r["part_name"])
             ptype, pos, _, _ = mapping.get(nm, ("misc_unknown", "", "", 0))
             stock.append(dict(r, part_type=ptype, position=pos))
-        db.executemany("INSERT INTO stock VALUES (?,?,?,?,?,?,?,?)",
+        db.executemany("INSERT INTO stock VALUES (?,?,?,?,?,?,?,?,?)",
                        [(s["part_id"], s["veh_ref"], name_key(s["part_name"]), s["part_type"], s["position"],
-                         f2(s["price"]), iso(s["added_date"]), s["listing"]) for s in stock])
+                         s["location"] or None, f2(s["price"]), iso(s["added_date"]), s["listing"]) for s in stock])
         db.commit()
     finally:
         db.close()
 
     return dict(data=data, types=types, labels=labels, names=names, mapping=mapping, usage=usage,
-                sales=sales, excluded=excluded, stock=stock, veh=veh, neg_days=neg_days)
+                sales=sales, excluded=excluded, stock=stock, veh=veh, neg_days=neg_days, unknown_veh=unknown_veh)
 
 
 # --------------------------------------------------------------------------
@@ -418,20 +493,67 @@ TM_COLS = [("part_type", "Part type", ""), ("model_family", "Model", ""), ("unit
            ("ebay_p25", "eBay P25", "gbp"), ("ebay_p75", "eBay P75", "gbp"),
            ("counter_median", "Counter median", "gbp"), ("median_days", "Median days", ""),
            ("pct_30", "≤30d", "pct"), ("pct_90", "≤90d", "pct"), ("pct_180", "≤180d", "pct")]
+CLEARANCE_COLS = [("veh_ref", "VEH ref", ""), ("part_id", "Part ID", ""), ("part_name", "Part name", ""),
+                  ("part_type", "Part type", ""), ("location", "Location", ""), ("price", "Price", "gbp"),
+                  ("age_days", "Age (days)", ""), ("listing", "Listing", ""), ("yard_sale_bias", "Flag", "")]
+UNKNOWN_COLS = [("group", "Group", ""), ("invoice_id", "Invoice", ""), ("part_id", "Part ID", ""),
+                ("part_name", "Part name", ""), ("sale_date", "Sale date", ""), ("net_price", "Net", "gbp")]
 MODEL_COLS = [("model_family", "Model", ""), ("revenue_net", "Revenue (net)", "gbp0"),
               ("units_sold", "Parts sold", ""), ("veh_refs", "VEH refs", ""),
               ("revenue_per_veh", "Revenue per VEH ref", "gbp0")]
 
 
+def dont_pull_html(stop, labels, today, n_parts):
+    """One printable page for the yard: what not to take off the cars."""
+    e = html.escape
+    rows = []
+    for r in stop:
+        cover = "no sales in 12 months" if r["units_12m"] == 0 else f"{r['months_cover']:.0f} months"
+        flag = ("<span class='flag'>yard-sale bias</span>" if r["yard_sale_bias"] else "")
+        rows.append(f"<tr><td>{e(labels.get(r['part_type'], r['part_type']))} {flag}</td>"
+                    f"<td class='num'>{e(cover)}</td><td class='num'>{r['in_stock']}</td></tr>")
+    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Don't Pull List</title><style>
+:root{{--bg:#fff;--fg:#111;--muted:#555;--line:#ccc;--flag:#8a5a00;--flagbg:#fff3d6}}
+@media (prefers-color-scheme: dark){{:root:not([data-theme="light"]){{--bg:#151515;--fg:#eee;--muted:#aaa;--line:#3a3a3a;--flag:#ffcc66;--flagbg:#3a2e10}}}}
+:root[data-theme="dark"]{{--bg:#151515;--fg:#eee;--muted:#aaa;--line:#3a3a3a;--flag:#ffcc66;--flagbg:#3a2e10}}
+body{{background:var(--bg);color:var(--fg);font:13px/1.3 system-ui,sans-serif;margin:0 auto;max-width:760px;padding:12px 16px}}
+h1{{font-size:20px;margin:0}} p{{margin:4px 0 8px;color:var(--muted)}}
+table{{border-collapse:collapse;width:100%}} th,td{{border-bottom:1px solid var(--line);padding:2px 6px;text-align:left}}
+th{{font-size:12px;color:var(--muted)}} td.num,th.num{{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}}
+.flag{{font-size:11px;color:var(--flag);background:var(--flagbg);border-radius:3px;padding:0 4px;white-space:nowrap}}
+@media print{{body{{font-size:10.5px;max-width:none;padding:0}} h1{{font-size:16px}} td,th{{padding:1px 4px}}
+ :root{{--bg:#fff;--fg:#000;--muted:#444;--line:#bbb;--flag:#000;--flagbg:#eee}}}}
+</style></head><body>
+<h1>Don't pull: {today:%d %b %Y}</h1>
+<p>Leave these on the car. We already hold more than {DONT_PULL_COVER_MONTHS} months of sales in stock, or none sold
+in the last 12 months. {len(stop)} part types, {sum(r['in_stock'] for r in stop):,} parts on the shelf
+({n_parts:,} on the clearance list). <b>yard-sale bias</b>: engines, gearboxes and doors were often sold for cash in
+the yard without an invoice before 28 Oct 2026, so their real sales are higher than shown; check before skipping.</p>
+<table><tr><th>Part type</th><th class="num">Cover</th><th class="num">In stock</th></tr>
+{''.join(rows)}</table></body></html>"""
+
+
 def write_outputs(b, today):
     REPORTS.mkdir(exist_ok=True)
     stamp = today.strftime("%Y-%m-%d")
+    dont_pull_path = REPORTS / f"dont_pull_{stamp}.html"
     tm = type_metrics(b["sales"], b["stock"], datetime.combine(today, datetime.min.time()))
     tmm = type_model_metrics(b["sales"])
     by_total, by_veh = model_metrics(b["sales"])
-    stop = sorted([r for r in tm if r["in_stock"] and r["months_cover"] is not None
-                   and r["months_cover"] > STOP_PULLING_COVER_MONTHS and r["part_type"] not in NOT_PARTS],
-                  key=lambda r: -r["months_cover"])
+    for r in tm:
+        r["yard_sale_bias"] = "yard-sale bias" if r["part_type"] in YARD_SALE_BIAS_TYPES else ""
+    stop = sorted([r for r in tm if r["in_stock"] and r["part_type"] not in NOT_PARTS
+                   and (r["units_12m"] == 0 or r["months_cover"] > DONT_PULL_COVER_MONTHS)],
+                  key=lambda r: (-r["months_cover"], -r["in_stock"]))
+    stop_types = {r["part_type"] for r in stop}
+    clearance = sorted([dict(veh_ref=s["veh_ref"], part_id=s["part_id"], part_name=name_key(s["part_name"]),
+                             part_type=s["part_type"], location=s["location"] or "", price=f2(s["price"]),
+                             age_days=(today - s["added_date"].date()).days if s["added_date"] else None,
+                             listing=s["listing"],
+                             yard_sale_bias="yard-sale bias" if s["part_type"] in YARD_SALE_BIAS_TYPES else "")
+                        for s in b["stock"] if s["part_type"] in stop_types],
+                       key=lambda r: (r["part_type"], -(r["age_days"] or 0)))
     pull = sorted([r for r in tm if r["median_days"] is not None and r["median_days"] < PULL_FIRST_MAX_DAYS
                    and r["ebay_median"] is not None and r["ebay_median"] > PULL_FIRST_MIN_PRICE
                    and r["part_type"] not in NOT_PARTS],
@@ -440,7 +562,12 @@ def write_outputs(b, today):
     files = {
         f"analytics_part_types_{stamp}.csv": (tm, TYPE_COLS),
         f"analytics_type_model_{stamp}.csv": (tmm, TM_COLS),
-        f"analytics_stop_pulling_{stamp}.csv": (stop, TYPE_COLS),
+        f"analytics_dont_pull_{stamp}.csv": (stop, TYPE_COLS + [("yard_sale_bias", "Flag", "")]),
+        f"analytics_dont_pull_clearance_{stamp}.csv": (clearance, CLEARANCE_COLS),
+        f"analytics_unknown_vehicle_sales_{stamp}.csv": (
+            [dict(group=u["grp"], invoice_id=u["invoice_id"], part_id=u["part_id"],
+                  part_name=name_key(u["part_name"]), sale_date=iso(u["invoice_date"]),
+                  net_price=f2(u["net_price"])) for u in b["unknown_veh"]], UNKNOWN_COLS),
         f"analytics_pull_first_{stamp}.csv": (pull, TYPE_COLS),
         f"analytics_models_by_revenue_{stamp}.csv": (by_total, MODEL_COLS),
         f"analytics_models_by_revenue_per_veh_{stamp}.csv": (by_veh, MODEL_COLS),
@@ -477,8 +604,11 @@ td.num{{text-align:right;font-variant-numeric:tabular-nums}} .wrap{{overflow-x:a
 (excluded: {e(exc)}). Prices are gross paid; revenue is net of VAT. eBay = auto-raised PayPal-import invoices,
 counter = staff-raised. Days to sell = sale date minus logging date (AddedDate). Percent sold within 30/90/180 days is
 of parts that have sold. Months of cover = parts in stock ÷ (units sold in the last 12 months ÷ 12).</p>"""]
-    parts.append(f"<h2>c) Stop pulling: more than {STOP_PULLING_COVER_MONTHS} months of cover ({len(stop)})</h2>")
-    parts.append(html_table(stop, TYPE_COLS, b["labels"]))
+    parts.append(f"<h2>c) Don't pull: more than {DONT_PULL_COVER_MONTHS} months of cover, or no sales in "
+                 f"12 months ({len(stop)})</h2><p class='muted'>One-page version for the yard: "
+                 f"{e(dont_pull_path.name)}. Clearance list of the parts in stock: "
+                 f"analytics_dont_pull_clearance_{stamp}.csv.</p>")
+    parts.append(html_table(stop, TYPE_COLS + [("yard_sale_bias", "Flag", "")], b["labels"]))
     parts.append(f"<h2>d) Pull first: median days to sell &lt; {PULL_FIRST_MAX_DAYS} and eBay median &gt; "
                  f"£{PULL_FIRST_MIN_PRICE} ({len(pull)})</h2>")
     parts.append(html_table(pull, TYPE_COLS, b["labels"]))
@@ -491,8 +621,10 @@ of parts that have sold. Months of cover = parts in stock ÷ (units sold in the 
                  "<p class='muted'>Revenue only; vehicle cost is not recorded in BreakerPro.</p>"
                  + html_table(by_veh, MODEL_COLS))
     (REPORTS / f"analytics_{stamp}.html").write_text("\n".join(parts) + "</body></html>", encoding="utf-8")
+    dont_pull_path.write_text(dont_pull_html(stop, b["labels"], today, len(clearance)), encoding="utf-8")
     return dict(tm=tm, tmm=tmm, stop=stop, pull=pull, by_total=by_total, by_veh=by_veh, review=rq,
-                html=REPORTS / f"analytics_{stamp}.html", csvs=list(files))
+                clearance=clearance, html=REPORTS / f"analytics_{stamp}.html", dont_pull=dont_pull_path,
+                csvs=list(files))
 
 
 # --------------------------------------------------------------------------
@@ -522,6 +654,56 @@ def checks(b, out, seed):
     print(f"  days_to_sell: {sum(1 for s in sales if s['days_to_sell'] is not None)} known, "
           f"{b['neg_days']} negative (set to unknown); added_date source "
           f"{dict(Counter(s['added_source'] for s in sales))}")
+
+    # Unknown-vehicle sales breakdown (no make/model on the invoice line).
+    uv = b["unknown_veh"]
+    grp = defaultdict(lambda: [0, Decimal(0)])
+    for u in uv:
+        grp[u["grp"]][0] += 1
+        grp[u["grp"]][1] += u["net_price"] or 0
+    print(f"\nUNKNOWN-VEHICLE SALES: {len(uv)} lines, £{sum(g[1] for g in grp.values()):,.2f} net")
+    for g in ("postage / courier", "manually typed part (MISC ID)", "other"):
+        n, t = grp.get(g, (0, Decimal(0)))
+        print(f"  {g:32} {n:>4} lines  £{t:>10,.2f}")
+    sample = random.Random(seed).sample(uv, min(20, len(uv)))
+    print("  20 sample part names:")
+    for u in sample:
+        print(f"    [{u['grp'][:6]}] {name_key(u['part_name'])[:80]:80} £{u['net_price']:,.2f}")
+    with_post = [float(s["gross_with_post"]) for s in sales if s["channel"] == "ebay" and s["gross_with_post"] is not None]
+    without = [float(s["gross_price"]) for s in sales if s["channel"] == "ebay" and s["gross_price"] is not None]
+    print(f"  postage change: net parts revenue unchanged (DELIVERY lines were never in it; postage typed as a part: "
+          f"{b['excluded'].get('postage / courier typed as a part line', [0])[0]} lines). eBay gross price per part "
+          f"now excludes postage: total £{sum(with_post):,.2f} -> £{sum(without):,.2f} "
+          f"(-£{sum(with_post) - sum(without):,.2f}); median eBay part £{pct(with_post, 50):,.2f} -> £{pct(without, 50):,.2f}")
+
+    # Model normalisation.
+    vm = Counter(v["norm"]["method"] for v in b["veh"].values())
+    bad = sorted({(v["make"], v["model"], v["year"], v["norm"]["method"]) for v in b["veh"].values()
+                  if v["norm"]["method"] in ("unmapped", "gen unknown", "no model")}, key=str)
+    print(f"\nCHECK model normalisation: {len(b['veh'])} vehicles; method {dict(vm)}; "
+          f"{len(bad)} unmapped or without a generation, listed below  -> PASS (every vehicle mapped or listed)")
+    for mk, md, yr, meth in bad:
+        print(f"    UNMAPPED  {mk!s:12} {md!s:40} year {yr!s:6} ({meth})")
+    sm = Counter(s["model_method"] for s in sales)
+    print(f"  sales by model method: {dict(sm)}")
+    unm = Counter((s["make"], s["model"]) for s in sales if s["model_method"] in ("unmapped", "gen unknown"))
+    for (mk, md), n in unm.most_common():
+        print(f"    sales UNMAPPED  {mk!s:12} {md!s:40} {n} lines")
+
+    n_stop = len(out["stop"])
+    print(f"\nCHECK Don't pull list: {n_stop} types  -> {'PASS' if 40 <= n_stop <= 60 else 'OUTSIDE 40-60'}; "
+          f"clearance CSV {len(out['clearance'])} parts")
+
+    # Personal-data scan over every file this build wrote.
+    files = [REPORTS / f for f in out["csvs"]] + [out["html"], out["dont_pull"], REVIEW_PATH]
+    hits = []
+    for f in files:
+        txt = f.read_text(encoding="utf-8-sig")
+        for label, rx in PII_PATTERNS:
+            hits += [(f.name, label, m.group(0)) for m in rx.finditer(txt)]
+    print(f"\nCHECK personal-data scan: {len(files)} files, {len(hits)} hits  -> {'PASS' if not hits else 'FAIL'}")
+    for h in hits[:20]:
+        print(f"    {h[0]}: {h[1]}")  # the match itself is not printed
 
     rnd = random.Random(seed)
     sample = rnd.sample(sorted(mapping), 20)
@@ -556,15 +738,20 @@ def main():
         print(f"  {r['part_type']:28} £{r['revenue_net']:>10,.0f}  sold {r['units_sold']:>4}  "
               f"eBay median {fmt(r['ebay_median'], 'gbp'):>8}  median days {fmt(r['median_days']):>6}  "
               f"in stock {r['in_stock']:>4}  cover {fmt(r['months_cover'], 'cover')}")
-    print(f"\nStop pulling (> {STOP_PULLING_COVER_MONTHS} months cover): {len(out['stop'])}")
+    print(f"\nTop 10 models by revenue per VEH ref (normalised):")
+    for r in out["by_veh"][:10]:
+        print(f"  {r['model_family']:28} £{r['revenue_per_veh']:>8,.0f} per vehicle  ({r['veh_refs']} vehicles, "
+              f"£{r['revenue_net']:,.0f}, {r['units_sold']} parts)")
+    print(f"\nDon't pull (> {DONT_PULL_COVER_MONTHS} months cover or no sales in 12 months): {len(out['stop'])}")
     for r in out["stop"]:
         print(f"  {r['part_type']:28} in stock {r['in_stock']:>4}  sold 12m {r['units_12m']:>3}  "
-              f"cover {fmt(r['months_cover'], 'cover')}")
+              f"cover {fmt(r['months_cover'], 'cover'):>13}  {r['yard_sale_bias']}")
     print(f"\nPull first (median days < {PULL_FIRST_MAX_DAYS}, eBay median > £{PULL_FIRST_MIN_PRICE}): {len(out['pull'])}")
     for r in out["pull"]:
         print(f"  {r['part_type']:28} median days {fmt(r['median_days']):>5}  eBay median "
               f"{fmt(r['ebay_median'], 'gbp'):>8}  sold {r['units_sold']:>4}  in stock {r['in_stock']}")
-    print(f"\nWrote {DB_PATH.relative_to(ROOT)}, {out['html'].relative_to(ROOT)} and {len(out['csvs'])} CSVs in reports/")
+    print(f"\nWrote {DB_PATH.relative_to(ROOT)}, {out['html'].relative_to(ROOT)}, "
+          f"{out['dont_pull'].relative_to(ROOT)} and {len(out['csvs'])} CSVs in reports/")
 
 
 if __name__ == "__main__":

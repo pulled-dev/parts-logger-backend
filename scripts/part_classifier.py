@@ -20,13 +20,17 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 TAXONOMY_PATH = ROOT / "analytics" / "part_types.yaml"
 
-LLM_MODEL = "claude-opus-5-5"
+LLM_MODEL = "claude-haiku-5-5"
 LLM_BATCH = 100
 REVIEW_BELOW = 0.7
 RULE_CONFIDENCE = 0.95
-# USD per million tokens for LLM_MODEL (claude-opus-5-5: $4 in / $20 out,
-# cache reads $0.20). Used only to report the run's cost.
-PRICE_IN, PRICE_OUT, PRICE_CACHE_READ = 4.00, 20.00, 0.20
+# USD per million tokens, used only to report the run's cost. Set to Haiku
+# list prices ($1 in / $5 out, cache reads $0.10); check them against the
+# current price list for LLM_MODEL.
+PRICE_IN, PRICE_OUT, PRICE_CACHE_READ = 1.00, 5.00, 0.10
+# The API key lives in this file (one line). It is read here and passed to the
+# client; it is never printed or logged.
+API_KEY_FILE = Path.home() / ".secrets" / "anthropic" / "api_key.txt"
 
 # Normalisation applied before rules run (order matters).
 _SUBS = [
@@ -148,10 +152,10 @@ def _system_prompt(types: list[dict]) -> str:
 def classify_llm(names: list[str], types: list[dict], log=print):
     """Classify names with Claude. Returns (results, usage) where results maps
     raw_name -> (part_type, position, confidence) and usage totals tokens/cost.
-    Needs API credentials (ANTHROPIC_API_KEY or an `ant auth login` profile)."""
+    Needs the key in API_KEY_FILE (see llm_available)."""
     import anthropic
 
-    client = anthropic.Anthropic()
+    client = anthropic.Anthropic(api_key=_read_key())
     type_ids = [t["id"] for t in types]
     system = _system_prompt(types)
     schema = _schema(type_ids)
@@ -160,12 +164,10 @@ def classify_llm(names: list[str], types: list[dict], log=print):
     for i in range(0, len(names), LLM_BATCH):
         batch = names[i:i + LLM_BATCH]
         try:
-            resp = client.beta.messages.create(
+            resp = client.messages.create(
                 model=LLM_MODEL,
                 max_tokens=16000,
-                betas=["server-side-fallback-2026-07-01"],
-                fallbacks="default",
-                output_config={"effort": "low", "format": {"type": "json_schema", "schema": schema}},
+                output_config={"format": {"type": "json_schema", "schema": schema}},
                 system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
                 messages=[{"role": "user", "content": "Classify these part names:\n" + json.dumps(batch)}],
             )
@@ -183,9 +185,9 @@ def classify_llm(names: list[str], types: list[dict], log=print):
         usage["output"] += u.output_tokens or 0
         usage["cache_read"] += getattr(u, "cache_read_input_tokens", 0) or 0
         usage["cache_write"] += getattr(u, "cache_creation_input_tokens", 0) or 0
-        if resp.stop_reason == "refusal":
-            log(f"  batch {i // LLM_BATCH + 1}: refused ({getattr(resp.stop_details, 'category', None)})")
-            usage["refused"] += len(batch)
+        if resp.stop_reason in ("refusal", "max_tokens"):
+            log(f"  batch {i // LLM_BATCH + 1}: stopped ({resp.stop_reason}); names left unclassified")
+            usage["refused" if resp.stop_reason == "refusal" else "failed"] += len(batch)
             continue
         text = next((b.text for b in resp.content if b.type == "text"), "")
         try:
@@ -210,9 +212,18 @@ def classify_llm(names: list[str], types: list[dict], log=print):
     return results, usage
 
 
-def llm_available() -> bool:
-    """True when the SDK can find credentials (env key/token or an ant profile)."""
-    import os
-    if os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"):
-        return True
-    return (Path.home() / ".config" / "anthropic").is_dir()
+def _read_key() -> str:
+    return API_KEY_FILE.read_text(encoding="utf-8-sig").strip()
+
+
+def llm_available() -> tuple[bool, str]:
+    """(True, "") when the key file exists and is not empty, else (False, reason).
+    The reason never contains the key."""
+    if not API_KEY_FILE.is_file():
+        return False, f"key file not found: {API_KEY_FILE}"
+    try:
+        if not _read_key():
+            return False, f"key file is empty: {API_KEY_FILE}"
+    except OSError as e:
+        return False, f"key file not readable: {API_KEY_FILE} ({e.strerror})"
+    return True, ""
