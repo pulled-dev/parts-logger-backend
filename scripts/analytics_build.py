@@ -77,7 +77,26 @@ def load_model_map(path: Path = MODEL_MAP_PATH) -> dict:
             for g in e["generations"]:
                 g["gen"] = str(g["gen"])  # YAML reads codes such as 121 as numbers
                 g["_codes"] = [re.compile(rf"\b{re.escape(str(c))}\b") for c in g.get("codes") or []]
+                g["_vin"] = {str(c).upper() for c in g.get("vin") or []}
     return mm
+
+
+# VAG makers' VIN prefixes (WMI). Other makes (LEVC, Mercedes, MINI) are not decoded.
+VAG_WMI = {"WVW", "WV1", "WV2", "WV3", "WAU", "WA1", "WUA", "TRU", "VSS", "TMB", "VWV", "WVG", "3VW", "AAV"}
+# VIN position 10 -> model year (2001-2030 cycle; V-Y are 1997-2000 or 2027-2030).
+_VIN_YEARS = dict(zip("123456789ABCDEFGHJKLMNPRSTVWXY", range(2001, 2031)))
+
+
+def vin_info(r: dict) -> dict:
+    """Decoder inputs from the VIN pieces the extract returns (never the full VIN)."""
+    code, wmi = (r.get("vin_model_code") or "").upper(), (r.get("vin_wmi") or "").upper()
+    if not r.get("vin_len"):
+        return dict(status="no VIN")
+    if r["vin_len"] != 17:
+        return dict(status="VIN not 17 characters")
+    if wmi not in VAG_WMI:
+        return dict(status="not a VAG VIN")
+    return dict(status="ok", code=code, year=_VIN_YEARS.get((r.get("vin_year_char") or "").upper()))
 
 
 def _year(y):
@@ -85,12 +104,13 @@ def _year(y):
     return int(m.group(0)) if m else None
 
 
-def normalise_model(mm: dict, make, model, year=None) -> dict:
+def normalise_model(mm: dict, make, model, year=None, vin=None) -> dict:
     """('SEAT', 'IBIZA FR', '2014') -> make SEAT, model Ibiza, gen 6J, method year.
 
-    method: code (generation written in the string), year (inferred from the
-    year of manufacture), single (model has one generation), gen unknown,
-    unmapped (no model matched), no model (blank)."""
+    method: vin (VAG model code at VIN positions 7-8), code (generation written
+    in the string), year (inferred from the year of manufacture), single (model
+    has one generation), gen unknown, unmapped (no model matched), no model
+    (blank). vin: vin_info() output, or None."""
     mk = " ".join(str(make or "").upper().split())
     mk = mm["make_aliases"].get(mk, mk)
     m = re.sub(r"\s+", " ", re.sub(r"[^A-Z0-9 ]+", " ", str(model or "").upper())).strip()
@@ -101,9 +121,25 @@ def normalise_model(mm: dict, make, model, year=None) -> dict:
     if entry is None:
         return dict(make=mk, model=None, gen=None, method="unmapped", family=f"{label} {m} (unmapped)")
     gens, gen, method = entry["generations"], None, None
-    gen = next((g for g in gens if any(rx.search(m) for rx in g["_codes"])), None)
+    if vin and vin.get("status") == "ok":
+        cands = [g for g in gens if vin["code"] in g["_vin"]]
+        if len(cands) > 1:  # code shared by generations (Polo 6R/6C, Passat 3C, Tiguan 5N)
+            named = [g for g in cands if any(rx.search(m) for rx in g["_codes"])]
+            vy = vin.get("year")
+            in_year = [g for g in cands if vy and g["years"][0] <= vy <= g["years"][1]]
+            if len(named) == 1:  # the generation written in the name, if the VIN allows it
+                cands = named
+            elif in_year:  # else the VIN model year
+                cands = in_year
+            elif vy:  # model year just past a range (e.g. a 2024 Tiguan 5N): nearest
+                cands = [min(cands, key=lambda g: min(abs(vy - g["years"][0]), abs(vy - g["years"][1])))]
+        if len(cands) == 1:
+            gen, method = cands[0], "vin"
+    if gen is None:
+        gen = next((g for g in gens if any(rx.search(m) for rx in g["_codes"])), None)
+        method = "code" if gen else None
     if gen:
-        method = "code"
+        pass
     elif (y := _year(year)) is not None:
         gen = next((g for g in gens if g["years"][0] <= y <= g["years"][1]), None)
         method = "year" if gen else None
@@ -115,6 +151,60 @@ def normalise_model(mm: dict, make, model, year=None) -> dict:
     shown = "" if gen["gen"] == entry["model"] else f" {gen['gen']}"
     return dict(make=mk, model=entry["model"], gen=gen["gen"], method=method,
                 family=f"{label} {entry['model']}{shown}")
+
+
+NAME_MAKES = {"VOLKSWAGEN": "VOLKSWAGEN", "VW": "VOLKSWAGEN", "VOLKSWAGON": "VOLKSWAGEN",
+              "VOLKWAGEN": "VOLKSWAGEN", "VOLKSWGAEN": "VOLKSWAGEN", "AUDI": "AUDI", "SEAT": "SEAT",
+              "SKODA": "SKODA", "LEVC": "LEVC", "MINI": "MINI", "MERCEDES": "MERCEDES"}
+
+
+def model_from_name(mm: dict, name: str) -> dict:
+    """Model from a hand-typed (MISC) part name, e.g. 'VOLKSWAGEN GOLF MK7 FRONT BUMPER'.
+
+    Whole-word matches only. Models flagged name_needs_make count only when the
+    make is written too ('PICK UP' is not a VW up!). A model whose match sits
+    inside a longer one is dropped (GOLF inside GOLF PLUS). Two different models
+    in one name -> ambiguous, not guessed. Generation: a code in the name, else
+    the year(s) in it (all must agree), else single-generation models."""
+    n = re.sub(r"\s+", " ", re.sub(r"[^A-Z0-9 ]+", " ", (name or "").upper())).strip()
+    words = set(n.split())
+    makes = {NAME_MAKES[w] for w in words if w in NAME_MAKES}
+    hits = []
+    for mk, entries in mm["models"].items():
+        for e in entries:
+            if e.get("name_needs_make") and mk not in makes:
+                continue
+            m = e["_rx"].search(n)
+            if m:
+                hits.append((mk, e, m.span()))
+    hits = [h for h in hits if not any(o is not h and o[2][0] <= h[2][0] and h[2][1] <= o[2][1]
+                                       and o[2] != h[2] for o in hits)]
+    if makes and any(h[0] in makes for h in hits):
+        hits = [h for h in hits if h[0] in makes]
+    models = {(h[0], h[1]["model"]) for h in hits}
+    if len(models) != 1:
+        return dict(make=None, model=None, gen=None, family="Unknown (no model)",
+                    method="name ambiguous" if models else "name no model")
+    mk, e, _ = hits[0]
+    label = mm["make_labels"].get(mk, mk.title())
+    gens = e["generations"]
+    gen, method = next((g for g in gens if any(rx.search(n) for rx in g["_codes"])), None), "name code"
+    if gen is None:
+        years = [int(y) for y in re.findall(r"\b((?:19|20)\d{2})\b", n)]
+        years += [2000 + int(a) for a, b in re.findall(r"\b(\d{2}) (\d{2})\b", n)
+                  if 0 <= int(a) <= 30 and 0 <= int(b) <= 30 and int(a) <= int(b)]
+        years += [2000 + int(b) for a, b in re.findall(r"\b(\d{2}) (\d{2})\b", n)
+                  if 0 <= int(a) <= 30 and 0 <= int(b) <= 30 and int(a) <= int(b)]
+        found = {g["gen"] for y in years for g in gens if g["years"][0] <= y <= g["years"][1]}
+        if len(found) == 1:
+            gen, method = next(g for g in gens if g["gen"] in found), "name year"
+    if gen is None and len(gens) == 1:
+        gen, method = gens[0], "name single"
+    if gen is None:
+        return dict(make=mk, model=e["model"], gen=None, method="name gen unknown",
+                    family=f"{label} {e['model']} (gen unknown)")
+    shown = "" if gen["gen"] == e["model"] else f" {gen['gen']}"
+    return dict(make=mk, model=e["model"], gen=gen["gen"], method=method, family=f"{label} {e['model']}{shown}")
 
 
 def name_key(name) -> str:
@@ -164,12 +254,15 @@ CREATE TABLE sales (invoice_id TEXT, part_id TEXT, veh_ref TEXT, make TEXT, mode
     days_to_sell INTEGER);
 DROP TABLE IF EXISTS sales_excluded;
 CREATE TABLE sales_excluded (reason TEXT, lines INTEGER, net_total REAL);
+DROP TABLE IF EXISTS misc_demand;
+CREATE TABLE misc_demand (part_type TEXT, model TEXT, count INTEGER, net_revenue REAL);
 DROP TABLE IF EXISTS unknown_vehicle_sales;
 CREATE TABLE unknown_vehicle_sales (grp TEXT, invoice_id TEXT, part_id TEXT, part_name TEXT,
     sale_date TEXT, net_price REAL);
 DROP TABLE IF EXISTS vehicles;
 CREATE TABLE vehicles (veh_ref TEXT PRIMARY KEY, vehicle_id TEXT, make TEXT, model TEXT,
-    model_family TEXT, norm_make TEXT, norm_model TEXT, generation TEXT, model_method TEXT, year TEXT, engine TEXT, engine_code TEXT, fuel TEXT, has_vehicle_row INTEGER);
+    model_family TEXT, norm_make TEXT, norm_model TEXT, generation TEXT, model_method TEXT,
+    vin_model_code TEXT, vin_status TEXT, generation_without_vin TEXT, year TEXT, engine TEXT, engine_code TEXT, fuel TEXT, has_vehicle_row INTEGER);
 DROP TABLE IF EXISTS stock;
 CREATE TABLE stock (part_id TEXT, veh_ref TEXT, part_name TEXT, part_type TEXT, position TEXT,
     location TEXT, price REAL, added_date TEXT, listing TEXT);
@@ -265,10 +358,13 @@ def build(use_llm: bool, log=print):
             veh.setdefault(ref, r)
         mm = load_model_map()
         for r in veh.values():
-            r["norm"] = normalise_model(mm, r["make"], r["model"], r["year"])
-        db.executemany("INSERT OR REPLACE INTO vehicles VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            r["vin"] = vin_info(r)
+            r["norm_no_vin"] = normalise_model(mm, r["make"], r["model"], r["year"])
+            r["norm"] = normalise_model(mm, r["make"], r["model"], r["year"], vin=r["vin"])
+        db.executemany("INSERT OR REPLACE INTO vehicles VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                        [(ref, r["vehicle_id"], r["make"], r["model"], r["norm"]["family"], r["norm"]["make"],
-                         r["norm"]["model"], r["norm"]["gen"], r["norm"]["method"],
+                         r["norm"]["model"], r["norm"]["gen"], r["norm"]["method"], r["vin"].get("code"),
+                         r["vin"]["status"], r["norm_no_vin"]["gen"],
                          r["year"], r["engine"], r["engine_code"], r["fuel"], r["has_vehicle_row"])
                         for ref, r in veh.items()])
 
@@ -326,10 +422,15 @@ def build(use_llm: bool, log=print):
                 if not model:
                     make, model = v["make"], v["model"]
                 year = year if _year(year) else v["year"]
-            norm = normalise_model(mm, make, model, year)
+            if v and v["norm"]["method"] not in ("unmapped", "no model"):
+                norm = v["norm"]  # the vehicle's model, VIN-decoded where possible
+            else:
+                norm = normalise_model(mm, make, model, year)
             if not make and not model:
-                unknown_veh.append(dict(r, grp="manually typed part (MISC ID)"
-                                        if "-MISC" in (r["part_id"] or "") else "other"))
+                is_misc = "-MISC" in (r["part_id"] or "")
+                unknown_veh.append(dict(r, grp="manually typed part (MISC ID)" if is_misc else "other"))
+                if is_misc:
+                    norm = model_from_name(mm, nm)
             sales.append(dict(invoice_id=r["invoice_id"], part_id=r["part_id"], veh_ref=r["veh_ref"] or None,
                               make=make, model=model, model_family=norm["family"], model_method=norm["method"],
                               gross_with_post=gross_with_post,
@@ -343,6 +444,13 @@ def build(use_llm: bool, log=print):
                          s["days_to_sell"]) for s in sales])
         db.executemany("INSERT INTO sales_excluded VALUES (?,?,?)",
                        [(k, v[0], f2(v[1])) for k, v in excluded.items()])
+        demand = defaultdict(lambda: [0, Decimal(0)])
+        for s_ in sales:
+            if "-MISC" in (s_["part_id"] or "") and not s_["veh_ref"]:
+                demand[(s_["part_type"], s_["model_family"])][0] += 1
+                demand[(s_["part_type"], s_["model_family"])][1] += s_["net_price"]
+        db.executemany("INSERT INTO misc_demand VALUES (?,?,?,?)",
+                       [(t, m, n, f2(v)) for (t, m), (n, v) in demand.items()])
         db.executemany("INSERT INTO unknown_vehicle_sales VALUES (?,?,?,?,?,?)",
                        [(u["grp"], u["invoice_id"], u["part_id"], name_key(u["part_name"]),
                          iso(u["invoice_date"]), f2(u["net_price"])) for u in unknown_veh])
@@ -361,7 +469,8 @@ def build(use_llm: bool, log=print):
         db.close()
 
     return dict(data=data, types=types, labels=labels, names=names, mapping=mapping, usage=usage,
-                sales=sales, excluded=excluded, stock=stock, veh=veh, neg_days=neg_days, unknown_veh=unknown_veh)
+                sales=sales, excluded=excluded, stock=stock, veh=veh, neg_days=neg_days, unknown_veh=unknown_veh,
+                demand=demand)
 
 
 # --------------------------------------------------------------------------
@@ -421,15 +530,18 @@ def type_model_metrics(sales):
 
 
 def model_metrics(sales):
-    rev, refs, units = defaultdict(float), defaultdict(set), Counter()
+    rev, rev_veh, refs, units = defaultdict(float), defaultdict(float), defaultdict(set), Counter()
     for s in sales:
         m = s["model_family"]
         rev[m] += float(s["net_price"])
         units[m] += 1
         if s["veh_ref"] and s["veh_ref"].startswith("VEH"):
             refs[m].add(s["veh_ref"])
+            rev_veh[m] += float(s["net_price"])
+    # Revenue per VEH ref counts only parts sold off a VEH ref; hand-typed (MISC)
+    # sales have no vehicle, so they are in the total but not the per-vehicle figure.
     rows = [dict(model_family=m, revenue_net=rev[m], units_sold=units[m], veh_refs=len(refs[m]),
-                 revenue_per_veh=(rev[m] / len(refs[m])) if refs[m] else None) for m in rev]
+                 revenue_per_veh=(rev_veh[m] / len(refs[m])) if refs[m] else None) for m in rev]
     by_total = sorted(rows, key=lambda r: -r["revenue_net"])[:20]
     by_veh = sorted([r for r in rows if r["revenue_per_veh"] is not None],
                     key=lambda r: -r["revenue_per_veh"])[:20]
@@ -498,6 +610,8 @@ CLEARANCE_COLS = [("veh_ref", "VEH ref", ""), ("part_id", "Part ID", ""), ("part
                   ("age_days", "Age (days)", ""), ("listing", "Listing", ""), ("yard_sale_bias", "Flag", "")]
 UNKNOWN_COLS = [("group", "Group", ""), ("invoice_id", "Invoice", ""), ("part_id", "Part ID", ""),
                 ("part_name", "Part name", ""), ("sale_date", "Sale date", ""), ("net_price", "Net", "gbp")]
+DEMAND_COLS = [("part_type", "Part type", ""), ("model", "Model", ""), ("count", "Count", ""),
+               ("net_revenue", "Net revenue", "gbp")]
 MODEL_COLS = [("model_family", "Model", ""), ("revenue_net", "Revenue (net)", "gbp0"),
               ("units_sold", "Parts sold", ""), ("veh_refs", "VEH refs", ""),
               ("revenue_per_veh", "Revenue per VEH ref", "gbp0")]
@@ -564,6 +678,9 @@ def write_outputs(b, today):
         f"analytics_type_model_{stamp}.csv": (tmm, TM_COLS),
         f"analytics_dont_pull_{stamp}.csv": (stop, TYPE_COLS + [("yard_sale_bias", "Flag", "")]),
         f"analytics_dont_pull_clearance_{stamp}.csv": (clearance, CLEARANCE_COLS),
+        f"analytics_misc_demand_{stamp}.csv": (
+            sorted([dict(part_type=t, model=m, count=n, net_revenue=f2(v)) for (t, m), (n, v) in b["demand"].items()],
+                   key=lambda r: (-r["count"], -r["net_revenue"])), DEMAND_COLS),
         f"analytics_unknown_vehicle_sales_{stamp}.csv": (
             [dict(group=u["grp"], invoice_id=u["invoice_id"], part_id=u["part_id"],
                   part_name=name_key(u["part_name"]), sale_date=iso(u["invoice_date"]),
@@ -675,6 +792,34 @@ def checks(b, out, seed):
           f"{b['excluded'].get('postage / courier typed as a part line', [0])[0]} lines). eBay gross price per part "
           f"now excludes postage: total £{sum(with_post):,.2f} -> £{sum(without):,.2f} "
           f"(-£{sum(with_post) - sum(without):,.2f}); median eBay part £{pct(with_post, 50):,.2f} -> £{pct(without, 50):,.2f}")
+
+    misc = [s for s in sales if "-MISC" in (s["part_id"] or "") and not s["veh_ref"]]
+    mc = Counter(s["model_method"] for s in misc)
+    mapped = [s for s in misc if s["model_method"].startswith("name") and s["model_method"] not in
+              ("name ambiguous", "name no model")]
+    print(f"  hand-typed (MISC) lines with a model from the part name: {len(mapped)}/{len(misc)} "
+          f"(£{sum(float(s['net_price']) for s in mapped):,.2f}); {dict(mc)}")
+    for s in [s for s in misc if s["model_method"] in ("name ambiguous", "name no model")]:
+        print(f"    no model: {s['part_name'][:80]}  ({s['model_method']})")
+    print(f"  MISC demand table: {len(b['demand'])} part type x model rows; top 10:")
+    for (t, m), (n, v) in sorted(b["demand"].items(), key=lambda kv: (-kv[1][0], -kv[1][1]))[:10]:
+        print(f"    {t:24} {m:26} {n:>3}  £{v:,.2f}")
+
+    # VIN decoder.
+    vs = Counter(v["vin"]["status"] for v in b["veh"].values())
+    by_vin = [v for v in b["veh"].values() if v["norm"]["method"] == "vin"]
+    changed = [(ref, v) for ref, v in b["veh"].items() if v["norm"]["gen"] != v["norm_no_vin"]["gen"]]
+    unknown_codes = Counter((v["norm"]["model"], v["vin"]["code"]) for v in b["veh"].values()
+                            if v["vin"]["status"] == "ok" and v["norm"]["method"] != "vin"
+                            and v["norm"]["model"] is not None)
+    print(f"\nVIN DECODER: VIN status {dict(vs)}; generation set from VIN for {len(by_vin)} vehicles; "
+          f"{len(changed)} vehicles changed generation because of it")
+    for ref, v in sorted(changed):
+        print(f"    CHANGED {ref:7} {v['make']!s:10} {v['model']!s:34} year {v['year']!s:5} "
+              f"VIN code {v['vin'].get('code')} (MY {v['vin'].get('year')}): "
+              f"{v['norm_no_vin']['gen']} ({v['norm_no_vin']['method']}) -> {v['norm']['gen']}")
+    for (mdl, code), n in sorted(unknown_codes.items(), key=str):
+        print(f"    VIN code not decoded: {mdl} code {code} ({n} vehicles) - fell back to name/year")
 
     # Model normalisation.
     vm = Counter(v["norm"]["method"] for v in b["veh"].values())
