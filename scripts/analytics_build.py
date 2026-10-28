@@ -402,6 +402,8 @@ def build(use_llm: bool, log=print):
             if r["invoice_time"]:
                 sale_dt = sale_dt.replace(hour=r["invoice_time"].hour, minute=r["invoice_time"].minute)
             added, src = r["added_date"], "AddedDate"
+            if added is not None and added.year < 2000:  # 1900-01-01 placeholder on hand-typed parts
+                added = None
             if added is None:
                 added, src = added_from_part_id(r["part_id"]), "Part ID"
             days = (sale_dt.date() - added.date()).days if added else None

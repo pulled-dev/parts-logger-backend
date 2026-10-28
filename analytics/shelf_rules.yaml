@@ -1,0 +1,37 @@
+# Shelf targets: how many of each part type to keep on the shelf per fitment
+# group (a model generation, or a platform for part types whose fitment_level
+# is "platform" in part_types.yaml). Edit freely, then rerun:
+#
+#     python scripts/shelf_targets.py
+#
+# target = min(max_cap, max(min_floor, ceil(monthly_rate x cover_months)))
+# gap    = target - in stock (dead listings not counted)
+#
+# status
+#   PULL          gap > 0, median net price >= min_price, not never_pull
+#   LEAVE ON CAR  gap <= 0, or median net price < min_price
+#   NEVER         never_pull, or no sales of that type for that group in 12 months
+#
+# monthly_rate comes from the group's own sales when it sold at least
+# min_sales_own times in 12 months. Otherwise it falls back to the platform
+# (average per generation on that platform), then to the part type overall
+# (average per group); the level used is recorded on every row.
+
+min_floor: 2
+cover_months: 3
+max_cap: 6
+min_price: 8          # £, median net price (ex VAT, no postage)
+min_sales_own: 3      # 12-month sales a group needs to use its own rate
+
+# Part type ids (from part_types.yaml). "*" wildcards allowed.
+never_pull:
+  - airbag_*
+never_pull_except:    # matched by never_pull above but still allowed
+  - airbag_squib_slip_ring   # clock spring / squib: not an explosive part
+  # Airbag on/off switches are classified as switch_other, so never match.
+
+always_pull: []       # PULL whatever the gap, price or sales
+
+# Per part type floor / cap, overriding the defaults above. Example:
+#   wheel_alloy: {min_floor: 4, max_cap: 8}
+type_overrides: {}

@@ -21,6 +21,10 @@
 #   code shared by two generations (1K = Golf MK5 and MK6) is split by the VIN
 #   model year (position 10). Best-known codes: the build lists every VIN whose
 #   generation disagrees with a code written in the model name, for checking.
+# platform: VAG platform the generation is built on (MQB, PQ35, PQ25, MQB-A0 ...).
+#   Part types whose fitment_level is "platform" (part_types.yaml) are pooled
+#   across every generation on the same platform for shelf targets. null = not
+#   sure (that generation then stands alone); "# platform: guess" = please check.
 # name_needs_make: the model word is also an ordinary word ("UP", "HATCH"), so in
 #   a hand-typed (MISC) part name it only counts when the make is written too.
 #
@@ -48,168 +52,168 @@ models:
     - model: e-Golf
       match: '\bE GOLF\b'
       generations:
-        - {gen: MK7, codes: [MK7], years: [2014, 2020], vin: [AU, 5G]}
+        - {gen: MK7, codes: [MK7], years: [2014, 2020], vin: [AU, 5G], platform: MQB}
     - model: Golf Plus
       match: '\bGOLF PLUS\b'
       generations:
-        - {gen: 5M, codes: [5M], years: [2005, 2014], vin: [1K, 5M]}
+        - {gen: 5M, codes: [5M], years: [2005, 2014], vin: [1K, 5M], platform: PQ35}
     - model: Golf SV
       match: '\bGOLF (SV|SPORTSVAN)\b'
       generations:
-        - {gen: AM, codes: [AM], years: [2014, 2020], vin: [AM, AU]}
+        - {gen: AM, codes: [AM], years: [2014, 2020], vin: [AM, AU], platform: MQB}
     - model: Golf
       match: '\bGOLF\b'
       generations:
-        - {gen: MK4, codes: [MK4, 1J], years: [1997, 2003], vin: [1J]}
-        - {gen: MK5, codes: [MK5], years: [2004, 2008], vin: [1K]}
-        - {gen: MK6, codes: [MK6, 5K], years: [2009, 2012], vin: [1K, 5K]}
-        - {gen: MK7, codes: [MK7, 5G], years: [2013, 2019], vin: [AU, 5G, BA]}
-        - {gen: MK8, codes: [MK8, CD], years: [2020, 2030], vin: [CD]}
+        - {gen: MK4, codes: [MK4, 1J], years: [1997, 2003], vin: [1J], platform: PQ34}
+        - {gen: MK5, codes: [MK5], years: [2004, 2008], vin: [1K], platform: PQ35}
+        - {gen: MK6, codes: [MK6, 5K], years: [2009, 2012], vin: [1K, 5K], platform: PQ35}
+        - {gen: MK7, codes: [MK7, 5G], years: [2013, 2019], vin: [AU, 5G, BA], platform: MQB}
+        - {gen: MK8, codes: [MK8, CD], years: [2020, 2030], vin: [CD], platform: MQB-Evo}
     - model: Polo
       match: '\bPOLO\b'
       # 2009 goes to 6R (launched mid-2009); a 2009 9N3 must say 9N3.
       # 2017 goes to 2G (AW, launched late 2017); a 2017 6C must say 6C.
       generations:
-        - {gen: 9N3, codes: [9N3, 9N], years: [2002, 2008], vin: [9N]}
-        - {gen: 6R, codes: [6R], years: [2009, 2013], vin: [6R]}
-        - {gen: 6C, codes: [6C], years: [2014, 2016], vin: [6R, 6C]}
-        - {gen: 2G, codes: [2G, AW, MK6], years: [2017, 2030], vin: [AW]}
+        - {gen: 9N3, codes: [9N3, 9N], years: [2002, 2008], vin: [9N], platform: PQ24}
+        - {gen: 6R, codes: [6R], years: [2009, 2013], vin: [6R], platform: PQ25}
+        - {gen: 6C, codes: [6C], years: [2014, 2016], vin: [6R, 6C], platform: PQ25}
+        - {gen: 2G, codes: [2G, AW, MK6], years: [2017, 2030], vin: [AW], platform: MQB-A0}
     - model: up!
       match: '\bUP\b'
       name_needs_make: true
       generations:
-        - {gen: 121, codes: [], years: [2012, 2024], vin: [AA]}
+        - {gen: 121, codes: [], years: [2012, 2024], vin: [AA], platform: NSF}
     - model: Fox
       match: '\bFOX\b'
       name_needs_make: true
       generations:
-        - {gen: 5Z, codes: [5Z], years: [2005, 2011], vin: [5Z]}
+        - {gen: 5Z, codes: [5Z], years: [2005, 2011], vin: [5Z], platform: PQ24}  # platform: guess
     - model: Passat CC
       match: '\bPASSAT CC\b|^CC\b'
       generations:
-        - {gen: 35, codes: [], years: [2008, 2016], vin: [35, 3C]}
+        - {gen: 35, codes: [], years: [2008, 2016], vin: [35, 3C], platform: PQ46}
     - model: Passat
       match: '\bPASSAT\b'
       # 3A is how the yard writes the B7; 3G is the B8 chassis code.
       # 2015 goes to B8 (launched late 2014).
       generations:
-        - {gen: B6, codes: [B6, 3C], years: [2005, 2010], vin: [3C]}
-        - {gen: B7, codes: [B7, 3A], years: [2011, 2014], vin: [3C, 36]}
-        - {gen: B8, codes: [B8, 3G], years: [2015, 2023], vin: [3G, 3C]}
-        - {gen: B9, codes: [B9], years: [2024, 2030]}
+        - {gen: B6, codes: [B6, 3C], years: [2005, 2010], vin: [3C], platform: PQ46}
+        - {gen: B7, codes: [B7, 3A], years: [2011, 2014], vin: [3C, 36], platform: PQ46}
+        - {gen: B8, codes: [B8, 3G], years: [2015, 2023], vin: [3G, 3C], platform: MQB}
+        - {gen: B9, codes: [B9], years: [2024, 2030], platform: MQB-Evo}
     - model: Jetta
       match: '\bJETTA\b'
       generations:
-        - {gen: MK5, codes: [MK5, 1K], years: [2005, 2010], vin: [1K]}
-        - {gen: 5C, codes: [5C, MK6], years: [2011, 2018], vin: [16, 5C, AJ]}
+        - {gen: MK5, codes: [MK5, 1K], years: [2005, 2010], vin: [1K], platform: PQ35}
+        - {gen: 5C, codes: [5C, MK6], years: [2011, 2018], vin: [16, 5C, AJ], platform: PQ35}  # platform: guess
     - model: Scirocco
       match: '\bSCIROCCO\b'
       generations:
-        - {gen: MK3, codes: [MK3, 13], years: [2008, 2017], vin: [13]}
+        - {gen: MK3, codes: [MK3, 13], years: [2008, 2017], vin: [13], platform: PQ35}
     - model: Tiguan
       match: '\bTIGUAN\b'
       generations:
-        - {gen: MK1, codes: [MK1, 5N], years: [2007, 2015], vin: [5N]}
-        - {gen: MK2, codes: [MK2, AD], years: [2016, 2023], vin: [AD, AX, 5N]}
-        - {gen: MK3, codes: [MK3], years: [2024, 2030], vin: [CT]}
+        - {gen: MK1, codes: [MK1, 5N], years: [2007, 2015], vin: [5N], platform: PQ35}
+        - {gen: MK2, codes: [MK2, AD], years: [2016, 2023], vin: [AD, AX, 5N], platform: MQB}
+        - {gen: MK3, codes: [MK3], years: [2024, 2030], vin: [CT], platform: MQB-Evo}
     - model: Touran
       match: '\bTOURAN\b'
       # 1T3 is the 2010-2015 facelift of the 1T.
       generations:
-        - {gen: 1T, codes: [1T, 1T3], years: [2003, 2015], vin: [1T]}
-        - {gen: 5T, codes: [5T], years: [2016, 2030], vin: [1T, 5T]}
+        - {gen: 1T, codes: [1T, 1T3], years: [2003, 2015], vin: [1T], platform: PQ35}
+        - {gen: 5T, codes: [5T], years: [2016, 2030], vin: [1T, 5T], platform: MQB}
     - model: Sharan
       match: '\bSHARAN\b'
       generations:
-        - {gen: 7M, codes: [7M], years: [1995, 2009], vin: [7M]}
-        - {gen: 7N, codes: [7N], years: [2010, 2022], vin: [7N]}
+        - {gen: 7M, codes: [7M], years: [1995, 2009], vin: [7M], platform: null}
+        - {gen: 7N, codes: [7N], years: [2010, 2022], vin: [7N], platform: PQ46}
     - model: Caddy
       match: '\bCADDY\b'
       # C20 is a Caddy van variant code, not a generation.
       generations:
-        - {gen: 2K, codes: [2K], years: [2004, 2020], vin: [2K]}
-        - {gen: SB, codes: [SB, MK5], years: [2021, 2030], vin: [SB]}
+        - {gen: 2K, codes: [2K], years: [2004, 2020], vin: [2K], platform: PQ35}  # platform: guess
+        - {gen: SB, codes: [SB, MK5], years: [2021, 2030], vin: [SB], platform: MQB-Evo}  # platform: guess
     - model: Transporter
       match: '\bTRANSPORTER\b'
       generations:
-        - {gen: T5, codes: [T5], years: [2003, 2015], vin: [7H, 7J]}
-        - {gen: T6, codes: [T6], years: [2016, 2030], vin: [7H, 7J, SG, SH]}
+        - {gen: T5, codes: [T5], years: [2003, 2015], vin: [7H, 7J], platform: null}
+        - {gen: T6, codes: [T6], years: [2016, 2030], vin: [7H, 7J, SG, SH], platform: null}
     - model: T-Roc
       match: '\bT ROC\b'
       generations:
-        - {gen: A1, codes: [], years: [2017, 2030], vin: [A1]}
+        - {gen: A1, codes: [], years: [2017, 2030], vin: [A1], platform: MQB}
     - model: T-Cross
       match: '\bT CROSS\b'
       generations:
-        - {gen: C1, codes: [], years: [2019, 2030], vin: [C1]}
+        - {gen: C1, codes: [], years: [2019, 2030], vin: [C1], platform: MQB-A0}
     - model: Beetle
       match: '\bBEETLE\b'
       generations:
-        - {gen: 5C, codes: [5C], years: [2011, 2019], vin: [16, 5C]}
+        - {gen: 5C, codes: [5C], years: [2011, 2019], vin: [16, 5C], platform: PQ35}
     - model: Eos
       match: '\bEOS\b'
       name_needs_make: true
       generations:
-        - {gen: 1F, codes: [1F], years: [2006, 2015], vin: [1F]}
+        - {gen: 1F, codes: [1F], years: [2006, 2015], vin: [1F], platform: PQ35}
     - model: Touareg
       match: '\bTOUAREG\b'
       generations:
-        - {gen: 7P, codes: [7P], years: [2010, 2018], vin: [7P]}
-        - {gen: CR, codes: [CR], years: [2018, 2030], vin: [CR]}
+        - {gen: 7P, codes: [7P], years: [2010, 2018], vin: [7P], platform: null}
+        - {gen: CR, codes: [CR], years: [2018, 2030], vin: [CR], platform: MLB-Evo}
     - model: Arteon
       match: '\bARTEON\b'
       generations:
-        - {gen: 3H, codes: [3H], years: [2017, 2030], vin: [3H]}
+        - {gen: 3H, codes: [3H], years: [2017, 2030], vin: [3H], platform: MQB}
 
   AUDI:
     - model: A1
       match: '\bA1\b'
       generations:
-        - {gen: 8X, codes: [8X], years: [2010, 2018], vin: [8X]}
-        - {gen: GB, codes: [GB], years: [2019, 2030], vin: [GB]}
+        - {gen: 8X, codes: [8X], years: [2010, 2018], vin: [8X], platform: PQ25}
+        - {gen: GB, codes: [GB], years: [2019, 2030], vin: [GB], platform: MQB-A0}
     - model: A3
       match: '\b(A3|S3|RS3)\b'
       generations:
-        - {gen: 8L, codes: [8L], years: [1996, 2002], vin: [8L]}
-        - {gen: 8P, codes: [8P], years: [2003, 2012], vin: [8P]}
-        - {gen: 8V, codes: [8V], years: [2013, 2019], vin: [8V]}
-        - {gen: 8Y, codes: [8Y], years: [2020, 2030], vin: [GY]}
+        - {gen: 8L, codes: [8L], years: [1996, 2002], vin: [8L], platform: PQ34}
+        - {gen: 8P, codes: [8P], years: [2003, 2012], vin: [8P], platform: PQ35}
+        - {gen: 8V, codes: [8V], years: [2013, 2019], vin: [8V], platform: MQB}
+        - {gen: 8Y, codes: [8Y], years: [2020, 2030], vin: [GY], platform: MQB-Evo}
     - model: A4
       match: '\b(A4|S4|RS4)\b'
       # 2008 goes to B8 (launched 2008); a 2008 B7 must say B7.
       generations:
-        - {gen: B6, codes: [B6], years: [2001, 2004], vin: [8E, 8H]}
-        - {gen: B7, codes: [B7], years: [2005, 2007], vin: [8E, 8H]}
-        - {gen: B8, codes: [B8, 8K], years: [2008, 2015], vin: [8K]}
-        - {gen: B9, codes: [B9, 8W], years: [2016, 2030], vin: [8W, F4]}
+        - {gen: B6, codes: [B6], years: [2001, 2004], vin: [8E, 8H], platform: PL46}  # platform: guess
+        - {gen: B7, codes: [B7], years: [2005, 2007], vin: [8E, 8H], platform: PL46}  # platform: guess
+        - {gen: B8, codes: [B8, 8K], years: [2008, 2015], vin: [8K], platform: MLB}
+        - {gen: B9, codes: [B9, 8W], years: [2016, 2030], vin: [8W, F4], platform: MLB-Evo}
     - model: A5
       match: '\b(A5|S5|RS5)\b'
       generations:
-        - {gen: 8T, codes: [8T], years: [2007, 2016], vin: [8T, 8F]}
-        - {gen: F5, codes: [F5], years: [2017, 2030], vin: [F5]}
+        - {gen: 8T, codes: [8T], years: [2007, 2016], vin: [8T, 8F], platform: MLB}
+        - {gen: F5, codes: [F5], years: [2017, 2030], vin: [F5], platform: MLB-Evo}
     - model: A6
       match: '\b(A6|S6|RS6)\b'
       generations:
-        - {gen: C6, codes: [C6, 4F], years: [2004, 2010], vin: [4F]}
-        - {gen: C7, codes: [C7, 4G], years: [2011, 2017], vin: [4G]}
-        - {gen: C8, codes: [C8, 4K], years: [2018, 2030], vin: [4K, 4A]}
+        - {gen: C6, codes: [C6, 4F], years: [2004, 2010], vin: [4F], platform: null}
+        - {gen: C7, codes: [C7, 4G], years: [2011, 2017], vin: [4G], platform: MLB}
+        - {gen: C8, codes: [C8, 4K], years: [2018, 2030], vin: [4K, 4A], platform: MLB-Evo}
     - model: Q3
       match: '\bQ3\b'
       generations:
-        - {gen: 8U, codes: [8U], years: [2011, 2018], vin: [8U]}
-        - {gen: F3, codes: [F3], years: [2019, 2030], vin: [F3]}
+        - {gen: 8U, codes: [8U], years: [2011, 2018], vin: [8U], platform: PQ35}
+        - {gen: F3, codes: [F3], years: [2019, 2030], vin: [F3], platform: MQB}
     - model: Q5
       match: '\b(Q5|SQ5)\b'
       generations:
-        - {gen: 8R, codes: [8R], years: [2008, 2016], vin: [8R]}
-        - {gen: FY, codes: [FY], years: [2017, 2030], vin: [FY]}
+        - {gen: 8R, codes: [8R], years: [2008, 2016], vin: [8R], platform: MLB}
+        - {gen: FY, codes: [FY], years: [2017, 2030], vin: [FY], platform: MLB-Evo}
     - model: TT
       match: '\bTT\b'
       name_needs_make: true
       generations:
-        - {gen: MK1, codes: [MK1, 8N], years: [1998, 2005], vin: [8N]}
-        - {gen: MK2, codes: [MK2, 8J], years: [2006, 2014], vin: [8J]}
-        - {gen: MK3, codes: [MK3, 8S], years: [2015, 2023], vin: [FV, 8S]}
+        - {gen: MK1, codes: [MK1, 8N], years: [1998, 2005], vin: [8N], platform: PQ34}
+        - {gen: MK2, codes: [MK2, 8J], years: [2006, 2014], vin: [8J], platform: PQ35}
+        - {gen: MK3, codes: [MK3, 8S], years: [2015, 2023], vin: [FV, 8S], platform: MQB}
 
   SEAT:
     - model: Ibiza
@@ -217,105 +221,105 @@ models:
       # MK5 is how the yard writes the 6F. 2017 goes to 6F (launched mid-2017);
       # a 2017 6J must say 6J.
       generations:
-        - {gen: 6L, codes: [6L, MK3], years: [2002, 2007], vin: [6L]}
-        - {gen: 6J, codes: [6J, MK4], years: [2008, 2016], vin: [6J]}
-        - {gen: 6F, codes: [6F, MK5], years: [2017, 2030], vin: [KJ, 6F]}
+        - {gen: 6L, codes: [6L, MK3], years: [2002, 2007], vin: [6L], platform: PQ24}
+        - {gen: 6J, codes: [6J, MK4], years: [2008, 2016], vin: [6J], platform: PQ25}
+        - {gen: 6F, codes: [6F, MK5], years: [2017, 2030], vin: [KJ, 6F], platform: MQB-A0}
     - model: Leon
       match: '\bLEON\b'
       generations:
-        - {gen: MK1, codes: [MK1, 1M], years: [1999, 2004], vin: [1M]}
-        - {gen: MK2, codes: [MK2, 1P], years: [2005, 2012], vin: [1P]}
-        - {gen: MK3, codes: [MK3, 5F], years: [2013, 2019], vin: [5F]}
-        - {gen: MK4, codes: [MK4, KL], years: [2020, 2030], vin: [KL]}
+        - {gen: MK1, codes: [MK1, 1M], years: [1999, 2004], vin: [1M], platform: PQ34}
+        - {gen: MK2, codes: [MK2, 1P], years: [2005, 2012], vin: [1P], platform: PQ35}
+        - {gen: MK3, codes: [MK3, 5F], years: [2013, 2019], vin: [5F], platform: MQB}
+        - {gen: MK4, codes: [MK4, KL], years: [2020, 2030], vin: [KL], platform: MQB-Evo}
     - model: Altea
       match: '\bALTEA\b'
       generations:
-        - {gen: 5P, codes: [5P], years: [2004, 2015], vin: [5P]}
+        - {gen: 5P, codes: [5P], years: [2004, 2015], vin: [5P], platform: PQ35}
     - model: Alhambra
       match: '\bALHAMBRA\b'
       generations:
-        - {gen: 7M, codes: [7M], years: [1996, 2009], vin: [7M]}
-        - {gen: 7N, codes: [7N], years: [2010, 2020], vin: [7N]}
+        - {gen: 7M, codes: [7M], years: [1996, 2009], vin: [7M], platform: null}
+        - {gen: 7N, codes: [7N], years: [2010, 2020], vin: [7N], platform: PQ46}
     - model: Ateca
       match: '\bATECA\b'
       generations:
-        - {gen: KH, codes: [KH], years: [2016, 2030], vin: [5F, KH]}
+        - {gen: KH, codes: [KH], years: [2016, 2030], vin: [5F, KH], platform: MQB}
     - model: Arona
       match: '\bARONA\b'
       generations:
-        - {gen: KJ, codes: [KJ], years: [2017, 2030], vin: [KJ]}
+        - {gen: KJ, codes: [KJ], years: [2017, 2030], vin: [KJ], platform: MQB-A0}
     - model: Mii
       match: '\bMII\b'
       generations:
-        - {gen: KF, codes: [KF], years: [2012, 2021], vin: [AA]}
+        - {gen: KF, codes: [KF], years: [2012, 2021], vin: [AA], platform: NSF}
     - model: Toledo
       match: '\bTOLEDO\b'
       generations:
-        - {gen: NH, codes: [NH], years: [2012, 2019], vin: [NH, KG]}
+        - {gen: NH, codes: [NH], years: [2012, 2019], vin: [NH, KG], platform: PQ25}  # platform: guess
 
   SKODA:
     - model: Fabia
       match: '\bFABIA\b'
       # The yard writes the Mk2 as 5J, and Mk3/Mk4 as MK3/MK4.
       generations:
-        - {gen: 6Y, codes: [6Y, MK1], years: [2000, 2006], vin: [6Y]}
-        - {gen: 5J, codes: [5J, MK2], years: [2007, 2014], vin: [5J]}
-        - {gen: NJ, codes: [NJ, MK3], years: [2015, 2021], vin: [NJ]}
-        - {gen: PJ, codes: [PJ, MK4], years: [2022, 2030], vin: [PJ]}
+        - {gen: 6Y, codes: [6Y, MK1], years: [2000, 2006], vin: [6Y], platform: PQ24}
+        - {gen: 5J, codes: [5J, MK2], years: [2007, 2014], vin: [5J], platform: PQ25}
+        - {gen: NJ, codes: [NJ, MK3], years: [2015, 2021], vin: [NJ], platform: PQ26}  # platform: guess
+        - {gen: PJ, codes: [PJ, MK4], years: [2022, 2030], vin: [PJ], platform: MQB-A0}
     - model: Octavia
       match: '\bOCTAVIA\b'
       generations:
-        - {gen: MK2, codes: [MK2, 1Z], years: [2004, 2012], vin: [1Z]}
-        - {gen: MK3, codes: [MK3, 5E], years: [2013, 2019], vin: [5E, NE]}
-        - {gen: MK4, codes: [MK4, NX], years: [2020, 2030], vin: [NX]}
+        - {gen: MK2, codes: [MK2, 1Z], years: [2004, 2012], vin: [1Z], platform: PQ35}
+        - {gen: MK3, codes: [MK3, 5E], years: [2013, 2019], vin: [5E, NE], platform: MQB}
+        - {gen: MK4, codes: [MK4, NX], years: [2020, 2030], vin: [NX], platform: MQB-Evo}
     - model: Superb
       match: '\bSUPERB\b'
       generations:
-        - {gen: 3T, codes: [3T, MK2], years: [2008, 2014], vin: [3T]}
-        - {gen: 3V, codes: [3V, MK3], years: [2015, 2023], vin: [3V, NP]}
+        - {gen: 3T, codes: [3T, MK2], years: [2008, 2014], vin: [3T], platform: PQ46}
+        - {gen: 3V, codes: [3V, MK3], years: [2015, 2023], vin: [3V, NP], platform: MQB}
     - model: Citigo
       match: '\bCITIGO\b'
       generations:
-        - {gen: NF, codes: [NF], years: [2012, 2020], vin: [AA]}
+        - {gen: NF, codes: [NF], years: [2012, 2020], vin: [AA], platform: NSF}
     - model: Yeti
       match: '\bYETI\b'
       generations:
-        - {gen: 5L, codes: [5L], years: [2009, 2017], vin: [5L]}
+        - {gen: 5L, codes: [5L], years: [2009, 2017], vin: [5L], platform: PQ35}
     - model: Rapid
       match: '\bRAPID\b'
       generations:
-        - {gen: NH, codes: [NH], years: [2012, 2019], vin: [NH]}
+        - {gen: NH, codes: [NH], years: [2012, 2019], vin: [NH], platform: PQ25}  # platform: guess
     - model: Roomster
       match: '\bROOMSTER\b'
       generations:
-        - {gen: 5J, codes: [5J], years: [2006, 2015], vin: [5J]}
+        - {gen: 5J, codes: [5J], years: [2006, 2015], vin: [5J], platform: null}
     - model: Kodiaq
       match: '\bKODIAQ\b'
       generations:
-        - {gen: NS, codes: [NS], years: [2016, 2030], vin: [NS]}
+        - {gen: NS, codes: [NS], years: [2016, 2030], vin: [NS], platform: MQB}
     - model: Karoq
       match: '\bKAROQ\b'
       generations:
-        - {gen: NU, codes: [NU], years: [2017, 2030], vin: [NU]}
+        - {gen: NU, codes: [NU], years: [2017, 2030], vin: [NU], platform: MQB}
 
   LEVC:
     - model: TX
       match: '\b(TX|TAXI)\b'
       name_needs_make: true
       generations:
-        - {gen: TX, codes: [], years: [2018, 2030]}
+        - {gen: TX, codes: [], years: [2018, 2030], platform: null}
 
   MERCEDES:
     - model: Citan
       match: '\bCITAN\b'
       generations:
-        - {gen: W415, codes: [W415], years: [2012, 2021]}
+        - {gen: W415, codes: [W415], years: [2012, 2021], platform: null}
 
   MINI:
     - model: Hatch
       match: '\b(HATCH|ONE|COOPER)\b'
       name_needs_make: true
       generations:
-        - {gen: R50/R53, codes: [R50, R52, R53], years: [2001, 2006]}
-        - {gen: R56, codes: [R56], years: [2007, 2013]}
-        - {gen: F56, codes: [F56], years: [2014, 2030]}
+        - {gen: R50/R53, codes: [R50, R52, R53], years: [2001, 2006], platform: null}
+        - {gen: R56, codes: [R56], years: [2007, 2013], platform: null}
+        - {gen: F56, codes: [F56], years: [2014, 2030], platform: null}
