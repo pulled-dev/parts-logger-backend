@@ -27,3 +27,6 @@ reports/
 # Local analytics store and generated review queue
 analytics/analytics.db
 analytics/review_queue.csv
+
+# Pick lists and other generated outputs (no customer data, but local only)
+outputs/

@@ -26,6 +26,7 @@ ALLOWED_COLUMNS = {
     "Part ID", "Vehicle ID", "Stock Reference", "Part Type", "Part Name", "Part Location",
     "Part Nett Sale", "Ebay_FixedPrice", "Ebay_Number", "Ebay_Status", "AddedDate",
     "Make", "Model", "Year Manufacture", "Engine", "VEH_ENGINECODE", "Fuel", "VIN",
+    "On-Site Date", "VEH_TRANSMISSION",
     "Invoice ID", "Invoice Date", "Invoice Time", "Transaction Type",
     "Transaction Details", "Transaction Amount",
 }
@@ -113,7 +114,9 @@ WITH v AS (
   SELECT {REF.format(a='s')} AS veh_ref, s.[Vehicle ID] AS vehicle_id,
          UPPER(LTRIM(RTRIM(s.[Make]))) AS make, UPPER(LTRIM(RTRIM(s.[Model]))) AS model,
          s.[Year Manufacture] AS year, s.[Engine] AS engine, s.[VEH_ENGINECODE] AS engine_code,
-         s.[Fuel] AS fuel, {VIN_PARTS.format(a='s')}, 1 AS has_vehicle_row
+         s.[Fuel] AS fuel, {VIN_PARTS.format(a='s')},
+         LTRIM(RTRIM(s.[On-Site Date])) AS on_site, UPPER(LTRIM(RTRIM(s.[VEH_TRANSMISSION]))) AS transmission,
+         1 AS has_vehicle_row
   FROM [Stock] s WHERE s.[Part Type] = {VEHICLE_ROW}
 ), parts AS (
   SELECT {REF.format(a='s')} AS veh_ref, UPPER(LTRIM(RTRIM(s.[Make]))) AS make, UPPER(LTRIM(RTRIM(s.[Model]))) AS model,
@@ -129,11 +132,12 @@ WITH v AS (
   FROM [Invoices] s WHERE s.[Transaction Type] = 'PART'
 )
 SELECT v.veh_ref, v.vehicle_id, v.make, v.model, v.year, v.engine, v.engine_code, v.fuel,
-       v.vin_wmi, v.vin_model_code, v.vin_year_char, v.vin_len, v.has_vehicle_row, 1 AS n
+       v.vin_wmi, v.vin_model_code, v.vin_year_char, v.vin_len, v.on_site, v.transmission,
+       v.has_vehicle_row, 1 AS n
 FROM v
 UNION ALL
 SELECT p.veh_ref, NULL, p.make, p.model, p.year, p.engine, p.engine_code, p.fuel,
-       NULL, NULL, NULL, NULL, 0, COUNT(1)
+       NULL, NULL, NULL, NULL, NULL, NULL, 0, COUNT(1)
 FROM parts p
 WHERE p.veh_ref LIKE 'VEH%' AND NOT EXISTS (SELECT 1 FROM v WHERE v.veh_ref = p.veh_ref)
 GROUP BY p.veh_ref, p.make, p.model, p.year, p.engine, p.engine_code, p.fuel

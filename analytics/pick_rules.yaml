@@ -1,0 +1,114 @@
+# Pick-list rules: which parts to take off each car. Edit freely; every number
+# the pick list uses lives here (scripts/pick_list.py has none of its own).
+#
+#     python scripts/pick_list.py VEH171          one car (A4 HTML + CSV)
+#     python scripts/pick_list.py --recent 3      the 3 newest cars
+#     python scripts/pick_list.py --yard          every car on the yard + summary
+#     python scripts/pick_list.py --last-call     tier-2 parts on cars about to be crushed
+#
+# Shelf floor, cover months and cap are NOT repeated here: they come from
+# shelf_rules (min_floor, cover_months, max_cap), and the per-group targets
+# from the shelf_targets table that scripts/shelf_targets.py builds.
+
+shelf_rules: shelf_rules.yaml   # in analytics/
+
+# --- stock position --------------------------------------------------------
+# effective_qty = located + unlocated x unlocated_weight + phantom x phantom_weight
+unlocated_weight: 0.5        # no shelf location: may be hard to find
+phantom_weight: 0            # probable phantom: count as not there
+phantom_min_age_days: 180    # phantom = this old, no location, unlisted or dead listing
+                             # (same rule as the exceptions report, section 10b)
+
+# --- value -------------------------------------------------------------------
+value_per_min_pull_threshold: 1.00   # £ per minute: tier 1 needs at least this
+value_per_min_floor: 0.30            # £ per minute: below this, scrap / don't pull
+vat_rate: 0.20               # eBay sold prices include VAT; values here are ex VAT
+ebay_fee_pct: 12.8           # final value fee, % of the VAT-inclusive price
+# Courier cost per part, by size class. analytics/courier_cost.csv wins when
+# filled in; these are used (and flagged as defaults) while it is blank.
+courier_default_gbp: {S: 4.00, M: 7.50, L: 15.00, Pallet: 45.00}
+# Costs only happen when the part sells, so fees and courier are weighted by
+# the sell probability: net_value = p x (price - fee - courier).
+
+# --- effort ------------------------------------------------------------------
+# Minutes per part beyond pulling it. Used for every part (no per-part figures yet).
+handling_minutes: {log: 2, photo: 3, list: 5}
+# Pull minutes and size when analytics/part_effort.csv has no figure
+# (flagged effort_is_default / size_is_default).
+default_pull_minutes: 15
+default_size: M
+pull_minutes_by_type:
+  engine_complete: 120
+  gearbox_manual: 90
+  gearbox_auto: 120
+  gearbox_dsg: 120
+  dashboard: 120
+  subframe: 60
+  rear_axle: 60
+  rad_pack: 45
+  steering_rack: 45
+  heater_matrix: 60
+  windscreen: 30
+  seats: 20
+  door_complete: 20
+  bumper: 15
+  wiring_loom: 60
+  fuel_tank: 45
+  centre_console: 30
+size_by_type:
+  engine_complete: Pallet
+  gearbox_manual: Pallet
+  gearbox_auto: Pallet
+  gearbox_dsg: Pallet
+  subframe: Pallet
+  rear_axle: Pallet
+  rad_pack: L
+  door_complete: L
+  door_bare: L
+  bonnet: L
+  tailgate: L
+  bumper: L
+  wing: L
+  seats: L
+  dashboard: L
+  windscreen: L
+  fuel_tank: L
+  wheel_alloy: L
+  wheel_steel: L
+  wheel_spare: L
+  steering_rack: M
+  headlight: M
+  tail_light: S
+  door_lock: S
+  window_switch: S
+  relay: S
+
+# --- sell probability --------------------------------------------------------
+# Demand over the cover window is Poisson with mean = monthly rate x cover
+# months; this part sells if demand exceeds the effective stock ahead of it.
+# Monthly rate = the fitment group's sales in the last demand_lookback_days per
+# day it actually had stock (a part can't sell while the shelf is empty), with
+# at least demand_min_available_days in the denominator so one quick sale can't
+# blow it up. Hand-typed (MISC) sales are already in these sales. A group with
+# no sales and too little stock history uses the shelf_targets fallback rate
+# (platform / part type overall).
+demand_lookback_days: 365
+demand_min_available_days: 60
+
+# --- tiers -------------------------------------------------------------------
+# Airbags (shelf_rules never_pull) are never in the eBay pull tier: they go to
+# depollution / scrap, unless there is phone / trade (counter) demand.
+non_ebay_extra_types: []     # other part types to treat like airbags
+trade_demand_lookback_days: 365
+trade_demand_min_sales: 1    # counter sales of that type for the fitment to "pull for trade"
+                             # (and more of them than the effective stock already holds)
+always_pull: []              # part type ids: tier 1 whatever the numbers (not airbags)
+
+# --- yard ----------------------------------------------------------------------
+crush_window_days: 60        # crush-by = BreakerPro On-Site Date + this
+last_call_days: 7            # --last-call: cars this close to crush-by (or past it)
+# BreakerPro does not record crushing, so a car counts as on the yard while its
+# vehicle row is in Stock and it is no more than this many days past crush-by.
+on_yard_grace_days: 30
+weekly_capacity_minutes: 2400   # pulling time available per week (2 people x 20 h)
+busy_car_tier1_lines: 25        # yard summary flags cars with more tier-1 lines than this

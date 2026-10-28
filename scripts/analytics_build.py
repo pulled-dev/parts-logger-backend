@@ -262,11 +262,27 @@ CREATE TABLE unknown_vehicle_sales (grp TEXT, invoice_id TEXT, part_id TEXT, par
 DROP TABLE IF EXISTS vehicles;
 CREATE TABLE vehicles (veh_ref TEXT PRIMARY KEY, vehicle_id TEXT, make TEXT, model TEXT,
     model_family TEXT, norm_make TEXT, norm_model TEXT, generation TEXT, model_method TEXT,
-    vin_model_code TEXT, vin_status TEXT, generation_without_vin TEXT, year TEXT, engine TEXT, engine_code TEXT, fuel TEXT, has_vehicle_row INTEGER);
+    vin_model_code TEXT, vin_status TEXT, generation_without_vin TEXT, year TEXT, engine TEXT, engine_code TEXT, fuel TEXT, has_vehicle_row INTEGER,
+    on_site_date TEXT, transmission TEXT);
+DROP TABLE IF EXISTS dont_pull;
+CREATE TABLE dont_pull (part_type TEXT PRIMARY KEY, in_stock INTEGER, units_12m INTEGER, months_cover REAL,
+    reason TEXT);
 DROP TABLE IF EXISTS stock;
 CREATE TABLE stock (part_id TEXT, veh_ref TEXT, part_name TEXT, part_type TEXT, position TEXT,
     location TEXT, price REAL, added_date TEXT, listing TEXT);
 """
+
+
+def on_site_iso(v):
+    """BreakerPro [On-Site Date] text 'dd/mm/yy' (sometimes with a time) -> 'yyyy-mm-dd', else None."""
+    m = re.match(r"^\s*(\d{1,2})/(\d{1,2})/(\d{2}|\d{4})\b", str(v or ""))
+    if not m:
+        return None
+    d, mo, y = int(m.group(1)), int(m.group(2)), int(m.group(3))
+    try:
+        return date(y + 2000 if y < 100 else y, mo, d).isoformat()
+    except ValueError:
+        return None
 
 
 def f2(x):
@@ -361,11 +377,12 @@ def build(use_llm: bool, log=print):
             r["vin"] = vin_info(r)
             r["norm_no_vin"] = normalise_model(mm, r["make"], r["model"], r["year"])
             r["norm"] = normalise_model(mm, r["make"], r["model"], r["year"], vin=r["vin"])
-        db.executemany("INSERT OR REPLACE INTO vehicles VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        db.executemany("INSERT OR REPLACE INTO vehicles VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                        [(ref, r["vehicle_id"], r["make"], r["model"], r["norm"]["family"], r["norm"]["make"],
                          r["norm"]["model"], r["norm"]["gen"], r["norm"]["method"], r["vin"].get("code"),
                          r["vin"]["status"], r["norm_no_vin"]["gen"],
-                         r["year"], r["engine"], r["engine_code"], r["fuel"], r["has_vehicle_row"])
+                         r["year"], r["engine"], r["engine_code"], r["fuel"], r["has_vehicle_row"],
+                         on_site_iso(r.get("on_site")), r.get("transmission") or None)
                         for ref, r in veh.items()])
 
         # Sales.
@@ -663,6 +680,16 @@ def write_outputs(b, today):
                    and (r["units_12m"] == 0 or r["months_cover"] > DONT_PULL_COVER_MONTHS)],
                   key=lambda r: (-r["months_cover"], -r["in_stock"]))
     stop_types = {r["part_type"] for r in stop}
+    db = sqlite3.connect(DB_PATH)
+    try:
+        db.executemany("INSERT INTO dont_pull VALUES (?,?,?,?,?)", [
+            (r["part_type"], r["in_stock"], r["units_12m"],
+             None if r["months_cover"] == float("inf") else round(r["months_cover"], 1),
+             "no sales in 12 months" if r["units_12m"] == 0 else f"over {DONT_PULL_COVER_MONTHS} months cover")
+            for r in stop])
+        db.commit()
+    finally:
+        db.close()
     clearance = sorted([dict(veh_ref=s["veh_ref"], part_id=s["part_id"], part_name=name_key(s["part_name"]),
                              part_type=s["part_type"], location=s["location"] or "", price=f2(s["price"]),
                              age_days=(today - s["added_date"].date()).days if s["added_date"] else None,
