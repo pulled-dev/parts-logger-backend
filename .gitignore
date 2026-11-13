@@ -17,6 +17,20 @@ vehicle-imports/logs/*
 !vehicle-imports/logs/_README.txt
 vehicle-imports/stock-sheets/
 
+# Local settings and generated reports (BreakerPro exceptions etc.)
+.env
+reports/
+
+# Playwright MCP snapshots/console logs
+.playwright-mcp/
+
+# Local analytics store and generated review queue
+analytics/analytics.db
+analytics/review_queue.csv
+
+# Pick lists and other generated outputs (no customer data, but local only)
+outputs/
+
 # Google Business Profile API secrets. These live in %LOCALAPPDATA%\PulledApart
 # and must never be committed; ignored here too in case a copy lands in the repo.
 gbp-oauth-client.json
