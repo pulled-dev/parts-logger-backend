@@ -30,3 +30,9 @@ analytics/review_queue.csv
 
 # Pick lists and other generated outputs (no customer data, but local only)
 outputs/
+
+# Google Business Profile API secrets. These live in %LOCALAPPDATA%\PulledApart
+# and must never be committed; ignored here too in case a copy lands in the repo.
+gbp-oauth-client.json
+gbp-token.json
+gbp-api.json
