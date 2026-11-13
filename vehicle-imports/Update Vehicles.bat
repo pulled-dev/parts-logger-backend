@@ -135,6 +135,16 @@ if !FAILS!==0 if exist "%WEBSITE_SCRIPT%" (
   )
 )
 
+rem -- Google Business Profile hero-photo step --
+set "GBP_SCRIPT=%HERE%update_gbp.py"
+if !FAILS!==0 if exist "%GBP_SCRIPT%" (
+  %PY% "%GBP_SCRIPT%"
+  if errorlevel 1 (
+    echo.
+    echo   ** Google photo step had an issue - check the output above.
+  )
+)
+
 rem -- Stock quick reference step --
 set "STOCK_SCRIPT=%HERE%update_stock_sheets.py"
 if !FAILS!==0 if exist "%STOCK_SCRIPT%" (
