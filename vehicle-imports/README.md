@@ -6,16 +6,21 @@ Google step only prints a warning; the later steps still run.
 
 ## Google Business Profile hero photos (`update_gbp.py`)
 
-### First time only: sign in to Google
+Since 13 Nov 2026 it uses the **Google Business Profile API** (`UPLOADER = "api"`).
+Access approved by Google on 13 Nov 2026 (case 8-2980000041381) for Cloud project
+**Pulled Apart GBP** (`pulled-apart-gbp`, number 630683302520, owner nmabmm11@gmail.com).
+No browser is involved when a photo is posted.
 
-Open a Command Prompt in this folder and run:
+### First time only (or if it says "sign-in missing or expired")
 
-    py -3 update_gbp.py --login
+Double-click **`Google Sign-in.bat`** in this folder. A browser opens: sign in as
+**nmabmm11@gmail.com** and click **Allow** (if Google says the app is unverified,
+click Advanced -> Go to Pulled Apart GBP Photos). It then finds the Pulled Apart
+location and runs a read-only check.
 
-An ordinary Chrome window opens (nothing is attached to it, so Google allows the
-sign-in). Sign in as **nmabmm11@gmail.com**, then close that Chrome window. The sign-in is kept in its own browser profile at
-`%LOCALAPPDATA%\PulledApart\gbp-browser-profile` (not your normal Chrome), so
-you only do this again if Google signs you out — the step will tell you.
+Secrets live outside the repo in `%LOCALAPPDATA%\PulledApart`:
+`gbp-oauth-client.json` (OAuth desktop client), `gbp-token.json` (sign-in),
+`gbp-api.json` (account + location IDs). Never commit these.
 
 ### How it works
 
@@ -26,14 +31,15 @@ you only do this again if Google signs you out — the step will tell you.
   on a later run.
 - It lists them and asks `Post N hero photo(s) to Google Business Profile? (Y/N)`.
   Anything but Y skips; they are offered again next run.
-- It opens Chrome, counts the photos in the Google media tool, uploads every
-  Main 1 in one go (max 20 a run), then reloads the media tool, scrolls it until no more photos load, and counts again.
-  (Google shows no "PENDING" label there - new photos just sit first in the grid
-  with no view count until reviewed - so it counts photos.) Only if the count
-  rose by exactly the number uploaded are the cars added to `gbp-posted.txt`;
-  anything else marks nothing and prints
-  `** Google upload not confirmed - check the profile manually`. Summary: `Google: added VEH176 (pending Google review)`.
-- Log: `logs/<date>_gbp.log`.
+- Each Main 1 (max 20 a run) is uploaded on its own: start upload -> send the
+  photo -> create the media item (category "Additional"). A car is added to
+  `gbp-posted.txt` only when Google returns the new photo's ID.
+- If a car fails cleanly (Google said no, or it failed before the photo was
+  created) nothing is recorded and it is offered again next run:
+  `** Not posted, will retry next run: VEH177`.
+- Only if the final "create" call gets no clear answer (connection dropped,
+  Google 5xx) is the car marked `UNCONFIRMED` - see below.
+- Summary: `Google: added VEH176 (pending Google review)`. Log: `logs/<date>_gbp.log`.
 
 ### `gbp-posted.txt`
 
@@ -51,10 +57,14 @@ a duplicate photo on the public profile), and every run lists it under
 
 ### Other commands
 
-    py -3 update_gbp.py --dry-run   # show which cars would be posted, change nothing
-    py -3 update_gbp.py --probe     # open the upload dialog, check it can find it, upload nothing
-    py -3 update_gbp.py --pending   # print photo count + newest awaiting review, upload nothing
+    py -3 update_gbp.py --dry-run     # show which cars would be posted, change nothing
+    py -3 update_gbp.py --api-check   # prove sign-in + location, upload nothing
+    py -3 update_gbp.py --authorize   # same as Google Sign-in.bat (first half)
     py -3 update_gbp.py --clear-unconfirmed VEH176   # release an unconfirmed car for retry
 
-`UPLOADER = "api"` in `update_gbp.py` is reserved for the Business Profile API
-once Google approves access; it is not built yet.
+### Fallback: browser route
+
+The old Playwright/Chrome uploader is still in the file. To use it, set
+`UPLOADER = "playwright"` in `update_gbp.py`, then `py -3 update_gbp.py --login`
+once. `--probe` and `--pending` only apply to that route. It breaks whenever
+Google changes the page, so only use it if the API is down.

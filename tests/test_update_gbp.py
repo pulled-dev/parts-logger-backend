@@ -191,9 +191,203 @@ def test_exception_prints_fail_and_exits_1(env, monkeypatch, capsys):
     assert gbp.FAIL_MSG in capsys.readouterr().out
 
 
-def test_api_uploader_is_stub():
-    with pytest.raises(NotImplementedError):
-        gbp.ApiUploader().upload(["x.jpg"])
+# ── API uploader (fake HTTP, no network) ─────────────────────────────
+
+class FakeApi:
+    """Stands in for http_json. fail = {(ref, step): ApiError} where step is
+    start / bytes / create. Records every call."""
+    def __init__(self, fail=None):
+        self.fail = fail or {}
+        self.calls = []
+        self.current = None
+        self.n = 0
+
+    def __call__(self, url, method="GET", body=None, token=None, data=None, **kw):
+        if url.endswith(":startUpload"):
+            step = "start"
+        elif "/upload/v1/media/" in url:
+            step = "bytes"
+        elif method == "POST" and url.endswith("/media"):
+            step = "create"
+        else:
+            step = "other"
+        self.calls.append((self.current, step))
+        err = self.fail.get((self.current, step))
+        if err:
+            raise err
+        if step == "start":
+            self.n += 1
+            return {"resourceName": f"res{self.n}"}
+        if step == "create":
+            assert body["mediaFormat"] == "PHOTO"
+            assert body["locationAssociation"] == {"category": "ADDITIONAL"}
+            return {"name": f"accounts/1/locations/2/media/m{self.n}"}
+        return {}
+
+
+def api_uploader(fake):
+    up = gbp.ApiUploader(call=fake, sleep=lambda s: None)
+    up.account, up.location, up.token = "accounts/1", "locations/2", "tok"
+    orig = up.upload_one
+
+    def tracked(path):
+        fake.current = gbp.ref_for_path(path)
+        return orig(path)
+    up.upload_one = tracked
+    return up
+
+
+def big_car(photos, ref, size=20 * 1024):
+    d = photos / ref
+    d.mkdir()
+    (d / "Main 1.jpg").write_bytes(b"\xff\xd8" + b"0" * size)
+    return str(d / "Main 1.jpg")
+
+
+def test_api_posts_each_photo_in_three_steps(tmp_path):
+    a, b = big_car(tmp_path, "VEH176"), big_car(tmp_path, "VEH177")
+    fake = FakeApi()
+    up = api_uploader(fake)
+    assert up.upload([a, b]) == ["VEH176", "VEH177"]
+    assert [s for _, s in fake.calls] == ["start", "bytes", "create"] * 2
+    assert not up.ambiguous and not up.not_uploaded
+
+
+def test_api_clean_failure_is_retried_not_unconfirmed(tmp_path):
+    a, b = big_car(tmp_path, "VEH176"), big_car(tmp_path, "VEH177")
+    fake = FakeApi({("VEH176", "create"): gbp.ApiError("400 bad photo", status=400)})
+    up = api_uploader(fake)
+    assert up.upload([a, b]) == ["VEH177"]
+    assert up.not_uploaded == {"VEH176"} and not up.ambiguous
+
+
+def test_api_create_timeout_is_ambiguous(tmp_path):
+    a = big_car(tmp_path, "VEH176")
+    fake = FakeApi({("VEH176", "create"): gbp.ApiError("timeout", ambiguous=True)})
+    up = api_uploader(fake)
+    assert up.upload([a]) == []
+    assert up.ambiguous == {"VEH176"}
+
+
+def test_api_start_failure_retries_then_gives_up_cleanly(tmp_path):
+    a = big_car(tmp_path, "VEH176")
+    fake = FakeApi({("VEH176", "start"): gbp.ApiError("503", status=503, ambiguous=True)})
+    up = api_uploader(fake)
+    assert up.upload([a]) == []
+    assert [s for _, s in fake.calls] == ["start"] * 3  # retried, never created
+    # Before the create call nothing can exist on the profile, but ambiguous
+    # flag from a 5xx start is still not "create ambiguous" - see below.
+
+
+def test_api_tiny_photo_rejected_without_calling_google(tmp_path):
+    d = tmp_path / "VEH176"
+    d.mkdir()
+    (d / "Main 1.jpg").write_bytes(b"\xff\xd8jpg")
+    fake = FakeApi()
+    up = api_uploader(fake)
+    assert up.upload([str(d / "Main 1.jpg")]) == []
+    assert fake.calls == [] and up.not_uploaded == {"VEH176"}
+
+
+class FakeApiUploader:
+    per_item = True
+
+    def __init__(self, confirmed=(), ambiguous=(), not_uploaded=(), raise_exc=None):
+        self.confirmed = list(confirmed)
+        self.ambiguous = set(ambiguous)
+        self.not_uploaded = set(not_uploaded)
+        self.raise_exc = raise_exc
+        self.sent = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        pass
+
+    def upload(self, paths):
+        self.sent = list(paths)
+        if self.raise_exc:
+            raise self.raise_exc
+        return self.confirmed
+
+
+def test_run_per_item_records_each_car(env, monkeypatch, capsys):
+    photos, state, _ = env
+    for r in ("VEH176", "VEH177", "VEH178"):
+        make_car(photos, r)
+    up = FakeApiUploader(confirmed=["VEH176"], ambiguous=["VEH177"], not_uploaded=["VEH178"])
+    monkeypatch.setattr(gbp, "make_uploader", lambda: up)
+    monkeypatch.setattr("builtins.input", lambda: "Y")
+    assert gbp.main([]) == 1
+    out = capsys.readouterr().out
+    assert "Google: added VEH176" in out
+    assert "will retry next run: VEH178" in out
+    assert state.read_text(encoding="utf-8").splitlines() == [
+        "BASELINE=VEH175", "VEH176", "UNCONFIRMED VEH177"]
+
+
+def test_run_per_item_all_posted(env, monkeypatch, capsys):
+    photos, state, _ = env
+    for r in ("VEH176", "VEH177"):
+        make_car(photos, r)
+    monkeypatch.setattr(gbp, "make_uploader",
+                        lambda: FakeApiUploader(confirmed=["VEH176", "VEH177"]))
+    monkeypatch.setattr("builtins.input", lambda: "Y")
+    assert gbp.main([]) == 0
+    assert state.read_text(encoding="utf-8").splitlines() == ["BASELINE=VEH175", "VEH176", "VEH177"]
+
+
+def test_run_per_item_auth_error_keeps_earlier_posts(env, monkeypatch, capsys):
+    photos, state, _ = env
+    for r in ("VEH176", "VEH177"):
+        make_car(photos, r)
+    up = FakeApiUploader(confirmed=["VEH176"], raise_exc=gbp.ApiAuthError("invalid_grant"))
+    monkeypatch.setattr(gbp, "make_uploader", lambda: up)
+    monkeypatch.setattr("builtins.input", lambda: "Y")
+    assert gbp.main([]) == 1
+    out = capsys.readouterr().out
+    assert gbp.REAUTH_MSG in out
+    assert state.read_text(encoding="utf-8").splitlines() == ["BASELINE=VEH175", "VEH176"]
+
+
+def test_run_per_item_auth_error_on_enter(env, monkeypatch, capsys):
+    photos, state, _ = env
+    make_car(photos, "VEH176")
+    up = gbp.ApiUploader()
+    monkeypatch.setattr(gbp, "load_api_config", lambda: ("accounts/1", "locations/2"))
+    def no_token():
+        raise gbp.ApiAuthError("No saved Google API sign-in.")
+    monkeypatch.setattr(gbp, "refresh_access_token", no_token)
+    monkeypatch.setattr(gbp, "make_uploader", lambda: up)
+    monkeypatch.setattr("builtins.input", lambda: "Y")
+    assert gbp.main([]) == 1
+    assert gbp.REAUTH_MSG in capsys.readouterr().out
+    assert state.read_text(encoding="utf-8").splitlines() == ["BASELINE=VEH175"]
+
+
+def test_refresh_token_invalid_grant_is_auth_error(tmp_path):
+    client = tmp_path / "c.json"
+    client.write_text('{"installed": {"client_id": "id", "client_secret": "s"}}')
+    token = tmp_path / "t.json"
+    token.write_text('{"refresh_token": "r"}')
+    def post(*a, **k):
+        raise gbp.ApiError("invalid_grant", status=400)
+    with pytest.raises(gbp.ApiAuthError):
+        gbp.refresh_access_token(str(client), str(token), post=post)
+
+
+def test_discover_location_picks_pulled_apart():
+    def call(url, token=None, **k):
+        if url == gbp.ACCOUNTS_URL:
+            return {"accounts": [{"name": "accounts/1"}]}
+        return {"locations": [{"name": "locations/9", "title": "Pulled Apart - VAG Breakers"}]}
+    assert gbp.discover_location("t", call=call) == ("accounts/1", "locations/9", "Pulled Apart - VAG Breakers")
+
+
+def test_default_uploader_is_api():
+    assert gbp.UPLOADER == "api"
+    assert isinstance(gbp.make_uploader(), gbp.ApiUploader)
 
 
 # ── frame selection ─────────────────────────────────────────────────

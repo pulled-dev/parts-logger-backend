@@ -16,3 +16,9 @@ vehicle-imports/done/*
 vehicle-imports/logs/*
 !vehicle-imports/logs/_README.txt
 vehicle-imports/stock-sheets/
+
+# Google Business Profile API secrets. These live in %LOCALAPPDATA%\PulledApart
+# and must never be committed; ignored here too in case a copy lands in the repo.
+gbp-oauth-client.json
+gbp-token.json
+gbp-api.json
