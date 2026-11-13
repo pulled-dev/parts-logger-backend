@@ -1,0 +1,9 @@
+Read build-spec/GBP-PHOTO-STEP.md and implement it in full. Read vehicle-imports/Update Vehicles.bat and vehicle-imports/update_website.py first and reuse their helpers.
+
+Work in this loop until everything in the spec's Acceptance section passes:
+1. Build the change.
+2. Test: run pytest tests/test_update_gbp.py, then python vehicle-imports/update_gbp.py --dry-run, then --probe (headed browser; if not signed in, stop and tell me to run --login, then continue after I confirm).
+3. If anything errors or fails, diagnose the root cause, fix it, and go back to step 2.
+4. Repeat until all tests pass and the acceptance checks are met.
+
+Do not upload any real photo to Google during testing. Do not change how the Parts Logger or website steps behave. When done, give me a short summary: files changed, test results, and the exact command for the one-time Google sign-in.
